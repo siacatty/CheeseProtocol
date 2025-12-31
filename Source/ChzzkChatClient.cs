@@ -60,6 +60,9 @@ namespace CheeseProtocol
         private readonly object connectLock = new object();
         private bool connectInProgress = false;
         private const int MaxEventsPerTick = 10;
+        private const int MaxQueueSize = 1000;
+        private int droppedChat = 0;
+        private int droppedDon = 0;
 
         public ChzzkChatClient(CheeseSettings settings)
         {
@@ -325,6 +328,8 @@ namespace CheeseProtocol
                     {
                         sid = sidObj?.ToString();
                         StartHeartbeatTimer();
+                        droppedChat = 0;
+                        droppedDon = 0;
                         settings.chzzkStatus = "Connected: waiting for chat/cheese";
                         EnqueueMessage("[CheeseProtocol] Chat channel connected successfully");
                     }
@@ -361,7 +366,15 @@ namespace CheeseProtocol
                     chat_evt.dedupeKey = $"{chat_evt.msgTimeMs}|{chat_evt.uid}|{chat_evt.message}";
 
                     // enqueue ONLY (no game logic here)
-                    chatQueue.Enqueue(chat_evt);
+                    if (chatQueue.Count >= MaxQueueSize)
+                    {
+                        if (droppedChat++ % 100 == 0)
+                            EnqueueWarning($"[CheeseProtocol] Queue overflow, dropping. droppedChat={droppedChat}");
+                    }
+                    else
+                    {
+                        chatQueue.Enqueue(chat_evt);
+                    }
                     /*
                     var evt = new DonationEvent
                     {
@@ -426,8 +439,15 @@ namespace CheeseProtocol
                             ? "don:" + donationId
                             : $"don:{donor}|{amount}|{message}"
                     };
-
-                    donationQueue.Enqueue(evt);
+                    if (donationQueue.Count >= MaxQueueSize)
+                    {
+                        if (droppedDon++ % 100 == 0)
+                            EnqueueWarning($"[CheeseProtocol]Queue overflow, dropping. droppedDon={droppedDon}");
+                    }
+                    else
+                    {
+                        donationQueue.Enqueue(evt);
+                    }
                     EnqueueMessage($"[CheeseProtocol][DON] {evt.donor} type={evt.donationType} amount={evt.amount} msg={evt.message}");
                 }
                 return;
