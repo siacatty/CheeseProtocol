@@ -25,3 +25,5 @@ sourcelink.json
 # OS
 Thumbs.db
 .DS_Store
+Source/obj/Release/net472/CheeseProtocol.AssemblyInfo.cs
+Source/obj/Release/net472/CheeseProtocol.AssemblyInfoInputs.cache
