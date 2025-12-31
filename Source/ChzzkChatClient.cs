@@ -108,7 +108,14 @@ namespace CheeseProtocol
                 settings.chzzkStatus = "Connecting: WS opened";
                 SendConnect();
             };
-            ws.MessageReceived += (_, e) => OnMessage(e.Message);
+            ws.MessageReceived += (_, e) =>
+            {
+                try { OnMessage(e.Message); }
+                catch (Exception ex)
+                {
+                    EnqueueError("[CheeseProtocol] OnMessage crash: " + ex);
+                }
+            };
             ws.Error += (_, e) =>
             {
                 EnqueueError("[CheeseProtocol] Web socket error: " + e.Exception);
@@ -339,6 +346,7 @@ namespace CheeseProtocol
                         StartHeartbeatTimer();
                         droppedChat = 0;
                         droppedDon = 0;
+                        jsonErrorCount = 0;
                         settings.chzzkStatus = "Connected: waiting for chat/cheese";
                         EnqueueMessage("[CheeseProtocol] Chat channel connected successfully");
                     }
