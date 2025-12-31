@@ -1,0 +1,27 @@
+# Build output
+bin/
+obj/
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+
+# Debug / symbols
+*.pdb
+*.mdb
+
+# Assemblies
+*.dll
+*.exe
+
+# Cache / temp
+*.cache
+*.tmp
+
+# SourceLink
+sourcelink.json
+
+# OS
+Thumbs.db
+.DS_Store
