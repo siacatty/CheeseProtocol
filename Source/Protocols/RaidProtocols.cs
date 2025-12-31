@@ -1,4 +1,5 @@
 using Verse;
+using RimWorld;
 
 namespace CheeseProtocol.Protocols
 {
@@ -7,12 +8,29 @@ namespace CheeseProtocol.Protocols
         public string Id => "raid";
         public string DisplayName => "Raid protocol";
 
-        public bool CanExecute(ProtocolContext ctx) => ctx?.Map != null;
+        public bool CanExecute(ProtocolContext ctx)
+        {
+            return ctx?.Map != null;
+        }
 
         public void Execute(ProtocolContext ctx)
         {
-            Log.Warning($"[CheeseProtocol] RaidProtocol triggered (stub). Donation: {ctx.Donation}");
-            //Messages.Message("[CheeseProtocol] !습격 received (stub).", MessageTypeDefOf.ThreatBig, false);
+            var map = ctx.Map;
+
+            var parms = StorytellerUtility.DefaultParmsNow(
+                IncidentCategoryDefOf.ThreatBig,
+                map
+            );
+
+            // Vanilla incident defName: "RaidEnemy"
+            IncidentDef def = DefDatabase<IncidentDef>.GetNamed("RaidEnemy", false);
+            if (def == null)
+            {
+                Log.Warning("[CheeseProtocol] RaidEnemy def not found.");
+                return;
+            }
+            if (!def.Worker.TryExecute(parms))
+                Log.Warning("[CheeseProtocol] RaidEnemy failed to execute.");
         }
     }
 }

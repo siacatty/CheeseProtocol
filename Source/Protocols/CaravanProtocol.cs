@@ -1,4 +1,5 @@
 using Verse;
+using RimWorld;
 
 namespace CheeseProtocol.Protocols
 {
@@ -7,12 +8,30 @@ namespace CheeseProtocol.Protocols
         public string Id => "caravan";
         public string DisplayName => "Caravan protocol";
 
-        public bool CanExecute(ProtocolContext ctx) => ctx?.Map != null;
+        public bool CanExecute(ProtocolContext ctx)
+        {
+            return ctx?.Map != null;
+        }
 
         public void Execute(ProtocolContext ctx)
         {
-            Log.Warning($"[CheeseProtocol] CaravanProtocol triggered (stub). Donation: {ctx.Donation}");
-            //Messages.Message("[CheeseProtocol] !상단 received (stub).", MessageTypeDefOf.NeutralEvent, false);
+            var map = ctx.Map;
+
+            var parms = StorytellerUtility.DefaultParmsNow(
+                IncidentCategoryDefOf.Misc,
+                map
+            );
+
+            // Vanilla incident defName: "TraderCaravanArrival"
+            IncidentDef def = DefDatabase<IncidentDef>.GetNamed("TraderCaravanArrival", false);
+            if (def == null)
+            {
+                Log.Warning("[CheeseProtocol] TraderCaravanArrival def not found.");
+                return;
+            }
+
+            if (!def.Worker.TryExecute(parms))
+                Log.Warning("[CheeseProtocol] TraderCaravanArrival failed to execute.");
         }
     }
 }
