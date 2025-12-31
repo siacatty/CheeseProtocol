@@ -51,17 +51,41 @@ namespace CheeseProtocol
             if (msg.StartsWith("!"))
             {
                 var cmd = CheeseCommandParser.Parse(msg, out var args);
-
+                Log.Message($"[CheeseProtocol] message starts with ! : \"{msg}\"");
                 if (cmd != CheeseCommand.None &&
                     CheeseCommandParser.TryGetSpec(cmd, out var spec))
                 {
                     Log.Message($"[CheeseProtocol] command found: \"{spec.protocolId}\"");
-                    return ProtocolRegistry.ById(spec.protocolId);
+                    if (IsCommandAllowedBySettings(CheeseProtocolMod.Settings, cmd, donation))
+                        return ProtocolRegistry.ById(spec.protocolId);
+                    else
+                    {
+                        Log.Message($"[CheeseProtocol] Command ignored (<min_donation): \"{msg}\"");
+                    }
                 }
                 Log.Message($"[CheeseProtocol] Unknown command ignored: \"{msg}\"");
             }
 
             return ProtocolRegistry.ById("noop");
+        }
+        private static bool IsCommandAllowedBySettings(CheeseSettings settings, CheeseCommand cmd, DonationEvent ev)
+        {
+            if (settings == null) return false;
+
+            if (!settings.TryGetCommandConfig(cmd, out var cfg))
+                return false;
+
+            if (!cfg.enabled) return false;
+
+            // Chat 모드면 채팅/도네 둘 다 OK, 금액 무시
+            if (cfg.source == CheeseCommandSource.Chat)
+                return true;
+
+            // Donation 모드면 도네만 + 최소금액
+            if (cfg.source == CheeseCommandSource.Donation)
+                return ev.amount >= cfg.minDonation;
+
+            return false;
         }
     }
 }
