@@ -45,7 +45,8 @@ namespace CheeseProtocol
             {
                 CheeseProtocolMod.ChzzkChat.UserDisconnect();
             }
-
+            listing.GapLine();
+            listing.CheckboxLabeled("치지직 프로토콜 HUD 표시", ref showHud, "화면에 작은 상태 표시창을 띄웁니다.");
             listing.End();
         }
     }
