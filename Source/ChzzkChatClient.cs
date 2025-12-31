@@ -63,6 +63,8 @@ namespace CheeseProtocol
         private const int MaxQueueSize = 1000;
         private int droppedChat = 0;
         private int droppedDon = 0;
+        private int jsonErrorCount = 0;
+        private string lastJsonErrorSample = null;
 
         public ChzzkChatClient(CheeseSettings settings)
         {
@@ -297,7 +299,14 @@ namespace CheeseProtocol
             }
             catch (Exception ex)
             {
-                EnqueueError("[CheeseProtocol] JSON parse error: " + ex);
+                jsonErrorCount++;
+                if (jsonErrorCount == 1 || jsonErrorCount % 100 == 0)
+                {
+                    lastJsonErrorSample = raw;
+                    EnqueueError("[CheeseProtocol] JSON parse error (" + jsonErrorCount + "): " + ex);
+                    EnqueueError("[CheeseProtocol] JSON error sample (first 300): " +
+                        (raw.Length > 300 ? raw.Substring(0, 300) : raw));
+                }
                 return;
             }
 
