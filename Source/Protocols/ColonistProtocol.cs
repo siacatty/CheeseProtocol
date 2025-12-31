@@ -5,7 +5,7 @@ namespace CheeseProtocol.Protocols
     public class ColonistProtocol : IProtocol
     {
         public string Id => "colonist";
-        public string DisplayName => "Colonist Join";
+        public string DisplayName => "Colonist Join protocol";
 
         public bool CanExecute(ProtocolContext ctx)
         {

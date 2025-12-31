@@ -5,7 +5,7 @@ namespace CheeseProtocol.Protocols
     public class RaidProtocol : IProtocol
     {
         public string Id => "raid";
-        public string DisplayName => "Raid (stub)";
+        public string DisplayName => "Raid protocol";
 
         public bool CanExecute(ProtocolContext ctx) => ctx?.Map != null;
 

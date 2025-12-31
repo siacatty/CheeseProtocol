@@ -403,7 +403,16 @@ namespace CheeseProtocol
                     if (msgObj == null) continue;
 
                     var msg = msgObj.TryGetValue("msg", out var msgText) ? msgText?.ToString() : null;
-                    if (string.IsNullOrEmpty(msg)) continue;
+                    if (!string.IsNullOrWhiteSpace(msg))
+                    {
+                        var trimmed = msg.TrimStart();
+                        if (!trimmed.StartsWith("!"))
+                            continue;
+                    }
+                    else
+                    {
+                        continue;
+                    }
                     var chat_evt = new ChatEvent
                     {
                         receivedAtUtcMs = ChatEvent.NowUtcMs(),
@@ -416,8 +425,7 @@ namespace CheeseProtocol
 
                     // dedupe key
                     chat_evt.dedupeKey = $"{chat_evt.msgTimeMs}|{chat_evt.uid}|{chat_evt.message}";
-
-                    // enqueue ONLY (no game logic here)
+                    // queue overflow 
                     if (chatQueue.Count >= MaxQueueSize)
                     {
                         if (droppedChat++ % 100 == 0)
@@ -465,6 +473,19 @@ namespace CheeseProtocol
                     catch { extras = null; }
                     if (extras == null) continue;
 
+                    var msg = msgObj.TryGetValue("msg", out var m) ? m?.ToString() : null;
+
+                    if (!string.IsNullOrWhiteSpace(msg))
+                    {
+                        var trimmed = msg.TrimStart();
+                        if (!trimmed.StartsWith("!"))
+                            continue;
+                    }
+                    else
+                    {
+                        continue;
+                    }
+
                     var donor = extras.TryGetValue("nickname", out var nn) ? nn?.ToString() : null;
 
                     int amount = 0;
@@ -472,8 +493,6 @@ namespace CheeseProtocol
                         amount = ParseIntSafe(pa);
 
                     var donationId = extras.TryGetValue("donationId", out var did) ? did?.ToString() : null;
-
-                    var message = msgObj.TryGetValue("msg", out var m) ? m?.ToString() : null;
 
                     var donationType = extras.TryGetValue("donationType", out var dt) ? dt?.ToString() : null;
 
@@ -483,13 +502,13 @@ namespace CheeseProtocol
                         receivedAtUtcMs = DonationEvent.NowUtcMs(),
                         donor = string.IsNullOrWhiteSpace(donor) ? "Unknown" : donor,
                         amount = amount,
-                        message = message,
+                        message = msg,
                         donationId = donationId,
                         donationType = donationType,
                         isDonation = true,
                         dedupeKey = !string.IsNullOrWhiteSpace(donationId)
                             ? "don:" + donationId
-                            : $"don:{donor}|{amount}|{message}"
+                            : $"don:{donor}|{amount}|{msg}"
                     };
                     if (donationQueue.Count >= MaxQueueSize)
                     {
@@ -565,7 +584,7 @@ namespace CheeseProtocol
                 if (!string.IsNullOrEmpty(don.dedupeKey) && IsDuplicate(don.dedupeKey, nowMs))
                     continue;
 
-                //ProtocolRouter.RouteAndExecute(don);
+                ProtocolRouter.RouteAndExecute(don);
             }
 
             while (budget > 0 && chatQueue.TryDequeue(out var chat))
@@ -585,7 +604,7 @@ namespace CheeseProtocol
                     isDonation = false
                 };
 
-                //ProtocolRouter.RouteAndExecute(evt);
+                ProtocolRouter.RouteAndExecute(evt);
             }
 
             CleanupSeen(nowMs);

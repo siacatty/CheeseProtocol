@@ -5,7 +5,7 @@ namespace CheeseProtocol.Protocols
     public class CaravanProtocol : IProtocol
     {
         public string Id => "caravan";
-        public string DisplayName => "Caravan (stub)";
+        public string DisplayName => "Caravan protocol";
 
         public bool CanExecute(ProtocolContext ctx) => ctx?.Map != null;
 

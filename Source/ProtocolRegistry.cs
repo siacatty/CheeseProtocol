@@ -10,6 +10,7 @@ namespace CheeseProtocol
             new ColonistProtocol(),
             new RaidProtocol(),
             new CaravanProtocol(),
+            new NoOpProtocol()
         };
 
         public static IReadOnlyList<IProtocol> All => protocols;

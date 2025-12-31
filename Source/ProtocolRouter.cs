@@ -48,37 +48,20 @@ namespace CheeseProtocol
         private static IProtocol FindProtocolForDonation(DonationEvent donation)
         {
             string msg = (donation.message ?? "").Trim();
-
-            // Only treat as command if message starts with "!"
-            // (prevents accidental triggers)
             if (msg.StartsWith("!"))
             {
-                // You can allow multiple aliases per command
-                if (StartsWithCommand(msg, "!참여"))
-                    return ProtocolRegistry.ById("colonist");
+                var cmd = CheeseCommandParser.Parse(msg, out var args);
 
-                if (StartsWithCommand(msg, "!습격"))
-                    return ProtocolRegistry.ById("raid");
-
-                if (StartsWithCommand(msg, "!상단"))
-                    return ProtocolRegistry.ById("caravan");
+                if (cmd != CheeseCommand.None &&
+                    CheeseCommandParser.TryGetSpec(cmd, out var spec))
+                {
+                    Log.Message($"[CheeseProtocol] command found: \"{spec.protocolId}\"");
+                    return ProtocolRegistry.ById(spec.protocolId);
+                }
+                Log.Message($"[CheeseProtocol] Unknown command ignored: \"{msg}\"");
             }
 
-            // Default behavior if no command found:
-            // choose what you want (colonist, or "none")
-            return ProtocolRegistry.ById("colonist");
-        }
-        private static bool StartsWithCommand(string msg, string command)
-        {
-            // Matches:
-            // "!참여"
-            // "!참여 hello"
-            // "!참여\t..."
-            if (!msg.StartsWith(command)) return false;
-            if (msg.Length == command.Length) return true;
-
-            char next = msg[command.Length];
-            return char.IsWhiteSpace(next);
+            return ProtocolRegistry.ById("noop");
         }
     }
 }
