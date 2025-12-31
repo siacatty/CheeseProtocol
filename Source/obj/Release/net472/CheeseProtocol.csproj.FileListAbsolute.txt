@@ -1,0 +1,14 @@
+C:\Program Files (x86)\Steam\steamapps\common\RimWorld\Mods\CheeseProtocol\Source\obj\Release\net472\CheeseProtocol.csproj.AssemblyReference.cache
+C:\Program Files (x86)\Steam\steamapps\common\RimWorld\Mods\CheeseProtocol\Source\obj\Release\net472\CheeseProtocol.GeneratedMSBuildEditorConfig.editorconfig
+C:\Program Files (x86)\Steam\steamapps\common\RimWorld\Mods\CheeseProtocol\Source\obj\Release\net472\CheeseProtocol.AssemblyInfoInputs.cache
+C:\Program Files (x86)\Steam\steamapps\common\RimWorld\Mods\CheeseProtocol\Source\obj\Release\net472\CheeseProtocol.AssemblyInfo.cs
+C:\Program Files (x86)\Steam\steamapps\common\RimWorld\Mods\CheeseProtocol\Source\obj\Release\net472\CheeseProtocol.csproj.CoreCompileInputs.cache
+C:\Program Files (x86)\Steam\steamapps\common\RimWorld\Mods\CheeseProtocol\Source\bin\Release\net472\CheeseProtocol.dll
+C:\Program Files (x86)\Steam\steamapps\common\RimWorld\Mods\CheeseProtocol\Source\bin\Release\net472\CheeseProtocol.pdb
+C:\Program Files (x86)\Steam\steamapps\common\RimWorld\Mods\CheeseProtocol\Source\obj\Release\net472\CheeseProtocol.dll
+C:\Program Files (x86)\Steam\steamapps\common\RimWorld\Mods\CheeseProtocol\Source\obj\Release\net472\CheeseProtocol.pdb
+C:\Program Files (x86)\Steam\steamapps\common\RimWorld\Mods\CheeseProtocol\Source\bin\Release\net472\EngineIoClientDotNet.dll
+C:\Program Files (x86)\Steam\steamapps\common\RimWorld\Mods\CheeseProtocol\Source\bin\Release\net472\Newtonsoft.Json.dll
+C:\Program Files (x86)\Steam\steamapps\common\RimWorld\Mods\CheeseProtocol\Source\bin\Release\net472\SocketIoClientDotNet.dll
+C:\Program Files (x86)\Steam\steamapps\common\RimWorld\Mods\CheeseProtocol\Source\bin\Release\net472\WebSocket4Net.dll
+C:\Program Files (x86)\Steam\steamapps\common\RimWorld\Mods\CheeseProtocol\Source\obj\Release\net472\CheesePr.D9725A87.Up2Date

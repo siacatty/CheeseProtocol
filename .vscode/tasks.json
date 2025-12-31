@@ -1,0 +1,26 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Build Cheese Protocol (Release)",
+      "type": "shell",
+      "command": "dotnet",
+      "args": [
+        "build",
+        "${workspaceFolder}/Source/CheeseProtocol.csproj",
+        "-c",
+        "Release"
+      ],
+      "options": {
+        "env": {
+          "RIMWORLD_DIR": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\RimWorld"
+        }
+      },
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": "$msCompile"
+    }
+  ]
+}

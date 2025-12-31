@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ModMetaData>
+  <name>Cheese Protocol</name>
+  <author>YourName</author>
+  <packageId>yourname.cheeseprotocol</packageId>
+  <supportedVersions>
+    <li>1.5</li>
+    <li>1.6</li>
+  </supportedVersions>
+  <description>
+Donation-driven protocols for RimWorld.
+Cheese (CHZZK donations) can trigger colonists, gifts, raids, and incidents.
+  </description>
+</ModMetaData>
