@@ -77,12 +77,22 @@ namespace CheeseProtocol
             if (!ChzzkEndpoints.TryExtractChannelIdFromStudioUrl(settings.chzzkStudioUrl, out channelId))
             {
                 settings.chzzkStatus = "Disconnected: Invalid Studio URL";
+                CheeseGameComponent.Instance?.UpdateUiStatus(s =>
+                {
+                    s.connectionState = ConnectionState.Disconnected;
+                    s.lastError = "Disconnected: Invalid Studio URL";
+                });
                 EnqueueWarning("[CheeseProtocol] Invalid studio URL");
                 return;
             }
             if (!ChzzkEndpoints.TryResolveChatChannelId(channelId, out chatChannelId))
             {
                 settings.chzzkStatus = "Disconnected: Stream offline";
+                CheeseGameComponent.Instance?.UpdateUiStatus(s =>
+                {
+                    s.connectionState = ConnectionState.Disconnected;
+                    s.lastError = "Disconnected: Stream offline";
+                });
                 EnqueueWarning("[CheeseProtocol] Failed to resolve chatChannelId (is stream LIVE?)");
                 StartLiveRetryTimer();
                 return;
@@ -94,18 +104,26 @@ namespace CheeseProtocol
             if (!ChzzkEndpoints.TryFetchChatAccessToken(chatChannelId, out chatAccessToken, out extraToken))
             {
                 settings.chzzkStatus = "Disconnected: ChatAccess token fetch failed";
+                CheeseGameComponent.Instance?.UpdateUiStatus(s =>
+                {
+                    s.connectionState = ConnectionState.Disconnected;
+                    s.lastError = "Disconnected: ChatAccess token fetch failed";
+                });
                 EnqueueWarning("[CheeseProtocol] Failed to fetch chatAccessToken");
                 return;
             }
 
             settings.chzzkStatus = "Connecting: WebSocket connecting...";
+            CheeseGameComponent.Instance?.UpdateUiStatus(s =>
+            {
+                s.connectionState = ConnectionState.Connecting;
+            });
             connectSent = false;
             sid = null;
             //ticksSinceHandshake = 0;
             ws = new WebSocket("wss://kr-ss1.chat.naver.com/chat");
             ws.Opened += (_, __) =>
             {
-                settings.chzzkStatus = "Connecting: WS opened";
                 SendConnect();
             };
             ws.MessageReceived += (_, e) =>
@@ -120,6 +138,11 @@ namespace CheeseProtocol
             {
                 EnqueueError("[CheeseProtocol] Web socket error: " + e.Exception);
                 settings.chzzkStatus = "Disconnected: WS error";
+                CheeseGameComponent.Instance?.UpdateUiStatus(s =>
+                {
+                    s.connectionState = ConnectionState.Disconnected;
+                    s.lastError = "Disconnected: WS error";
+                });
                 OnDisconnected("ws.error");
             };
             ws.Closed += (sender, __) =>
@@ -129,6 +152,11 @@ namespace CheeseProtocol
                 EnqueueWarning("[CheeseProtocol] Web socket closed. State=" + state);
 
                 settings.chzzkStatus = "Disconnected: WS closed";
+                CheeseGameComponent.Instance?.UpdateUiStatus(s =>
+                {
+                    s.connectionState = ConnectionState.Disconnected;
+                    s.lastError = "Disconnected: WS closed";
+                });
 
                 if (sock != null && closingWs == sock)
                 {
@@ -198,6 +226,10 @@ namespace CheeseProtocol
                 reconnectTimer.Start();
 
                 settings.chzzkStatus = "Connecting: Try reconnecting";
+                CheeseGameComponent.Instance?.UpdateUiStatus(s =>
+                {
+                    s.connectionState = ConnectionState.Connecting;
+                });
             }
         }
 
@@ -290,7 +322,6 @@ namespace CheeseProtocol
 
             ws.Send(json);
             connectSent = true;
-            settings.chzzkStatus = "Connecting: CONNECT sent (waiting 10100)";
         }
 
         private void OnMessage(string raw)
@@ -348,6 +379,10 @@ namespace CheeseProtocol
                         droppedDon = 0;
                         jsonErrorCount = 0;
                         settings.chzzkStatus = "Connected: waiting for chat/cheese";
+                        CheeseGameComponent.Instance?.UpdateUiStatus(s =>
+                        {
+                            s.connectionState = ConnectionState.Connected;
+                        });
                         EnqueueMessage("[CheeseProtocol] Chat channel connected successfully");
                     }
                 }
@@ -484,7 +519,6 @@ namespace CheeseProtocol
             if (fastRetryCount < FastRetryMax)
             {
                 fastRetryCount++;
-                //settings.chzzkStatus = $"Connecting: fast retry {fastRetryCount}/{FastRetryMax} ({reason})";
                 ScheduleReconnect(); // 5초 타이머
                 return;
             }
@@ -680,6 +714,11 @@ namespace CheeseProtocol
             {
                 // OFFLINE일 가능성: status만 갱신하고 그냥 유지
                 settings.chzzkStatus = "Stream offline";
+                CheeseGameComponent.Instance?.UpdateUiStatus(s =>
+                {
+                    s.connectionState = ConnectionState.Disconnected;
+                    s.lastError = "Stream may be offline";
+                });
                 return;
             }
 
@@ -691,6 +730,11 @@ namespace CheeseProtocol
             {
                 EnqueueWarning($"[CheeseProtocol] chatChannelId changed {lastResolvedChatChannelId} -> {currentChatCid}, reconnecting");
                 settings.chzzkStatus = "Connecting: Chat channel changed";
+                CheeseGameComponent.Instance?.UpdateUiStatus(s =>
+                {
+                    s.connectionState = ConnectionState.Connecting;
+                    s.lastError = "Connecting: Chat channel changed";
+                });
                 lastResolvedChatChannelId = currentChatCid;
                 RequestConnect("auto"); // Connect가 Disconnect하고 새 cid로 붙음
                 return;
@@ -701,6 +745,11 @@ namespace CheeseProtocol
             {
                 EnqueueWarning("[CheeseProtocol][Chat] live but not connected, reconnecting");
                 settings.chzzkStatus = "Connecting: Chat channel detached";
+                CheeseGameComponent.Instance?.UpdateUiStatus(s =>
+                {
+                    s.connectionState = ConnectionState.Connecting;
+                    s.lastError = "Connecting: Chat channel detached";
+                });
                 RequestConnect("auto");
             }
         }

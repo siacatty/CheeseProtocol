@@ -4,6 +4,7 @@ namespace CheeseProtocol
 {
     public class CheeseProtocolMod : Mod
     {
+        public static CheeseProtocolMod Instance;
         public static ChzzkChatClient ChzzkChat;
         public static CheeseSettings Settings;
 
@@ -12,6 +13,7 @@ namespace CheeseProtocol
             Settings = GetSettings<CheeseSettings>();
             Log.Message("[CheeseProtocol] Loaded.");
             ChzzkChat = new ChzzkChatClient(Settings);
+            Instance = this;
         }
 
         public override string SettingsCategory() => "Cheese Protocol";
