@@ -45,12 +45,25 @@ namespace CheeseProtocol
                 Scribe_Values.Look(ref c.enabled,        p + "enabled", true);
                 Scribe_Values.Look(ref c.source,         p + "source", CheeseCommandSource.Donation);
                 Scribe_Values.Look(ref c.minDonation,    p + "minDonation", 1000);
-                Scribe_Values.Look(ref c.cooldownSeconds,p + "cooldownSeconds", 0);
+                Scribe_Values.Look(ref c.cooldownHours,p + "cooldownHours", 0);
+            }
+
+            if (Scribe.mode == LoadSaveMode.PostLoadInit)
+            {
+                EnsureCommandConfigs();
+                for (int i = 0; i < commandConfigs.Count; i++)
+                {
+                    commandConfigs[i].EnsureBuffers();
+                }
             }
         }
 
         public void DoWindowContents(Rect inRect)
         {
+            foreach (var c in commandConfigs)
+            {
+                c.EnsureBuffers();
+            }
             //const float pad = 10f;
             const float tabH = 32f;
             const float gap = 10f;
@@ -286,7 +299,7 @@ namespace CheeseProtocol
                     ref c.source,
                     ref c.minDonation,
                     ref c.minDonationBuf,
-                    ref c.cooldownSeconds,
+                    ref c.cooldownHours,
                     ref c.cooldownBuf
                 );
                 if (i < commandConfigs.Count - 1)

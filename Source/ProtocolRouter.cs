@@ -18,10 +18,20 @@ namespace CheeseProtocol
 
             var ctx = new ProtocolContext(donation, map);
 
-            // Simple routing v1:
-            // - Always spawn colonist for now
-            // - Later: amount tiers + keywords + random
-            var protocol = FindProtocolForDonation(donation);
+            string msg = (donation.message ?? "").Trim();
+            CheeseCommand cmd = CheeseCommand.None;
+            string args = string.Empty;
+
+            if (msg.StartsWith("!"))
+                cmd = CheeseCommandParser.Parse(msg, out args);
+
+            var protocol = FindProtocolForDonation(donation, cmd);
+
+            if (cmd == CheeseCommand.None || CheeseProtocolMod.Settings == null || !CheeseProtocolMod.Settings.TryGetCommandConfig(cmd, out var cfg))
+                return;
+
+            if (!IsProtocolAllowedBySettings(CheeseProtocolMod.Settings, cfg, donation))
+                return;
 
             if (protocol == null)
             {
@@ -38,6 +48,8 @@ namespace CheeseProtocol
             try
             {
                 protocol.Execute(ctx);
+                var cdState = CheeseCooldownState.Current;
+                cdState.MarkExecuted(cfg.cmd, Find.TickManager.TicksGame);
             }
             catch (Exception ex)
             {
@@ -45,47 +57,47 @@ namespace CheeseProtocol
             }
         }
 
-        private static IProtocol FindProtocolForDonation(DonationEvent donation)
+        private static IProtocol FindProtocolForDonation(DonationEvent donation, CheeseCommand cmd)
         {
             string msg = (donation.message ?? "").Trim();
-            if (msg.StartsWith("!"))
+            if (cmd != CheeseCommand.None &&
+                CheeseCommandParser.TryGetSpec(cmd, out var spec))
             {
-                var cmd = CheeseCommandParser.Parse(msg, out var args);
-                Log.Message($"[CheeseProtocol] message starts with ! : \"{msg}\"");
-                if (cmd != CheeseCommand.None &&
-                    CheeseCommandParser.TryGetSpec(cmd, out var spec))
-                {
-                    Log.Message($"[CheeseProtocol] command found: \"{spec.protocolId}\"");
-                    if (IsCommandAllowedBySettings(CheeseProtocolMod.Settings, cmd, donation))
-                        return ProtocolRegistry.ById(spec.protocolId);
-                    else
-                    {
-                        Log.Message($"[CheeseProtocol] Command ignored (<min_donation): \"{msg}\"");
-                    }
-                }
-                Log.Message($"[CheeseProtocol] Unknown command ignored: \"{msg}\"");
+                Log.Message($"[CheeseProtocol] command found: \"{spec.protocolId}\"");
+                return ProtocolRegistry.ById(spec.protocolId);
             }
+            Log.Message($"[CheeseProtocol] Unknown command ignored: \"{msg}\"");
 
             return ProtocolRegistry.ById("noop");
         }
-        private static bool IsCommandAllowedBySettings(CheeseSettings settings, CheeseCommand cmd, DonationEvent ev)
+        private static bool IsProtocolAllowedBySettings(CheeseSettings settings, CheeseCommandConfig cfg, DonationEvent ev)
         {
-            if (settings == null) return false;
-
-            if (!settings.TryGetCommandConfig(cmd, out var cfg))
-                return false;
-
             if (!cfg.enabled) return false;
 
-            // Chat 모드면 채팅/도네 둘 다 OK, 금액 무시
-            if (cfg.source == CheeseCommandSource.Chat)
-                return true;
-
-            // Donation 모드면 도네만 + 최소금액
             if (cfg.source == CheeseCommandSource.Donation)
-                return ev.amount >= cfg.minDonation;
+            {
+                if (!ev.isDonation) return false;
+                if (!(ev.amount >= cfg.minDonation))
+                {
+                    Log.Message($"[CheeseProtocol] Command ignored (<min_donation): \"{ev.message}\"");
+                    return false;
+                }
+            }
+            int nowTick = Find.TickManager.TicksGame;
+            var cdState = CheeseCooldownState.Current;
+            if (cdState == null)
+            {
+                Log.Warning("[CheeseProtocol] CooldownState missing; allow by default.");
+                return true;
+            }
+            //Log.Warning($"[CheeseProtocol] command config cooldown: {cfg.cooldownHours} | last executed: {cdState.GetLastTick(cfg.cmd)} | now:  {nowTick}");
 
-            return false;
+            if (!cdState.IsReady(cfg.cmd, cfg.cooldownHours, nowTick))
+            {
+                Log.Message($"[CheeseProtocol] Command ignored (on cooldown): \"{ev.message}\"");
+                return false;
+            }
+            return true;
         }
     }
 }
