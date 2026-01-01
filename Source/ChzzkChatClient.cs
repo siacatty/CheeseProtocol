@@ -74,7 +74,7 @@ namespace CheeseProtocol
         public void Connect()
         {
             Disconnect();
-            if (!ChzzkEndpoints.TryExtractChannelIdFromStudioUrl(settings.chzzkStudioUrl, out channelId))
+            if (!ChzzkEndpoints.TryExtractChannelId(settings.chzzkStudioUrl, out channelId))
             {
                 settings.chzzkStatus = "Disconnected: Invalid Studio URL";
                 CheeseGameComponent.Instance?.UpdateUiStatus(s =>

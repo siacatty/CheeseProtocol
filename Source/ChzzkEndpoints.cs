@@ -3,51 +3,72 @@ using System.IO;
 using System.Net;
 using System.Text;
 using System.Collections.Generic;
+using System.Text.RegularExpressions;
 using Verse;
 
 namespace CheeseProtocol
 {
     internal static class ChzzkEndpoints
     {
-        public static bool TryExtractChannelIdFromStudioUrl(string studioUrl, out string channelId)
+        private static readonly Regex ChannelIdRegex =
+        new Regex(@"(?i)^[0-9a-f]{32}$", RegexOptions.Compiled);
+        public static bool TryExtractChannelId(string input, out string channelId)
         {
             channelId = null;
-            if (string.IsNullOrWhiteSpace(studioUrl)) return false;
+            if (string.IsNullOrWhiteSpace(input)) return false;
 
-            // examples:
-            // https://studio.chzzk.naver.com/fc42ea9bb15cd218dd205d1c9bd0f1cf/
-            // https://studio.chzzk.naver.com/fc42ea9bb15cd218dd205d1c9bd0f1cf
-            try
-            {
-                var u = new Uri(studioUrl.Trim());
-                var segs = u.AbsolutePath.Trim('/').Split('/');
-                if (segs.Length >= 1 && segs[0].Length >= 8)
-                {
-                    channelId = segs[0];
-                    return true;
-                }
-            }
-            catch
-            {
-                // maybe user pasted without scheme
-                var s = studioUrl.Trim();
-                if (!s.StartsWith("http", StringComparison.OrdinalIgnoreCase))
-                    s = "https://" + s;
+            input = input.Trim();
 
-                try
-                {
-                    var u2 = new Uri(s);
-                    var segs2 = u2.AbsolutePath.Trim('/').Split('/');
-                    if (segs2.Length >= 1 && segs2[0].Length >= 8)
-                    {
-                        channelId = segs2[0];
-                        return true;
-                    }
-                }
-                catch { }
+            // If scheme is missing, prepend https:// so Uri can parse it
+            if (input.IndexOf("://", StringComparison.OrdinalIgnoreCase) < 0)
+                input = "https://" + input;
+
+            if (!Uri.TryCreate(input, UriKind.Absolute, out var uri))
+                return false;
+
+            var host = uri.Host.ToLowerInvariant();
+
+            // Accept only these hosts (you can relax if you want)
+            bool isStudio = host == "studio.chzzk.naver.com";
+            bool isMain = host == "chzzk.naver.com";
+            if (!isStudio && !isMain) return false;
+
+            // Split path segments
+            var segments = uri.AbsolutePath.Split(new[] { '/' }, StringSplitOptions.RemoveEmptyEntries);
+
+            // Patterns:
+            // 1) studio: /{id} or /{id}/live
+            // 2) main:  /live/{id}
+            // 3) main:  /{id}
+            if (segments.Length == 0) return false;
+
+            // /live/{id}
+            if (segments.Length >= 2 && segments[0].Equals("live", StringComparison.OrdinalIgnoreCase))
+            {
+                return ValidateId(segments[1], out channelId);
             }
+
+            // /{id} or /{id}/live
+            // (Works for both studio + main)
+            if (ValidateId(segments[0], out channelId))
+                return true;
 
             return false;
+        }
+
+        private static bool ValidateId(string candidate, out string id)
+        {
+            id = null;
+            if (string.IsNullOrWhiteSpace(candidate)) return false;
+
+            // Remove any trailing stuff just in case (rare, but safe)
+            candidate = candidate.Trim();
+
+            if (!ChannelIdRegex.IsMatch(candidate))
+                return false;
+
+            id = candidate.ToLowerInvariant();
+            return true;
         }
 
         public static bool TryResolveChatChannelId(string channelId, out string chatChannelId)

@@ -22,5 +22,10 @@ namespace CheeseProtocol
         {
             Settings.DoWindowContents(inRect);
         }
+        public override void WriteSettings()
+        {
+            base.WriteSettings();
+            Settings.Write();
+        }
     }
 }

@@ -52,7 +52,7 @@ namespace CheeseProtocol
             return nowTick - last >= cdTicks;
         }
 
-        public int RemainingSeconds(CheeseCommand cmd, int cooldownHours, int nowTick)
+        public int RemainingTicks(CheeseCommand cmd, int cooldownHours, int nowTick)
         {
             if (cooldownHours <= 0) return 0;
 
@@ -61,7 +61,7 @@ namespace CheeseProtocol
             int remainTicks = cdTicks - (nowTick - last);
             if (remainTicks <= 0) return 0;
 
-            return (remainTicks + 59) / 60; // ceil
+            return remainTicks; // ceil
         }
 
         // helper accessor

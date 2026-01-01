@@ -9,7 +9,6 @@ namespace CheeseProtocol
         public CheeseCommandSource source = CheeseCommandSource.Donation;
         public int minDonation = 1000;
         public string minDonationBuf = "1000";
-
         public int cooldownHours = 0;
         public string cooldownBuf = "0";
         public string ScribeKeyPrefix => cmd.ToString(); // "Join" 같은 값
