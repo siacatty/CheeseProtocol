@@ -21,7 +21,7 @@ namespace CheeseProtocol
         public float hudX = -1f;   // -1이면 아직 저장된 위치 없음(기본 위치 사용)
         public float hudY = -1f;
         public bool hudMinimized = false;
-        private enum CheeseSettingsTab { General, Command, Advanced, Credits }
+        private enum CheeseSettingsTab { General, Command, Advanced, Simulation, Credits }
         private CheeseSettingsTab activeTab = CheeseSettingsTab.General;
 
         private readonly Dictionary<string, float> sectionContentHeights = new Dictionary<string, float>();
@@ -30,6 +30,7 @@ namespace CheeseProtocol
         private const float SectionGap = 10f;
         private const float separatorH = 12f;
         public List<CheeseCommandConfig> commandConfigs;
+        public CheeseCommandConfig selectedConfig;
 
         public override void ExposeData()
         {
@@ -78,6 +79,11 @@ namespace CheeseProtocol
                     c.EnsureBuffers();
                 }
             }
+
+            EnsureCommandConfigs();
+            if (selectedConfig == null)
+                selectedConfig = commandConfigs == null ? null : commandConfigs[0];
+
             //const float pad = 10f;
             const float tabH = 32f;
             const float gap = 10f;
@@ -168,9 +174,45 @@ namespace CheeseProtocol
                     break;
 
                 case CheeseSettingsTab.Advanced:
-                    DrawSection(left, ref yL, "Theme", listing =>
+                    DrawSection(left, ref yL, "고급", listing =>
                     {
                         listing.Label("Later: accent colors, HUD opacity, etc.");
+                    });
+                    break;
+                case CheeseSettingsTab.Simulation:
+                    DrawSection(left, ref yL, "시뮬레이션", listing =>
+                    {
+                        float lineH = 26f;
+                        float paddingX = 6f;
+                        float paddingY = 12f;
+                        listing.Label("시뮬레이션 (개발자 모드 전용)\n환경설정 → 개발자 모드 활성화");
+                        listing.GapLine();
+                        bool oldGUI = GUI.enabled;
+                        GUI.enabled = Prefs.DevMode;
+                        Rect simCommandRect = listing.GetRect(lineH*2f);
+                        SplitVerticallyByRatio(
+                            simCommandRect,
+                            out Rect simCommandDesc,
+                            out Rect simCommandDropdown,
+                            0.4f,
+                            paddingX
+                        );
+                        simCommandDropdown = ShrinkRect(simCommandDropdown, 0, simCommandDropdown.width*0.5f, simCommandDropdown.height*0.20f, simCommandDropdown.height*0.20f);
+                        var oldAnchor = Text.Anchor;
+                        Text.Anchor = TextAnchor.MiddleCenter;
+                        Widgets.Label(simCommandDesc, "명령어 :");
+                        Text.Anchor = oldAnchor;
+                        Widgets.Dropdown(
+                            simCommandDropdown,
+                            selectedConfig,
+                            c => c,
+                            _ => GenerateCommandMenu(),
+                            selectedConfig != null ? selectedConfig.label : "(No commands)"
+                        );
+                        
+
+
+                        GUI.enabled = oldGUI;
                     });
                     break;
 
@@ -178,13 +220,28 @@ namespace CheeseProtocol
                     DrawSection(left, ref yL, "Credits", listing =>
                     {
                         listing.Label("Cheese Protocol");
-                        listing.Label("by ...");
+                        listing.Label("by SiaCatty");
                     });
                     break;
             }
             viewHeight = Mathf.Max(yL, yR) + 20f;
 
             Widgets.EndScrollView();
+        }
+        private IEnumerable<Widgets.DropdownMenuElement<CheeseCommandConfig>> GenerateCommandMenu()
+        {
+            foreach (var cfg in commandConfigs)
+            {
+                var captured = cfg;
+                yield return new Widgets.DropdownMenuElement<CheeseCommandConfig>
+                {
+                    option = new FloatMenuOption(
+                        captured.label,
+                        () => selectedConfig = captured
+                    ),
+                    payload = captured
+                };
+            }
         }
         private int DefaultMinDonationFor(CheeseCommand cmd)
         {
@@ -267,71 +324,6 @@ namespace CheeseProtocol
 
             curY += sectionH + SectionGap;
         }
-        /*
-        private void DrawSection(
-            Rect column,
-            ref float curY,
-            string title,
-            System.Action<Listing_Standard> drawListing)
-        {
-            string key = title;
-            // ---- measure pass (Layout only) ----
-            if (Event.current.type == EventType.Layout)
-            {
-                float innerW = column.width - SectionPad * 2f;
-
-                // "very tall" rect for measurement
-                Rect measureRect = new Rect(0f, 0f, innerW, 100000f);
-
-                var listingM = new Listing_Standard();
-                listingM.Begin(measureRect);
-                drawListing(listingM);
-                listingM.End();
-
-                sectionContentHeights[key] = listingM.CurHeight;
-            }
-
-            // fallback if not measured yet (first frame)
-            float contentH = sectionContentHeights.TryGetValue(key, out var h) ? h : 200f;
-
-            // total section height: pad + header + line + content + pad
-            float sectionH =
-                SectionPad +                 // top pad
-                SectionHeaderH +             // title
-                10f +                        // title->content spacing + separator
-                contentH +                   // measured content
-                SectionPad;                  // bottom pad
-
-            Rect outer = new Rect(column.x, curY, column.width, sectionH);
-            Widgets.DrawMenuSection(outer);
-
-            Rect inner = outer.ContractedBy(SectionPad);
-
-            // title
-            Rect head = new Rect(inner.x, inner.y, inner.width, SectionHeaderH);
-            var oldFont = Text.Font;
-            Text.Font = GameFont.Medium;
-            Widgets.Label(head, title);
-            Text.Font = oldFont;
-
-            Widgets.DrawLineHorizontal(inner.x, head.yMax + 4f, inner.width);
-
-            // content area
-            Rect contentRect = new Rect(
-                inner.x,
-                head.yMax + 10f,
-                inner.width,
-                inner.yMax - (head.yMax + 10f)
-            );
-
-            var listing = new Listing_Standard();
-            listing.Begin(contentRect);
-            drawListing(listing);
-            listing.End();
-
-            curY += sectionH + SectionGap;
-        }
-        */
         private void DrawTabs(Rect tabRect)
         {
             float w = 140f;
@@ -340,7 +332,8 @@ namespace CheeseProtocol
             if (Widgets.ButtonText(new Rect(tabRect.x + 0f, tabRect.y, w, h), "일반")) activeTab = CheeseSettingsTab.General;
             if (Widgets.ButtonText(new Rect(tabRect.x + w + 6f, tabRect.y, w, h), "명령어")) activeTab = CheeseSettingsTab.Command;
             if (Widgets.ButtonText(new Rect(tabRect.x + (w + 6f) * 2, tabRect.y, w, h), "고급")) activeTab = CheeseSettingsTab.Advanced;
-            if (Widgets.ButtonText(new Rect(tabRect.x + (w + 6f) * 3, tabRect.y, w, h), "Credits")) activeTab = CheeseSettingsTab.Credits;
+            if (Widgets.ButtonText(new Rect(tabRect.x + (w + 6f) * 3, tabRect.y, w, h), "시뮬레이션")) activeTab = CheeseSettingsTab.Simulation;
+            if (Widgets.ButtonText(new Rect(tabRect.x + (w + 6f) * 4, tabRect.y, w, h), "Credits")) activeTab = CheeseSettingsTab.Credits;
         }
 
         private void DrawCommandsGridTwoLine(Rect rect, float lineH, float paddingX, float paddingY)
@@ -369,6 +362,7 @@ namespace CheeseProtocol
             Widgets.DrawLineHorizontal(rect.x + 8f, lineY, rect.width - 16f);
             GUI.color = prev;
             y += separatorH;
+            EnsureCommandConfigs();
             for (int i = 0; i < commandConfigs.Count; i++)
             {
                 var c = commandConfigs[i];
@@ -782,6 +776,15 @@ namespace CheeseProtocol
 
                 y = part.yMax + margin;
             }
+        }
+        public static Rect ShrinkRect(Rect rect, float left, float right, float top, float bottom)
+        {
+            return new Rect(
+                rect.x + left,
+                rect.y + top,
+                rect.width - left - right,
+                rect.height - top - bottom
+            );
         }
     }
 }
