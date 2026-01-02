@@ -2,15 +2,16 @@ using System;
 
 namespace CheeseProtocol
 {
-    public class DonationEvent
+    public class CheeseEvent
     {
         // When we received it (real time, not ticks)
         public string donationType; // e.g. "CHAT", "VIDEO"
         public long receivedAtUtcMs;
+        public long msgTimeMs;
 
         // Donation content
         public bool isDonation;
-        public string donor;
+        public string username;
         public int amount;
         public string message;
 
@@ -24,6 +25,6 @@ namespace CheeseProtocol
             => DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
             
         public override string ToString()
-            => $"donor={donor}, amount={amount}, message={message}";
+            => $"username={username}, amount={amount}, message={message}";
     }
 }

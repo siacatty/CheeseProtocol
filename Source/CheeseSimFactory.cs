@@ -11,37 +11,38 @@ namespace CheeseProtocol
         /// Chat 시뮬레이션: isDonation=false, amount=0
         /// </summary>
         /// 
-        public static DonationEvent MakeChatLike(string user, string message)
+        public static CheeseEvent MakeChatEvent(string user, string message, long msgTimeMs)
         {
-            string simDonationId = NewId();
-            return new DonationEvent
+            //string simDonationId = NewId();
+            long receivedAtUtcMsNow = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+            return new CheeseEvent
             {
-                donationId = simDonationId,
-                donor = user,
+                donationId = null,
+                username = user,
                 message = message,
                 amount = 0,
                 isDonation = false,
-                receivedAtUtcMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
-                dedupeKey = !string.IsNullOrWhiteSpace(simDonationId)
-                            ? "don:" + simDonationId
-                            : $"don:{user}|{0}|{message}"
+                msgTimeMs = msgTimeMs,
+                receivedAtUtcMs = receivedAtUtcMsNow,
+                dedupeKey = $"{receivedAtUtcMsNow}|{user}|{0}|{message}"
             };
         }
-        public static DonationEvent MakeDonation(string user, string message, int amount)
+        public static CheeseEvent MakeDonationEvent(string user, string message, int amount, string donationType, string donationId, long msgTimeMs)
         {
-            string simDonationId = NewId();
-            return new DonationEvent
+            long receivedAtUtcMsNow = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+            return new CheeseEvent
             {
-                donationId = simDonationId,
-                donor = user,
+                donationId = donationId,
+                username = user,
                 message = message,
                 amount = amount,
                 isDonation = true,
-                donationType = "CHAT",
-                receivedAtUtcMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
-                dedupeKey = !string.IsNullOrWhiteSpace(simDonationId)
-                            ? "don:" + simDonationId
-                            : $"don:{user}|{amount}|{message}"
+                donationType = donationType,
+                msgTimeMs = msgTimeMs,
+                receivedAtUtcMs = receivedAtUtcMsNow,
+                dedupeKey = !string.IsNullOrWhiteSpace(donationId)
+                            ? "don:" + donationId
+                            : $"{receivedAtUtcMsNow}|{user}|{amount}|{message}"
             };
         }
     }

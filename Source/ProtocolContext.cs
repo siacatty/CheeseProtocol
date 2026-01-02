@@ -4,12 +4,12 @@ namespace CheeseProtocol
 {
     public class ProtocolContext
     {
-        public DonationEvent Donation { get; }
+        public CheeseEvent CheeseEvt { get; }
         public Map Map { get; }
 
-        public ProtocolContext(DonationEvent donation, Map map)
+        public ProtocolContext(CheeseEvent evt, Map map)
         {
-            Donation = donation;
+            CheeseEvt = evt;
             Map = map;
         }
     }

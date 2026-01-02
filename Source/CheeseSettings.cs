@@ -20,6 +20,9 @@ namespace CheeseProtocol
         public bool hudLocked = false;
         public float hudX = -1f;   // -1이면 아직 저장된 위치 없음(기본 위치 사용)
         public float hudY = -1f;
+        public CheeseCommandSource simSource = CheeseCommandSource.Donation;
+        public int simDonAmount = 1000;
+        public string simDonAmountBuf = "1000";
         public bool hudMinimized = false;
         private enum CheeseSettingsTab { General, Command, Advanced, Simulation, Credits }
         private CheeseSettingsTab activeTab = CheeseSettingsTab.General;
@@ -31,6 +34,8 @@ namespace CheeseProtocol
         private const float separatorH = 12f;
         public List<CheeseCommandConfig> commandConfigs;
         public CheeseCommandConfig selectedConfig;
+        private const int maxAllowedDonation = 1000000;
+        private const int minAllowedDonation = 1000;
 
         public override void ExposeData()
         {
@@ -41,7 +46,9 @@ namespace CheeseProtocol
             Scribe_Values.Look(ref hudLocked, "hudLocked", false);
             Scribe_Values.Look(ref hudX, "hudX", -1f);
             Scribe_Values.Look(ref hudY, "hudY", -1f);
-
+            Scribe_Values.Look(ref simSource, "simSource", CheeseCommandSource.Donation);
+            Scribe_Values.Look(ref simDonAmount, "simDonAmount", 1000);
+            Scribe_Values.Look(ref simDonAmountBuf, "simDonAmountBuf", "1000");
             EnsureCommandConfigs();
 
             for (int i = 0; i < commandConfigs.Count; i++)
@@ -185,11 +192,13 @@ namespace CheeseProtocol
                         float lineH = 26f;
                         float paddingX = 6f;
                         float paddingY = 12f;
+                        float btnSize = 24f;
                         listing.Label("시뮬레이션 (개발자 모드 전용)\n환경설정 → 개발자 모드 활성화");
                         listing.GapLine();
                         bool oldGUI = GUI.enabled;
                         GUI.enabled = Prefs.DevMode;
                         Rect simCommandRect = listing.GetRect(lineH*2f);
+                        //Widgets.DrawBox(simCommandRect);
                         SplitVerticallyByRatio(
                             simCommandRect,
                             out Rect simCommandDesc,
@@ -209,9 +218,76 @@ namespace CheeseProtocol
                             _ => GenerateCommandMenu(),
                             selectedConfig != null ? selectedConfig.label : "(No commands)"
                         );
+
+                        listing.Gap(8);
+                        Rect simSrcRect=listing.GetRect(btnSize*2f+paddingY);
+                        //Widgets.DrawBox(simSrcRect);
+                        SplitVerticallyByRatio(
+                            simSrcRect,
+                            out Rect simSrcRad,
+                            out Rect simDonAmountRect,
+                            0.5f,
+                            paddingX
+                        );
+                        SplitHorizontallyByRatio(
+                            simSrcRad,
+                            out Rect simSrcChat,
+                            out Rect simSrcDon,
+                            0.5f,
+                            paddingY
+                        );
+                        SplitVerticallyByRatio(
+                            simSrcChat,
+                            out Rect simSrcChatRadBtn,
+                            out Rect simSrcChatDesc,
+                            0.5f,
+                            paddingX
+                        );
+                        SplitVerticallyByRatio(
+                            simSrcDon,
+                            out Rect simSrcDonRadBtn,
+                            out Rect simSrcDonDesc,
+                            0.5f,
+                            paddingX
+                        );
+                        SplitVerticallyByRatio(
+                            simDonAmountRect,
+                            out Rect simDonAmountDesc,
+                            out Rect simDonAmountField,
+                            0.5f,
+                            paddingX
+                        );
+                        oldAnchor = Text.Anchor;
+                        Text.Anchor = TextAnchor.MiddleLeft;
+                        simSrcChatRadBtn = ResizeRectCentered(simSrcChatRadBtn, btnSize, btnSize);
+                        simSrcDonRadBtn = ResizeRectCentered(simSrcDonRadBtn, btnSize, btnSize);
+                        if (Widgets.RadioButton(simSrcChatRadBtn.position, simSource == CheeseCommandSource.Chat))
+                            simSource = CheeseCommandSource.Chat;
+                        Widgets.Label(simSrcChatDesc, "채팅");
+                        if (Widgets.RadioButton(simSrcDonRadBtn.position, simSource == CheeseCommandSource.Donation))
+                            simSource = CheeseCommandSource.Donation;
+                        Widgets.Label(simSrcDonDesc, "후원");
+
+                        bool oldGUI2 = GUI.enabled;
+                        GUI.enabled = simSource == CheeseCommandSource.Donation && Prefs.DevMode;
+
+                        Text.Anchor = TextAnchor.MiddleCenter;
+                        Widgets.Label(simDonAmountDesc, "후원 금액 :");
+                        Text.Anchor = oldAnchor;
+                        simDonAmountField = ShrinkRect(simDonAmountField, 0, 0, simDonAmountField.height*0.25f, simDonAmountField.height*0.25f);
+                        UiNumericField.IntFieldDigitsOnly(simDonAmountField, ref simDonAmount, ref simDonAmountBuf, 0, maxAllowedDonation);
+                        GUI.enabled = oldGUI2;
+
+                        listing.Gap(lineH);
+                        Rect simBtn  = listing.GetRect(btnSize);
                         
-
-
+                        if (Widgets.ButtonText(simBtn, "시뮬레이션 실행"))
+                        {
+                            Log.Message("[CheeseProtocol] Run Simulation");
+                            //CheeseProtocolMod.ChzzkChat.UserConnect();
+                        }
+                        
+                        
                         GUI.enabled = oldGUI;
                     });
                     break;
@@ -293,6 +369,8 @@ namespace CheeseProtocol
 
             float sectionH = SectionPad + SectionHeaderH + 10f + contentH + SectionPad;
 
+            //Log.Message($"[CheeseProtocol] Title: {title}, SectionH = {sectionH}");
+
             Rect outer = new Rect(column.x, curY, column.width, sectionH);
             Widgets.DrawMenuSection(outer);
 
@@ -314,13 +392,12 @@ namespace CheeseProtocol
             );
 
             var listing = new Listing_Standard();
+            listing.maxOneColumn = true; 
             listing.Begin(contentRect);
             drawListing(listing);
-            listing.End();
-
-            // After drawing, record actual height for next frame
             if (Event.current.type == EventType.Layout)
                 sectionContentHeights[key] = listing.CurHeight;
+            listing.End();
 
             curY += sectionH + SectionGap;
         }
@@ -534,8 +611,6 @@ namespace CheeseProtocol
                 paddingX
             );
             bool oldGui2 = GUI.enabled;
-            int maxAllowedDonation = 1000000;
-            int minAllowedDonation = 1000;
             GUI.enabled = enabled && source == CheeseCommandSource.Donation;
             UiNumericField.IntFieldDigitsOnly(minDonField, ref minDonation, ref minDonationBuf, 0, maxAllowedDonation);
 
@@ -786,5 +861,17 @@ namespace CheeseProtocol
                 rect.height - top - bottom
             );
         }
-    }
+        public static Rect ResizeRectCentered(Rect rect, float targetWidth, float targetHeight)
+        {
+            float newWidth  = rect.width  > targetWidth  ? targetWidth  : rect.width;
+            float newHeight = rect.height > targetHeight ? targetHeight : rect.height;
+
+            return new Rect(
+                rect.x + (rect.width  - newWidth)  * 0.5f,
+                rect.y + (rect.height - newHeight) * 0.5f,
+                newWidth,
+                newHeight
+            );
+        }
+            }
 }

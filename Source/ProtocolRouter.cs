@@ -5,37 +5,37 @@ namespace CheeseProtocol
 {
     public static class ProtocolRouter
     {
-        public static void RouteAndExecute(DonationEvent donation)
+        public static void RouteAndExecute(CheeseEvent evt)
         {
-            if (donation == null) return;
+            if (evt == null) return;
 
             Map map = Find.AnyPlayerHomeMap ?? Find.CurrentMap;
             if (map == null)
             {
-                Log.Warning("[CheeseProtocol] No map available; skipping donation: " + donation);
+                Log.Warning("[CheeseProtocol] No map available; skipping donation: " + evt);
                 return;
             }
 
-            var ctx = new ProtocolContext(donation, map);
+            var ctx = new ProtocolContext(evt, map);
 
-            string msg = (donation.message ?? "").Trim();
+            string msg = (evt.message ?? "").Trim();
             CheeseCommand cmd = CheeseCommand.None;
             string args = string.Empty;
 
             if (msg.StartsWith("!"))
                 cmd = CheeseCommandParser.Parse(msg, out args);
 
-            var protocol = FindProtocolForDonation(donation, cmd);
+            var protocol = FindProtocolForDonation(evt, cmd);
 
             if (cmd == CheeseCommand.None || CheeseProtocolMod.Settings == null || !CheeseProtocolMod.Settings.TryGetCommandConfig(cmd, out var cfg))
                 return;
 
-            if (!IsProtocolAllowedBySettings(CheeseProtocolMod.Settings, cfg, donation))
+            if (!IsProtocolAllowedBySettings(CheeseProtocolMod.Settings, cfg, evt))
                 return;
 
             if (protocol == null)
             {
-                Log.Warning("[CheeseProtocol] No protocol matched donation: " + donation);
+                Log.Warning("[CheeseProtocol] No protocol matched donation: " + evt);
                 return;
             }
 
@@ -57,9 +57,9 @@ namespace CheeseProtocol
             }
         }
 
-        private static IProtocol FindProtocolForDonation(DonationEvent donation, CheeseCommand cmd)
+        private static IProtocol FindProtocolForDonation(CheeseEvent evt, CheeseCommand cmd)
         {
-            string msg = (donation.message ?? "").Trim();
+            string msg = (evt.message ?? "").Trim();
             if (cmd != CheeseCommand.None &&
                 CheeseCommandParser.TryGetSpec(cmd, out var spec))
             {
@@ -70,16 +70,16 @@ namespace CheeseProtocol
 
             return ProtocolRegistry.ById("noop");
         }
-        private static bool IsProtocolAllowedBySettings(CheeseSettings settings, CheeseCommandConfig cfg, DonationEvent ev)
+        private static bool IsProtocolAllowedBySettings(CheeseSettings settings, CheeseCommandConfig cfg, CheeseEvent evt)
         {
             if (!cfg.enabled) return false;
 
             if (cfg.source == CheeseCommandSource.Donation)
             {
-                if (!ev.isDonation) return false;
-                if (!(ev.amount >= cfg.minDonation))
+                if (!evt.isDonation) return false;
+                if (!(evt.amount >= cfg.minDonation))
                 {
-                    Log.Message($"[CheeseProtocol] Command ignored (<min_donation): \"{ev.message}\"");
+                    Log.Message($"[CheeseProtocol] Command ignored (<min_donation): \"{evt.message}\"");
                     return false;
                 }
             }
@@ -94,7 +94,7 @@ namespace CheeseProtocol
 
             if (!cdState.IsReady(cfg.cmd, cfg.cooldownHours, nowTick))
             {
-                Log.Message($"[CheeseProtocol] Command ignored (on cooldown): \"{ev.message}\"");
+                Log.Message($"[CheeseProtocol] Command ignored (on cooldown): \"{evt.message}\"");
                 return false;
             }
             return true;

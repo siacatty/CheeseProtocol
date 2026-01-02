@@ -5,6 +5,7 @@ using RimWorld;
 using Verse;
 using WebSocket4Net;
 using System.Collections.Concurrent;
+using System.Runtime.InteropServices;
 
 namespace CheeseProtocol
 {
@@ -18,10 +19,8 @@ namespace CheeseProtocol
         }
         private readonly Queue<(LogLevel level, string msg)> pendingLogs
     = new Queue<(LogLevel, string)>();
-        private readonly ConcurrentQueue<ChatEvent> chatQueue
-        = new ConcurrentQueue<ChatEvent>();
-        private readonly ConcurrentQueue<DonationEvent> donationQueue
-    = new ConcurrentQueue<DonationEvent>();
+        private readonly ConcurrentQueue<CheeseEvent> cheeseEvtQueue
+    = new ConcurrentQueue<CheeseEvent>();
         private readonly CheeseSettings settings;
 
         private WebSocket ws;
@@ -61,8 +60,7 @@ namespace CheeseProtocol
         private bool connectInProgress = false;
         private const int MaxEventsPerTick = 10;
         private const int MaxQueueSize = 1000;
-        private int droppedChat = 0;
-        private int droppedDon = 0;
+        private int droppedEvt = 0;
         private int jsonErrorCount = 0;
         private string lastJsonErrorSample = null;
 
@@ -375,8 +373,7 @@ namespace CheeseProtocol
                     {
                         sid = sidObj?.ToString();
                         StartHeartbeatTimer();
-                        droppedChat = 0;
-                        droppedDon = 0;
+                        droppedEvt = 0;
                         jsonErrorCount = 0;
                         settings.chzzkStatus = "Connected: waiting for chat/cheese";
                         CheeseGameComponent.Instance?.UpdateUiStatus(s =>
@@ -400,57 +397,18 @@ namespace CheeseProtocol
                 foreach (var item in list)
                 {
                     var msgObj = item as Dictionary<string, object>;
-                    if (msgObj == null) continue;
-
-                    var msg = msgObj.TryGetValue("msg", out var msgText) ? msgText?.ToString() : null;
-                    if (!string.IsNullOrWhiteSpace(msg))
+                    CheeseEvent evt = CreateCheeseEvent(msgObj, false);
+                    if (evt == null)
                     {
-                        var trimmed = msg.TrimStart();
-                        if (!trimmed.StartsWith("!"))
-                            continue;
-                    }
-                    else
-                    {
+                        EnqueueWarning("[CheeseProtocol] CheeseEvent creation failed from chat");
                         continue;
                     }
-                    var chat_evt = new ChatEvent
-                    {
-                        receivedAtUtcMs = ChatEvent.NowUtcMs(),
-                        chatChannelId = chatChannelId,
-                        uid = msgObj.TryGetValue("uid", out var uid) ? uid?.ToString() : null,
-                        nickname = ExtractNickname(msgObj),
-                        message = msg,
-                        msgTimeMs = msgObj.TryGetValue("msgTime", out var mt) ? ParseLongSafe(mt) : 0
-                    };
-
-                    // dedupe key
-                    chat_evt.dedupeKey = $"{chat_evt.msgTimeMs}|{chat_evt.uid}|{chat_evt.message}";
-                    // queue overflow 
-                    if (chatQueue.Count >= MaxQueueSize)
-                    {
-                        if (droppedChat++ % 100 == 0)
-                            EnqueueWarning($"[CheeseProtocol] Queue overflow, dropping. droppedChat={droppedChat}");
-                    }
-                    else
-                    {
-                        chatQueue.Enqueue(chat_evt);
-                    }
-                    /*
-                    var evt = new DonationEvent
-                    {
-                        donor = string.IsNullOrWhiteSpace(nickname) ? "Unknown" : nickname,
-                        amount = 0,
-                        message = msg
-                    };
-                    */
-
-                    EnqueueMessage($"[CheeseProtocol] [{chat_evt.msgTimeMs}]{chat_evt.nickname}: {chat_evt.message}");
-
-                    // Use existing keyword routing (!참여/!습격/!상단)
-                    //ProtocolRouter.RouteAndExecute(evt);
+                    else if (!TryEnqueueMessage(evt))
+                        continue;
                 }
                 return;
             }
+            // donation batch
             if (cmd == 93102)
             {
                 //EnqueueWarning("[CheeseProtocol][RAW-CMD] cmd=" + cmd + " raw=" + raw);
@@ -462,70 +420,81 @@ namespace CheeseProtocol
                 foreach (var item in list)
                 {
                     var msgObj = item as Dictionary<string, object>;
-                    if (msgObj == null) continue;
-
-                    // extras is a JSON string
-                    var extrasJson = msgObj.TryGetValue("extras", out var ex) ? ex?.ToString() : null;
-                    if (string.IsNullOrWhiteSpace(extrasJson)) continue;
-
-                    Dictionary<string, object> extras = null;
-                    try { extras = MiniJSON.Deserialize(extrasJson) as Dictionary<string, object>; }
-                    catch { extras = null; }
-                    if (extras == null) continue;
-
-                    var msg = msgObj.TryGetValue("msg", out var m) ? m?.ToString() : null;
-
-                    if (!string.IsNullOrWhiteSpace(msg))
+                    CheeseEvent evt = CreateCheeseEvent(msgObj, true);
+                    if (evt == null)
                     {
-                        var trimmed = msg.TrimStart();
-                        if (!trimmed.StartsWith("!"))
-                            continue;
-                    }
-                    else
-                    {
+                        EnqueueWarning("[CheeseProtocol] CheeseEvent creation failed from donation");
                         continue;
                     }
-
-                    var donor = extras.TryGetValue("nickname", out var nn) ? nn?.ToString() : null;
-
-                    int amount = 0;
-                    if (extras.TryGetValue("payAmount", out var pa))
-                        amount = ParseIntSafe(pa);
-
-                    var donationId = extras.TryGetValue("donationId", out var did) ? did?.ToString() : null;
-
-                    var donationType = extras.TryGetValue("donationType", out var dt) ? dt?.ToString() : null;
-
-                    // Build DonationEvent and enqueue (no game logic here)
-                    var evt = new DonationEvent
-                    {
-                        receivedAtUtcMs = DonationEvent.NowUtcMs(),
-                        donor = string.IsNullOrWhiteSpace(donor) ? "Unknown" : donor,
-                        amount = amount,
-                        message = msg,
-                        donationId = donationId,
-                        donationType = donationType,
-                        isDonation = true,
-                        dedupeKey = !string.IsNullOrWhiteSpace(donationId)
-                            ? "don:" + donationId
-                            : $"don:{donor}|{amount}|{msg}"
-                    };
-                    if (donationQueue.Count >= MaxQueueSize)
-                    {
-                        if (droppedDon++ % 100 == 0)
-                            EnqueueWarning($"[CheeseProtocol]Queue overflow, dropping. droppedDon={droppedDon}");
-                    }
-                    else
-                    {
-                        donationQueue.Enqueue(evt);
-                    }
-                    EnqueueMessage($"[CheeseProtocol][DON] {evt.donor} type={evt.donationType} amount={evt.amount} msg={evt.message}");
+                    else if (!TryEnqueueMessage(evt))
+                        continue;
                 }
                 return;
             }
 
 
             // Heartbeat etc. ignore
+        }
+
+        private CheeseEvent CreateCheeseEvent(Dictionary<string, object> msgObj, bool isDonation)
+        {   
+            if (msgObj == null) return null;
+
+            var msg = msgObj.TryGetValue("msg", out var m) ? m?.ToString() : null;
+
+            if (!string.IsNullOrWhiteSpace(msg))
+            {
+                var trimmed = msg.TrimStart();
+                if (!trimmed.StartsWith("!"))
+                    return null;
+            }
+            else
+            {
+                return null;
+            }
+
+            // extras is a JSON string
+            Dictionary<string, object> extras = null;
+            int amount = 0;
+            string username = "Unknown";
+            var msgTimeMs = msgObj.TryGetValue("msgTime", out var mt) ? ParseLongSafe(mt) : 0;
+
+            if (isDonation)
+            {
+                var extrasJson = msgObj.TryGetValue("extras", out var ex) ? ex?.ToString() : null;
+                if (string.IsNullOrWhiteSpace(extrasJson)) return null;
+                try { extras = MiniJSON.Deserialize(extrasJson) as Dictionary<string, object>; }
+                catch { extras = null; }
+                if (extras == null) return null;
+                username = extras.TryGetValue("nickname", out var nn) ? nn?.ToString() : null;
+                if (extras.TryGetValue("payAmount", out var pa))
+                    amount = ParseIntSafe(pa);
+                var donationId = extras.TryGetValue("donationId", out var did) ? did?.ToString() : null;
+                var donationType = extras.TryGetValue("donationType", out var dt) ? dt?.ToString() : null;
+
+                return CheeseSimFactory.MakeDonationEvent(username, msg, amount, donationType, donationId, msgTimeMs);
+            }
+            username = ExtractNickname(msgObj);
+
+            return CheeseSimFactory.MakeChatEvent(username, msg, msgTimeMs);
+        }
+
+        private bool TryEnqueueMessage(CheeseEvent evt)
+        {
+            if (cheeseEvtQueue.Count >= MaxQueueSize)
+            {
+                if (droppedEvt++ % 100 == 0)
+                {
+                    EnqueueWarning($"[CheeseProtocol]Queue overflow, dropping. droppedEvt={droppedEvt}");
+                    return false;
+                }
+            }
+            else
+            {
+                cheeseEvtQueue.Enqueue(evt);
+            }
+            EnqueueMessage($"[CheeseProtocol][DON] {evt.username} type={evt.donationType} amount={evt.amount} msg={evt.message}");
+            return true;
         }
 
         private void OnDisconnected(string reason)
@@ -577,36 +546,15 @@ namespace CheeseProtocol
             var nowMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
             int budget = MaxEventsPerTick;
 
-            while (budget > 0 && donationQueue.TryDequeue(out var don))
+            while (budget > 0 && cheeseEvtQueue.TryDequeue(out var evt))
             {
                 budget--;
 
-                if (!string.IsNullOrEmpty(don.dedupeKey) && IsDuplicate(don.dedupeKey, nowMs))
+                if (!string.IsNullOrEmpty(evt.dedupeKey) && IsDuplicate(evt.dedupeKey, nowMs))
                     continue;
-
-                ProtocolRouter.RouteAndExecute(don);
-            }
-
-            while (budget > 0 && chatQueue.TryDequeue(out var chat))
-            {
-                budget--;
-
-                if (!string.IsNullOrEmpty(chat.dedupeKey) && IsDuplicate(chat.dedupeKey, nowMs))
-                    continue;
-
-                var evt = new DonationEvent
-                {
-                    receivedAtUtcMs = chat.receivedAtUtcMs,
-                    donor = string.IsNullOrWhiteSpace(chat.nickname) ? "Unknown" : chat.nickname,
-                    amount = 0,
-                    message = chat.message,
-                    dedupeKey = chat.dedupeKey,
-                    isDonation = false
-                };
 
                 ProtocolRouter.RouteAndExecute(evt);
             }
-
             CleanupSeen(nowMs);
         }
         

@@ -9,16 +9,16 @@ namespace CheeseProtocol.Protocols
 
         public bool CanExecute(ProtocolContext ctx)
         {
-            return ctx?.Map != null && ctx?.Donation != null;
+            return ctx?.Map != null && ctx?.CheeseEvt != null;
         }
 
         public void Execute(ProtocolContext ctx)
         {
-            var d = ctx.Donation;
-            Log.Warning($"[CheeseProtocol] Executing protocol={Id} for {d}");
+            var evt = ctx.CheeseEvt;
+            Log.Warning($"[CheeseProtocol] Executing protocol={Id} for {evt}");
 
             // Use your existing spawner
-            ColonistSpawner.Spawn(d.donor, d.amount, d.message);
+            ColonistSpawner.Spawn(evt.username, evt.amount, evt.message);
         }
     }
 }
