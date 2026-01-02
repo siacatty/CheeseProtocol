@@ -13,18 +13,20 @@ namespace CheeseProtocol
     {
         private Vector2 scrollPos = Vector2.zero;
         private float viewHeight = 800f; // 대충 크게 잡아두면 OK
-        public bool useDropPod = true;
-        public string chzzkStudioUrl = "";
-        public string chzzkStatus = "Disconnected";
-        public bool showHud = true;
-        public bool hudLocked = false;
-        public bool drainQueue = true;
-        public float hudX = -1f;   // -1이면 아직 저장된 위치 없음(기본 위치 사용)
-        public float hudY = -1f;
-        public CheeseCommandSource simSource = CheeseCommandSource.Donation;
-        public int simDonAmount = 1000;
-        public string simDonAmountBuf = "1000";
-        public bool hudMinimized = false;
+        public bool useDropPod = CheeseDefaults.UseDropPod;
+        public string chzzkStudioUrl = CheeseDefaults.ChzzkStudioUrl;
+        public string chzzkStatus = CheeseDefaults.ChzzkStatus;
+        public bool showHud = CheeseDefaults.ShowHud;
+        public bool hudLocked = CheeseDefaults.HudLocked;
+        public float hudOpacity = CheeseDefaults.HudOpacity;
+        public bool drainQueue = CheeseDefaults.DrainQueue;
+        public float hudX = CheeseDefaults.HudX;   // -1이면 아직 저장된 위치 없음(기본 위치 사용)
+        public float hudY = CheeseDefaults.HudY;
+        public CheeseCommandSource simSource = CheeseDefaults.SimSource;
+        public int simDonAmount = CheeseDefaults.SimDonAmount;
+        public string simDonAmountBuf = CheeseDefaults.SimDonAmountBuf;
+        public bool hudMinimized = CheeseDefaults.HudMinimized;
+        public bool hudSlideHidden = CheeseDefaults.HudSlideHidden;
         private enum CheeseSettingsTab { General, Command, Advanced, Simulation, Credits }
         private CheeseSettingsTab activeTab = CheeseSettingsTab.General;
 
@@ -33,24 +35,55 @@ namespace CheeseProtocol
         private const float SectionHeaderH = 26f;
         private const float SectionGap = 10f;
         private const float separatorH = 12f;
+        private const float lineH = 26f;
         public List<CheeseCommandConfig> commandConfigs;
         public CheeseCommandConfig selectedConfig;
         private const int maxAllowedDonation = 1000000;
         private const int minAllowedDonation = 1000;
 
+        public void ResetToDefaults()
+        {
+            useDropPod = CheeseDefaults.UseDropPod;
+            chzzkStudioUrl = CheeseDefaults.ChzzkStudioUrl;
+            chzzkStatus = CheeseDefaults.ChzzkStatus;
+            showHud = CheeseDefaults.ShowHud;
+            hudLocked = CheeseDefaults.HudLocked;
+            hudOpacity = CheeseDefaults.HudOpacity;
+            hudX = CheeseDefaults.HudX;
+            hudY = CheeseDefaults.HudY;
+            simSource = CheeseDefaults.SimSource;
+            simDonAmount = CheeseDefaults.SimDonAmount;
+            simDonAmountBuf = CheeseDefaults.SimDonAmountBuf;
+            drainQueue = CheeseDefaults.DrainQueue;
+            EnsureCommandConfigs();
+            for (int i = 0; i < commandConfigs.Count; i++)
+            {
+                var c = commandConfigs[i];
+                c.enabled = CheeseDefaults.CmdEnabled;
+                c.source = CheeseDefaults.CmdSource;
+                c.minDonation = CheeseDefaults.CmdMinDonation;
+                c.maxDonation = CheeseDefaults.CmdMaxDonation;
+                c.cooldownHours = CheeseDefaults.CmdCooldownHours;
+            }
+
+        }
+
         public override void ExposeData()
         {
-            Scribe_Values.Look(ref useDropPod, "useDropPod", true);
-            Scribe_Values.Look(ref chzzkStudioUrl, "chzzkStudioUrl", "");
-            Scribe_Values.Look(ref chzzkStatus, "chzzkStatus", "Disconnected");
-            Scribe_Values.Look(ref showHud, "showHud", true);
-            Scribe_Values.Look(ref hudLocked, "hudLocked", false);
-            Scribe_Values.Look(ref hudX, "hudX", -1f);
-            Scribe_Values.Look(ref hudY, "hudY", -1f);
-            Scribe_Values.Look(ref simSource, "simSource", CheeseCommandSource.Donation);
-            Scribe_Values.Look(ref simDonAmount, "simDonAmount", 1000);
-            Scribe_Values.Look(ref simDonAmountBuf, "simDonAmountBuf", "1000");
-            Scribe_Values.Look(ref drainQueue, "drainQueue", true);
+            Scribe_Values.Look(ref useDropPod, "useDropPod", CheeseDefaults.UseDropPod);
+            Scribe_Values.Look(ref chzzkStudioUrl, "chzzkStudioUrl", CheeseDefaults.ChzzkStudioUrl);
+            Scribe_Values.Look(ref chzzkStatus, "chzzkStatus", CheeseDefaults.ChzzkStatus);
+            Scribe_Values.Look(ref showHud, "showHud", CheeseDefaults.ShowHud);
+            Scribe_Values.Look(ref hudLocked, "hudLocked", CheeseDefaults.HudLocked);
+            Scribe_Values.Look(ref hudOpacity, "hudOpacity", CheeseDefaults.HudOpacity);
+            Scribe_Values.Look(ref hudMinimized, "hudMinimized", CheeseDefaults.HudMinimized);
+            Scribe_Values.Look(ref hudSlideHidden, "hudSlideHidden", CheeseDefaults.HudSlideHidden);
+            Scribe_Values.Look(ref hudX, "hudX", CheeseDefaults.HudX);
+            Scribe_Values.Look(ref hudY, "hudY", CheeseDefaults.HudY);
+            Scribe_Values.Look(ref simSource, "simSource", CheeseDefaults.SimSource);
+            Scribe_Values.Look(ref simDonAmount, "simDonAmount", CheeseDefaults.SimDonAmount);
+            Scribe_Values.Look(ref simDonAmountBuf, "simDonAmountBuf", CheeseDefaults.SimDonAmountBuf);
+            Scribe_Values.Look(ref drainQueue, "drainQueue", CheeseDefaults.DrainQueue);
             EnsureCommandConfigs();
 
             for (int i = 0; i < commandConfigs.Count; i++)
@@ -58,25 +91,16 @@ namespace CheeseProtocol
                 var c = commandConfigs[i];
                 string p = "cmd_" + c.ScribeKeyPrefix + "_"; // e.g. cmd_Join_
 
-                Scribe_Values.Look(ref c.enabled,        p + "enabled", true);
-                Scribe_Values.Look(ref c.source,         p + "source", CheeseCommandSource.Donation);
-                Scribe_Values.Look(ref c.minDonation, p + "minDonation", 1000);
-                Scribe_Values.Look(ref c.cooldownHours, p + "cooldownHours", 0);
+                Scribe_Values.Look(ref c.enabled,        p + "enabled", CheeseDefaults.CmdEnabled);
+                Scribe_Values.Look(ref c.source,         p + "source", CheeseDefaults.CmdSource);
+                Scribe_Values.Look(ref c.minDonation, p + "minDonation", CheeseDefaults.CmdMinDonation);
+                Scribe_Values.Look(ref c.maxDonation, p + "maxDonation", CheeseDefaults.CmdMaxDonation);
+                Scribe_Values.Look(ref c.cooldownHours, p + "cooldownHours", CheeseDefaults.CmdCooldownHours);
             }
 
             if (Scribe.mode == LoadSaveMode.PostLoadInit || Scribe.mode == LoadSaveMode.Saving)
             {
                 FixupCommandDefaults();
-                for (int i = 0; i < commandConfigs.Count; i++)
-                {
-                    var c = commandConfigs[i];
-
-                    if (c.source == CheeseCommandSource.Donation)
-                        c.minDonation = Mathf.Max(1000, c.minDonation);
-                    c.cooldownHours = Mathf.Max(0, c.cooldownHours);
-                    c.minDonationBuf = c.minDonation.ToString();
-                    c.cooldownBuf = c.cooldownHours.ToString();
-                }
             }
         }
 
@@ -161,8 +185,16 @@ namespace CheeseProtocol
                     });
                     DrawSection(left, ref yL, "HUD", listing =>
                     {
+                        float paddingX = 6f;
                         listing.CheckboxLabeled("HUD 표시", ref showHud);
                         listing.CheckboxLabeled("HUD 현재 위치 고정", ref hudLocked);
+                        Rect opacityRect = listing.GetRect(lineH*2f);
+                        SplitVerticallyByRatio(opacityRect, out Rect opacityDesc, out Rect opacitySlider, 0.4f, paddingX);
+                        var prevAnchor = Text.Anchor;
+                        Text.Anchor = TextAnchor.MiddleLeft;
+                        Widgets.Label(opacityDesc, "HUD 배경 불투명도");
+                        Text.Anchor = prevAnchor;
+                        hudOpacity = Widgets.HorizontalSlider(opacitySlider, hudOpacity, 0.05f, 1f, true, label:$"{Mathf.RoundToInt(hudOpacity * 100f)}%");
                     });
                     DrawSection(right, ref yR, "기타", listing =>
                     {
@@ -170,18 +202,35 @@ namespace CheeseProtocol
                         listing.Gap(4);
                         var prev = GUI.color;
                         GUI.color = new Color(230f / 255f, 195f / 255f, 92f / 255f);
-                        listing.Label("[WARNING!]\n모드가 많거나 렉이 심한 환경에서는 비활성화를 권장.\n비활성화 시, 퍼즈 상태에서 들어온 명령어는 퍼즈 해제 후 일괄 처리");
+                        listing.Label("[WARNING!]\n모드가 많거나 렉이 심하면 비활성화를 권장.\n비활성화 시, 퍼즈 중 명령어는 퍼즈 해제 후 일괄 처리");
                         GUI.color = prev;
                         listing.GapLine();
                         Rect cooldownResetRect = listing.GetRect(btnSize*2f);
                         cooldownResetRect = ResizeRectCentered(cooldownResetRect, cooldownResetRect.width*0.5f, btnSize*1.5f);
                         if (Widgets.ButtonText(cooldownResetRect, "모든 명령어 쿨타임 리셋"))
                             CheeseProtocolMod.ChzzkChat.ResetCooldown();
+                        listing.Gap(8);
+                        Rect resetSettingRect = listing.GetRect(btnSize*2f);
+                        resetSettingRect = ResizeRectCentered(resetSettingRect, resetSettingRect.width*0.5f, btnSize*1.5f);
+                        if (Widgets.ButtonText(resetSettingRect, "모든 설정 초기화"))
+                        {
+                            Find.WindowStack.Add(
+                                Dialog_MessageBox.CreateConfirmation(
+                                    "모든 설정을 기본값으로 되돌릴까요?\n(되돌릴 수 없습니다)",
+                                    confirmedAct: () =>
+                                    {
+                                        ResetToDefaults();
+                                        Write();
+                                        CheeseProtocolMod.ChzzkChat.UserConnect();
+                                    },
+                                    destructive: true
+                                )
+                            );
+                        }
                     });
                     break;
 
                 case CheeseSettingsTab.Command:
-                    float lineH = 26f;
                     float paddingX = 6f;
                     float paddingY = 12f;
                     float rowH = lineH * 2f + paddingY;
@@ -193,7 +242,7 @@ namespace CheeseProtocol
                         gridH
                     );
 
-                    DrawCommandsGridTwoLine(commandsRect, lineH, paddingX, paddingY);
+                    DrawCommandSection(commandsRect, lineH, paddingX, paddingY);
 
                     yL = gridH + 10f;
                     break;
@@ -207,7 +256,6 @@ namespace CheeseProtocol
                 case CheeseSettingsTab.Simulation:
                     DrawSection(left, ref yL, "시뮬레이션", listing =>
                     {
-                        float lineH = 26f;
                         float paddingX = 6f;
                         float paddingY = 12f;
                         listing.Label("시뮬레이션 (개발자 모드 전용)\n환경설정 → 개발자 모드 활성화");
@@ -377,9 +425,14 @@ namespace CheeseProtocol
             for (int i = 0; i < commandConfigs.Count; i++)
             {
                 var c = commandConfigs[i];
-                if (c.minDonation <= 0)
-                    c.minDonation = DefaultMinDonationFor(c.cmd);
+                if (c.minDonation < CheeseCommandConfig.defaultMinDonation)
+                    c.minDonation = CheeseCommandConfig.defaultMinDonation;
+                if (c.maxDonation < CheeseCommandConfig.defaultMinDonation)
+                    c.maxDonation = CheeseCommandConfig.defaultMaxDonation;
+                if (c.minDonation > c.maxDonation)
+                    c.maxDonation = c.minDonation;
                 c.minDonationBuf = c.minDonation.ToString();
+                c.maxDonationBuf = c.maxDonation.ToString();
                 c.cooldownBuf = c.cooldownHours.ToString();
             }
         }
@@ -452,7 +505,7 @@ namespace CheeseProtocol
             if (Widgets.ButtonText(new Rect(tabRect.x + (w + 6f) * 4, tabRect.y, w, h), "Credits")) activeTab = CheeseSettingsTab.Credits;
         }
 
-        private void DrawCommandsGridTwoLine(Rect rect, float lineH, float paddingX, float paddingY)
+        private void DrawCommandSection(Rect rect, float lineH, float paddingX, float paddingY)
         {
             Widgets.DrawMenuSection(rect);
             Rect inner = rect.ContractedBy(8f);
@@ -467,7 +520,7 @@ namespace CheeseProtocol
             float y = inner.y;
             float lineY;
             List<float> separatorPosX = new List<float>();
-            var ratios = new float[] { 0.2f, 0.1f, 0.16f, 0.27f, 0.27f };
+            var ratios = new float[] { 0.1f, 0.1f, 0.16f, 0.25f, 0.19f, 0.20f };
             Rect rowRect = new Rect(inner.x, y, inner.width, rowH);
 
             DrawCommandRowHeader(rowRect, ref y, rowH, paddingX, ratios, separatorPosX);
@@ -496,6 +549,8 @@ namespace CheeseProtocol
                     ref c.source,
                     ref c.minDonation,
                     ref c.minDonationBuf,
+                    ref c.maxDonation,
+                    ref c.maxDonationBuf,
                     ref c.cooldownHours,
                     ref c.cooldownBuf
                 );
@@ -524,13 +579,14 @@ namespace CheeseProtocol
         }
         private void DrawCommandRowHeader(Rect rect, ref float curY, float rowH, float paddingX, float[] ratios, List<float> separatorPosX)
         {
-            var cols = new List<Rect>(5);
+            var cols = new List<Rect>(ratios.Length);
             SplitVerticallyByRatios(rect, ratios, paddingX, cols);
             Rect cmdRect = cols[0];
             Rect enableRect  = cols[1];
             Rect srcRadioRect = cols[2];
             Rect minDonRect = cols[3];
-            Rect cdRect = cols[4];
+            Rect maxDonRect = cols[4];
+            Rect cdRect = cols[5];
             for (int i = 0; i < cols.Count-1; i++)
             {
                 separatorPosX.Add(cols[i].xMax);
@@ -543,6 +599,7 @@ namespace CheeseProtocol
             Widgets.Label(enableRect, "활성화");
             Widgets.Label(srcRadioRect, "트리거 방식");
             Widgets.Label(minDonRect, "최소 후원 금액 (₩)");
+            Widgets.Label(maxDonRect, "효과 상한 금액 (₩)");
             Widgets.Label(cdRect, "쿨타임 (인게임 시간)");
             Text.Anchor = oldAnchor;
 
@@ -560,18 +617,21 @@ namespace CheeseProtocol
             ref CheeseCommandSource source,
             ref int minDonation,
             ref string minDonationBuf,
+            ref int maxDonation,
+            ref string maxDonationBuf,
             ref int cooldownHours,
             ref string cooldownBuf)
         {
             Widgets.DrawHighlightIfMouseover(rect);
-            var cols = new List<Rect>(5);
+            var cols = new List<Rect>(ratios.Length);
             SplitVerticallyByRatios(rect, ratios, paddingX, cols);
 
             Rect cmdRect = cols[0];
             Rect enableRect  = cols[1];
             Rect srcRadioRect = cols[2];
             Rect minDonRect = cols[3];
-            Rect cdRect = cols[4];
+            Rect maxDonRect = cols[4];
+            Rect cdRect = cols[5];
             float btnSize = 24f;
 
             //command (e.g. !참여)
@@ -651,15 +711,15 @@ namespace CheeseProtocol
             );
             bool oldGui2 = GUI.enabled;
             GUI.enabled = enabled && source == CheeseCommandSource.Donation;
-            UiNumericField.IntFieldDigitsOnly(minDonField, ref minDonation, ref minDonationBuf, 0, maxAllowedDonation);
+            UiNumericField.IntFieldDigitsOnly(minDonField, ref minDonation, ref minDonationBuf, 0, maxDonation);
 
             float sliderDonValue = minDonation;
-            int stepDon = 1000;
+            int stepDon = 500;
             float newSliderDonValue = Widgets.HorizontalSlider(
                 minDonSlider,
                 sliderDonValue,
                 minAllowedDonation,
-                maxAllowedDonation,
+                maxDonation,
                 middleAlignment: true,
                 label: null,
                 leftAlignedLabel: null,
@@ -684,6 +744,27 @@ namespace CheeseProtocol
                 Text.Anchor = oldAnchor;
                 GUI.color = prev;
             }
+            else if (minDonation > maxDonation)
+            {
+                Color prev = GUI.color;
+                GUI.color = Color.yellow;
+                oldAnchor = Text.Anchor;
+                Text.Anchor = TextAnchor.MiddleCenter;
+                Widgets.Label(minDonWarning, "> 효과최대 금액");
+                Text.Anchor = oldAnchor;
+                GUI.color = prev;
+            }
+            //Maximum donation amount text field
+            SplitHorizontallyByRatio(
+                maxDonRect,
+                out Rect maxDonEmpty,
+                out Rect maxDonField,
+                0.5f,
+                paddingY
+            );
+            maxDonField = ResizeRectCentered(maxDonField, maxDonField.width*0.6f, maxDonField.height);
+            UiNumericField.IntFieldDigitsOnly(maxDonField, ref maxDonation, ref maxDonationBuf, 0, maxAllowedDonation);
+
             GUI.enabled = oldGui2;
 
             //Cooldown text field
@@ -746,18 +827,12 @@ namespace CheeseProtocol
         public bool TryGetCommandConfig(CheeseCommand cmd, out CheeseCommandConfig cfg)
         {
             EnsureCommandConfigs();
-
+            FixupCommandDefaults();
             for (int i = 0; i < commandConfigs.Count; i++)
             {
                 if (commandConfigs[i].cmd == cmd)
                 {
                     cfg = commandConfigs[i];
-                    if (cfg.minDonation <= 0)
-                    {
-                        cfg.minDonation = DefaultMinDonationFor(cfg.cmd);
-                        cfg.minDonationBuf = cfg.minDonation.ToString();
-                    }
-
                     return true;
                 }
             }
@@ -891,7 +966,7 @@ namespace CheeseProtocol
                 y = part.yMax + margin;
             }
         }
-        public static Rect ShrinkRect(Rect rect, float left, float right, float top, float bottom)
+        public static Rect ShrinkRect(Rect rect, float left=0, float right=0, float top=0, float bottom=0)
         {
             return new Rect(
                 rect.x + left,
