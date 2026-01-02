@@ -6,6 +6,7 @@ using Verse;
 using WebSocket4Net;
 using System.Collections.Concurrent;
 using System.Runtime.InteropServices;
+using UnityEngine;
 
 namespace CheeseProtocol
 {
@@ -63,6 +64,7 @@ namespace CheeseProtocol
         private int droppedEvt = 0;
         private int jsonErrorCount = 0;
         private string lastJsonErrorSample = null;
+        private int evtQueueDraining = 0;
 
         public ChzzkChatClient(CheeseSettings settings)
         {
@@ -267,26 +269,8 @@ namespace CheeseProtocol
                 watchRequested = false;
                 CheckChannelAndSwitchIfNeeded();
             }
-
-            ProcessEventQueues();
-
-            //if (ws == null) return;
-
-            // Handshake silent watchdog
-            /*
-            if (ws != null && sid != null)
-            {
-                ticksSinceHandshake++;
-                int now = Find.TickManager.TicksGame;
-                if (now - lastRecvTick > 60 * 10) // 10초 동안 아무것도 안 오면
-                {
-                    reconnectReason = "no_messages_10s";
-                    settings.chzzkStatus = "Chat: reconnecting (silent)";
-                    reconnectRequested = true;
-                }
-                // ~10 seconds at 60 ticks/sec = 600 ticks
-            }
-            */
+            if (!settings.drainQueue)
+                ProcessEventQueues();
         }
 
         private void SendConnect()
@@ -472,7 +456,7 @@ namespace CheeseProtocol
                 var donationId = extras.TryGetValue("donationId", out var did) ? did?.ToString() : null;
                 var donationType = extras.TryGetValue("donationType", out var dt) ? dt?.ToString() : null;
 
-                return CheeseSimFactory.MakeDonationEvent(username, msg, amount, donationType, donationId, msgTimeMs);
+                return CheeseSimFactory.MakeDonationEvent(username, msg, msgTimeMs, amount, donationType, donationId);
             }
             username = ExtractNickname(msgObj);
 
@@ -541,21 +525,30 @@ namespace CheeseProtocol
             }
         }
 
-        private void ProcessEventQueues()
+        public void ProcessEventQueues()
         {
-            var nowMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-            int budget = MaxEventsPerTick;
-
-            while (budget > 0 && cheeseEvtQueue.TryDequeue(out var evt))
+            if (System.Threading.Interlocked.Exchange(ref evtQueueDraining, 1) == 1)
+                return;
+            try
             {
-                budget--;
+                var nowMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+                int budget = MaxEventsPerTick;
 
-                if (!string.IsNullOrEmpty(evt.dedupeKey) && IsDuplicate(evt.dedupeKey, nowMs))
-                    continue;
+                while (budget > 0 && cheeseEvtQueue.TryDequeue(out var evt))
+                {
+                    budget--;
 
-                ProtocolRouter.RouteAndExecute(evt);
+                    if (!string.IsNullOrEmpty(evt.dedupeKey) && IsDuplicate(evt.dedupeKey, nowMs))
+                        continue;
+
+                    ProtocolRouter.RouteAndExecute(evt);
+                }
+                CleanupSeen(nowMs);   
             }
-            CleanupSeen(nowMs);
+            finally
+            {
+                System.Threading.Interlocked.Exchange(ref evtQueueDraining, 0);
+            }
         }
         
         private bool IsDuplicate(string key, long nowMs)
@@ -720,6 +713,27 @@ namespace CheeseProtocol
                 RequestConnect("auto");
             }
         }
+        public void RunSimulation(string user, string message, long msgTimeMs, bool isDonation, int amount=0, string donationType="", string donationId="")
+        {
+            if (!Prefs.DevMode) return;
+            CheeseEvent evt = null;
+            if (isDonation)
+            {
+                evt = CheeseSimFactory.MakeDonationEvent(user, message, msgTimeMs, amount, donationType, donationId);
+            }
+            else
+            {
+                evt = CheeseSimFactory.MakeChatEvent(user, message, msgTimeMs);
+            }
+            TryEnqueueMessage(evt);
+        }
+
+        public void ResetCooldown()
+        {
+            var cdState = CheeseCooldownState.Current;
+            cdState.ResetAllCd();
+        }
+
         public void UserConnect()
         {
             userDisabledReconnect = false;

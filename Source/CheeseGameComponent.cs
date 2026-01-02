@@ -51,6 +51,8 @@ namespace CheeseProtocol
                     hudWindow = null;
                 }
             }
+            if (settings.drainQueue)
+                CheeseProtocolMod.ChzzkChat.ProcessEventQueues();
         }
 
         public static CheeseGameComponent Instance =>

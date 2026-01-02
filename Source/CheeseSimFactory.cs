@@ -27,7 +27,7 @@ namespace CheeseProtocol
                 dedupeKey = $"{receivedAtUtcMsNow}|{user}|{0}|{message}"
             };
         }
-        public static CheeseEvent MakeDonationEvent(string user, string message, int amount, string donationType, string donationId, long msgTimeMs)
+        public static CheeseEvent MakeDonationEvent(string user, string message, long msgTimeMs, int amount, string donationType, string donationId)
         {
             long receivedAtUtcMsNow = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
             return new CheeseEvent

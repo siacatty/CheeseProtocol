@@ -28,6 +28,10 @@ namespace CheeseProtocol
         }
 
         // --- API ---
+        public void ResetAllCd()
+        {
+            Reset();
+        }
         public int GetLastTick(CheeseCommand cmd)
         {
             if (lastTickByCmd.TryGetValue(cmd, out var t)) return t;

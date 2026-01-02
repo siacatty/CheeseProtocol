@@ -18,6 +18,7 @@ namespace CheeseProtocol
         public string chzzkStatus = "Disconnected";
         public bool showHud = true;
         public bool hudLocked = false;
+        public bool drainQueue = true;
         public float hudX = -1f;   // -1이면 아직 저장된 위치 없음(기본 위치 사용)
         public float hudY = -1f;
         public CheeseCommandSource simSource = CheeseCommandSource.Donation;
@@ -49,6 +50,7 @@ namespace CheeseProtocol
             Scribe_Values.Look(ref simSource, "simSource", CheeseCommandSource.Donation);
             Scribe_Values.Look(ref simDonAmount, "simDonAmount", 1000);
             Scribe_Values.Look(ref simDonAmountBuf, "simDonAmountBuf", "1000");
+            Scribe_Values.Look(ref drainQueue, "drainQueue", true);
             EnsureCommandConfigs();
 
             for (int i = 0; i < commandConfigs.Count; i++)
@@ -117,6 +119,8 @@ namespace CheeseProtocol
             float yL = 0f;
             float yR = 0f;
 
+            float btnSize = 24f;
+
             // ---- 탭별로 내용 바꾸기 ----
             switch (activeTab)
             {
@@ -155,10 +159,24 @@ namespace CheeseProtocol
                         if (Widgets.ButtonText(disconnectBtn, "연결 해제"))
                             CheeseProtocolMod.ChzzkChat.UserDisconnect();
                     });
-                    DrawSection(right, ref yR, "HUD", listing =>
+                    DrawSection(left, ref yL, "HUD", listing =>
                     {
                         listing.CheckboxLabeled("HUD 표시", ref showHud);
                         listing.CheckboxLabeled("HUD 현재 위치 고정", ref hudLocked);
+                    });
+                    DrawSection(right, ref yR, "기타", listing =>
+                    {
+                        listing.CheckboxLabeled("퍼즈 상태일때 명령어 처리", ref drainQueue);
+                        listing.Gap(4);
+                        var prev = GUI.color;
+                        GUI.color = new Color(230f / 255f, 195f / 255f, 92f / 255f);
+                        listing.Label("[WARNING!]\n모드가 많거나 렉이 심한 환경에서는 비활성화를 권장.\n비활성화 시, 퍼즈 상태에서 들어온 명령어는 퍼즈 해제 후 일괄 처리");
+                        GUI.color = prev;
+                        listing.GapLine();
+                        Rect cooldownResetRect = listing.GetRect(btnSize*2f);
+                        cooldownResetRect = ResizeRectCentered(cooldownResetRect, cooldownResetRect.width*0.5f, btnSize*1.5f);
+                        if (Widgets.ButtonText(cooldownResetRect, "모든 명령어 쿨타임 리셋"))
+                            CheeseProtocolMod.ChzzkChat.ResetCooldown();
                     });
                     break;
 
@@ -192,7 +210,6 @@ namespace CheeseProtocol
                         float lineH = 26f;
                         float paddingX = 6f;
                         float paddingY = 12f;
-                        float btnSize = 24f;
                         listing.Label("시뮬레이션 (개발자 모드 전용)\n환경설정 → 개발자 모드 활성화");
                         listing.GapLine();
                         bool oldGUI = GUI.enabled;
@@ -279,13 +296,35 @@ namespace CheeseProtocol
                         GUI.enabled = oldGUI2;
 
                         listing.Gap(lineH);
-                        Rect simBtn  = listing.GetRect(btnSize);
+                        Rect simBtn  = listing.GetRect(btnSize*2f);
+                        simBtn = ResizeRectCentered(simBtn, simBtn.width*0.5f, btnSize*1.5f);
                         
                         if (Widgets.ButtonText(simBtn, "시뮬레이션 실행"))
                         {
                             Log.Message("[CheeseProtocol] Run Simulation");
-                            //CheeseProtocolMod.ChzzkChat.UserConnect();
+                            long simAtUtcMsNow = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+                            string simUserName = $"SIM{DateTimeOffset.FromUnixTimeMilliseconds(simAtUtcMsNow):HHmmssfff}";
+                            string simMessage = selectedConfig.label;
+                            bool simIsDonation = simSource == CheeseCommandSource.Donation;
+                            int simAmount = simDonAmount;
+                            string simDonationType = "CHAT";
+                            string simDonationId = null;
+                            CheeseProtocolMod.ChzzkChat.RunSimulation(
+                                simUserName,
+                                simMessage,
+                                simAtUtcMsNow,
+                                simIsDonation,
+                                simAmount,
+                                simDonationType,
+                                simDonationId
+                            );
+                            CheeseProtocolMod.ChzzkChat.ProcessEventQueues();
                         }
+                        listing.Gap(8);
+                        Rect cooldownResetRect = listing.GetRect(btnSize*2f);
+                        cooldownResetRect = ResizeRectCentered(cooldownResetRect, cooldownResetRect.width*0.5f, btnSize*1.5f);
+                        if (Widgets.ButtonText(cooldownResetRect, "모든 명령어 쿨타임 리셋"))
+                            CheeseProtocolMod.ChzzkChat.ResetCooldown();
                         
                         
                         GUI.enabled = oldGUI;
