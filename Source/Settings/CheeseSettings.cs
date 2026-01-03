@@ -27,6 +27,7 @@ namespace CheeseProtocol
         public string simDonAmountBuf = CheeseDefaults.SimDonAmountBuf;
         public bool hudMinimized = CheeseDefaults.HudMinimized;
         public bool hudSlideHidden = CheeseDefaults.HudSlideHidden;
+        public float randomVar = CheeseDefaults.RandomVar;
         private enum CheeseSettingsTab { General, Command, Advanced, Simulation, Credits }
         private CheeseSettingsTab activeTab = CheeseSettingsTab.General;
 
@@ -41,8 +42,12 @@ namespace CheeseProtocol
         private const int maxAllowedDonation = 1000000;
         private const int minAllowedDonation = 1000;
 
+        //Advanced settings
+        public JoinAdvancedSettings joinAdvanced;
+
         public void ResetToDefaults()
         {
+            joinAdvanced ??= new JoinAdvancedSettings();
             useDropPod = CheeseDefaults.UseDropPod;
             chzzkStudioUrl = CheeseDefaults.ChzzkStudioUrl;
             chzzkStatus = CheeseDefaults.ChzzkStatus;
@@ -51,6 +56,7 @@ namespace CheeseProtocol
             hudOpacity = CheeseDefaults.HudOpacity;
             hudX = CheeseDefaults.HudX;
             hudY = CheeseDefaults.HudY;
+            randomVar = CheeseDefaults.RandomVar;
             simSource = CheeseDefaults.SimSource;
             simDonAmount = CheeseDefaults.SimDonAmount;
             simDonAmountBuf = CheeseDefaults.SimDonAmountBuf;
@@ -70,6 +76,7 @@ namespace CheeseProtocol
 
         public override void ExposeData()
         {
+            base.ExposeData();
             Scribe_Values.Look(ref useDropPod, "useDropPod", CheeseDefaults.UseDropPod);
             Scribe_Values.Look(ref chzzkStudioUrl, "chzzkStudioUrl", CheeseDefaults.ChzzkStudioUrl);
             Scribe_Values.Look(ref chzzkStatus, "chzzkStatus", CheeseDefaults.ChzzkStatus);
@@ -80,10 +87,16 @@ namespace CheeseProtocol
             Scribe_Values.Look(ref hudSlideHidden, "hudSlideHidden", CheeseDefaults.HudSlideHidden);
             Scribe_Values.Look(ref hudX, "hudX", CheeseDefaults.HudX);
             Scribe_Values.Look(ref hudY, "hudY", CheeseDefaults.HudY);
+            Scribe_Values.Look(ref randomVar, "randomVar", CheeseDefaults.RandomVar);
             Scribe_Values.Look(ref simSource, "simSource", CheeseDefaults.SimSource);
             Scribe_Values.Look(ref simDonAmount, "simDonAmount", CheeseDefaults.SimDonAmount);
             Scribe_Values.Look(ref simDonAmountBuf, "simDonAmountBuf", CheeseDefaults.SimDonAmountBuf);
             Scribe_Values.Look(ref drainQueue, "drainQueue", CheeseDefaults.DrainQueue);
+
+            //Advanced settings
+            Scribe_Deep.Look(ref joinAdvanced, "joinAdvanced");
+
+            joinAdvanced ??= new JoinAdvancedSettings();
             EnsureCommandConfigs();
 
             for (int i = 0; i < commandConfigs.Count; i++)
@@ -198,6 +211,8 @@ namespace CheeseProtocol
                     });
                     DrawSection(right, ref yR, "기타", listing =>
                     {
+                        float paddingX = 6f;
+                        //float paddingY = 12f;
                         listing.CheckboxLabeled("퍼즈 상태일때 명령어 처리", ref drainQueue);
                         listing.Gap(4);
                         var prev = GUI.color;
@@ -209,6 +224,14 @@ namespace CheeseProtocol
                         cooldownResetRect = ResizeRectCentered(cooldownResetRect, cooldownResetRect.width*0.5f, btnSize*1.5f);
                         if (Widgets.ButtonText(cooldownResetRect, "모든 명령어 쿨타임 리셋"))
                             CheeseProtocolMod.ChzzkChat.ResetCooldown();
+                        listing.Gap(16);
+                        Rect randomVarRect = listing.GetRect(lineH*3);
+                        SplitVerticallyByRatio(randomVarRect, out Rect randomVarLabel, out Rect randomVarSlider, 0.4f, paddingX);
+                        TextAnchor oldAnchor = Text.Anchor;
+                        Text.Anchor = TextAnchor.MiddleLeft;
+                        Widgets.Label(randomVarLabel, "이벤트 효과 강도 랜덤성:");
+                        Text.Anchor = oldAnchor;
+                        randomVar = Widgets.HorizontalSlider(randomVarSlider, randomVar, 0f, 1f, true, label:$"{Mathf.RoundToInt(randomVar * 100f)}%");
                         listing.Gap(8);
                         Rect resetSettingRect = listing.GetRect(btnSize*2f);
                         resetSettingRect = ResizeRectCentered(resetSettingRect, resetSettingRect.width*0.5f, btnSize*1.5f);

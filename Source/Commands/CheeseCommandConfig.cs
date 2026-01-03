@@ -14,6 +14,7 @@ namespace CheeseProtocol
         public int cooldownHours = 0;
         public string cooldownBuf = "0";
         public string ScribeKeyPrefix => cmd.ToString(); // "Join" 같은 값
+        public QualityCurve curve = QualityCurve.Linear;
         public const int defaultMinDonation = 1000;
         public const int defaultMaxDonation = 10000;
 
