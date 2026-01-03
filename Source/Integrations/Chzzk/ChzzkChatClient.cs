@@ -456,11 +456,11 @@ namespace CheeseProtocol
                 var donationId = extras.TryGetValue("donationId", out var did) ? did?.ToString() : null;
                 var donationType = extras.TryGetValue("donationType", out var dt) ? dt?.ToString() : null;
 
-                return CheeseSimFactory.MakeDonationEvent(username, msg, msgTimeMs, amount, donationType, donationId);
+                return CheeseEventFactory.MakeDonationEvent(username, msg, msgTimeMs, amount, donationType, donationId);
             }
             username = ExtractNickname(msgObj);
 
-            return CheeseSimFactory.MakeChatEvent(username, msg, msgTimeMs);
+            return CheeseEventFactory.MakeChatEvent(username, msg, msgTimeMs);
         }
 
         private bool TryEnqueueMessage(CheeseEvent evt)
@@ -719,11 +719,11 @@ namespace CheeseProtocol
             CheeseEvent evt = null;
             if (isDonation)
             {
-                evt = CheeseSimFactory.MakeDonationEvent(user, message, msgTimeMs, amount, donationType, donationId);
+                evt = CheeseEventFactory.MakeDonationEvent(user, message, msgTimeMs, amount, donationType, donationId);
             }
             else
             {
-                evt = CheeseSimFactory.MakeChatEvent(user, message, msgTimeMs);
+                evt = CheeseEventFactory.MakeChatEvent(user, message, msgTimeMs);
             }
             TryEnqueueMessage(evt);
         }

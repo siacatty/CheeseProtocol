@@ -3,7 +3,7 @@ using Verse;
 
 namespace CheeseProtocol
 {
-    public static class CheeseSimFactory
+    public static class CheeseEventFactory
     {
         private static string NewId() => $"SIM-{Guid.NewGuid():N}";
 
