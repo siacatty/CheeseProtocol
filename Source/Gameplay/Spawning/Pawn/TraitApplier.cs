@@ -350,15 +350,7 @@ namespace CheeseProtocol
         // === Your entry point ===
         public static void ApplyTraitsHelper(Pawn pawn, float traitQuality)
         {
-            var joinAdvSettings = CheeseProtocolMod.Settings.joinAdvanced;
-
-            var negativeSet = (joinAdvSettings.negativeTraitKeys != null && joinAdvSettings.negativeTraitKeys.Count > 0)
-                ? new HashSet<string>(joinAdvSettings.negativeTraitKeys)
-                : null;
-
-            var positiveSet = (joinAdvSettings.positiveTraitKeys != null && joinAdvSettings.positiveTraitKeys.Count > 0)
-                ? new HashSet<string>(joinAdvSettings.positiveTraitKeys)
-                : null;
+            var joinAdvSettings = CheeseProtocolMod.Settings.GetAdvSetting<JoinAdvancedSettings>(CheeseCommand.Join);
             //Log.Warning($"[CheeseProtocol] Beginning traitQuality = {traitQuality}");
             traitQuality = Mathf.Clamp01(traitQuality);
 

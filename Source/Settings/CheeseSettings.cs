@@ -7,6 +7,7 @@ using System.Linq;
 using System.Xml.Schema;
 using System;
 using Newtonsoft.Json;
+using System.Security.Cryptography;
 
 namespace CheeseProtocol
 {
@@ -39,16 +40,46 @@ namespace CheeseProtocol
         private const float lineH = 26f;
         private float cachedScrollHeight = 900f;
         public List<CheeseCommandConfig> commandConfigs;
-        public CheeseCommandConfig selectedConfig;
+        public CheeseCommandConfig selectedConfigSim;
+        public CheeseCommandConfig selectedConfigAdv;
         private const int maxAllowedDonation = 1000000;
         private const int minAllowedDonation = 1000;
 
         //Advanced settings
-        public JoinAdvancedSettings joinAdvanced;
+        public List<CommandAdvancedSettingsBase> advancedSettings;
+        private static readonly Dictionary<CheeseCommand, Func<CommandAdvancedSettingsBase>> AdvFactories
+        = new()
+        {
+            { CheeseCommand.Join,    () => new JoinAdvancedSettings() },
+            //{ CheeseCommand.Raid,    () => new RaidAdvancedSettings() },
+            //{ CheeseCommand.Caravan, () => new CaravanAdvancedSettings() },
+            //{ CheeseCommand.Meteor,  () => new MeteorAdvancedSettings() },
+        };
+        public T GetAdvSetting<T>(CheeseCommand cmd) where T : CommandAdvancedSettingsBase
+        {
+            var a = GetAdvSetting(cmd);
+            if (a is T t) return t;
 
+            Log.Error($"[CheeseProtocol] AdvSetting type mismatch for {cmd}. Got={a?.GetType().Name}, expected={typeof(T).Name}");
+            return null;
+        }
+        public CommandAdvancedSettingsBase GetAdvSetting(CheeseCommand cmd)
+        {
+            var a = advancedSettings.FirstOrDefault(x => x.Command == cmd);
+            if (a != null) return a;
+
+            if (!AdvFactories.TryGetValue(cmd, out var factory))
+            {
+                Log.Error($"[CheeseProtocol] No AdvancedSettings factory for {cmd}");
+                return null;
+            }
+
+            var created = factory();
+            advancedSettings.Add(created);
+            return created;
+        }
         public void ResetToDefaults()
         {
-            joinAdvanced ??= new JoinAdvancedSettings();
             chzzkStudioUrl = CheeseDefaults.ChzzkStudioUrl;
             chzzkStatus = CheeseDefaults.ChzzkStatus;
             showHud = CheeseDefaults.ShowHud;
@@ -71,7 +102,10 @@ namespace CheeseProtocol
                 c.maxDonation = CheeseDefaults.CmdMaxDonation;
                 c.cooldownHours = CheeseDefaults.CmdCooldownHours;
             }
-            joinAdvanced.ResetToDefaults();
+            foreach (var adv in advancedSettings)
+            {
+                adv.ResetToDefaults();
+            }
 
         }
 
@@ -94,9 +128,14 @@ namespace CheeseProtocol
             Scribe_Values.Look(ref drainQueue, "drainQueue", CheeseDefaults.DrainQueue);
 
             //Advanced settings
-            Scribe_Deep.Look(ref joinAdvanced, "joinAdvanced");
+            Scribe_Collections.Look(ref advancedSettings, "advancedSettings", LookMode.Deep);
 
-            joinAdvanced ??= new JoinAdvancedSettings();
+            if (advancedSettings == null)
+                advancedSettings = new List<CommandAdvancedSettingsBase>();
+            EnsureAdvSettingsInitialized();
+            //EnsureAdvanced(CheeseCommand.Raid, () => new RaidAdvancedSettings());
+            //EnsureAdvanced(CheeseCommand.Caravan, () => new CaravanAdvancedSettings());
+            //EnsureAdvanced(CheeseCommand.Meteor, () => new MeteorAdvancedSettings());
             EnsureCommandConfigs();
 
             for (int i = 0; i < commandConfigs.Count; i++)
@@ -116,7 +155,22 @@ namespace CheeseProtocol
                 FixupCommandDefaults();
             }
         }
+        public void EnsureAdvSettingsInitialized()
+        {
+            advancedSettings ??= new List<CommandAdvancedSettingsBase>();
 
+            EnsureAdv(CheeseCommand.Join, () => new JoinAdvancedSettings());
+            //EnsureAdv(CheeseCommand.Raid, () => new RaidAdvancedSettings());
+            //EnsureAdv(CheeseCommand.Caravan, () => new CaravanAdvancedSettings());
+            //EnsureAdv(CheeseCommand.Meteor, () => new MeteorAdvancedSettings());
+
+            // 나중에 커맨드 늘어나면 여기만 추가하면 됨
+        }
+        private void EnsureAdv(CheeseCommand command, Func<CommandAdvancedSettingsBase> factory)
+        {
+            if (!advancedSettings.Any(a => a.Command == command))
+                advancedSettings.Add(factory());
+        }
         public void DoWindowContents(Rect inRect)
         {
             float curY = 0;
@@ -128,25 +182,19 @@ namespace CheeseProtocol
             }
 
             EnsureCommandConfigs();
-            if (selectedConfig == null)
-                selectedConfig = commandConfigs == null ? null : commandConfigs[0];
+            if (selectedConfigSim == null)
+                selectedConfigSim = commandConfigs == null ? null : commandConfigs[0];
+            if (selectedConfigAdv == null)
+                selectedConfigAdv = commandConfigs == null ? null : commandConfigs[0];
 
-            //const float pad = 10f;
             const float tabH = 32f;
             const float gap = 10f;
-            //const float paddingX = 6f;
-            //const float paddingY = 12f;
 
-            // 1) 탭 바 영역
             Rect tabRect = new Rect(inRect.x, inRect.y, inRect.width, tabH);
             Rect bodyScrollRect = new Rect(inRect.x, inRect.y + tabH + gap, inRect.width, inRect.height - tabH - gap);
 
-            DrawTabs(tabRect); // <- 아래에 구현 (activeTab 변경)
+            DrawTabs(tabRect);
             curY += tabH;
-            // 2) 본문 (스크롤 유지)
-            //float contentHeight = Mathf.Max(viewHeight, bodyScrollRect.height, cachedMainHeight);
-            //Rect viewRect = new Rect(0f, 0f, bodyScrollRect.width - 16f, contentHeight);
-            //Widgets.BeginScrollView(bodyRect, ref scrollPos, viewRect);
 
             UIUtil.AutoScrollView(
                     bodyScrollRect,
@@ -154,21 +202,14 @@ namespace CheeseProtocol
                     ref cachedScrollHeight,
                     viewRect =>
                     {
-                        // ...Rect 기반으로 그리면서 y 누적...
                         return DrawScrollView(new Rect(0f, 0f, bodyScrollRect.width - 16f, cachedScrollHeight));
-                        //return Mathf.Max(yL, yR) + 20f; // 사용한 컨텐츠 높이 리턴
                     }
                 );
             curY += bodyScrollRect.height;
-            // 3) 2컬럼
-
-            //Widgets.EndScrollView();
         }
 
         private float DrawScrollView(Rect viewRect)
         {
-            //const float tabH = 32f;
-            //const float gap = 10f;
             const float paddingX = 6f;
             const float paddingY = 12f;
             float colGap = 12f;
@@ -337,10 +378,10 @@ namespace CheeseProtocol
                         Text.Anchor = oldAnchor;
                         Widgets.Dropdown(
                             simCommandDropdown,
-                            selectedConfig,
+                            selectedConfigSim,
                             c => c,
-                            _ => GenerateCommandMenu(),
-                            selectedConfig != null ? selectedConfig.label : "(No commands)"
+                            _ => GenerateCommandMenu(cfg => selectedConfigSim = cfg),
+                            selectedConfigSim != null ? selectedConfigSim.label : "(No commands)"
                         );
 
                         listing.Gap(8);
@@ -411,7 +452,7 @@ namespace CheeseProtocol
                             Log.Message("[CheeseProtocol] Run Simulation");
                             long simAtUtcMsNow = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
                             string simUserName = $"SIM{DateTimeOffset.FromUnixTimeMilliseconds(simAtUtcMsNow):HHmmssfff}";
-                            string simMessage = selectedConfig.label;
+                            string simMessage = selectedConfigSim.label;
                             bool simIsDonation = simSource == CheeseCommandSource.Donation;
                             int simAmount = simDonAmount;
                             string simDonationType = "CHAT";
@@ -449,7 +490,8 @@ namespace CheeseProtocol
             return viewHeight = Mathf.Max(yL, yR) + 20f;
             //return Mathf.Max(curYL, curYR) + 20f;
         }
-        private IEnumerable<Widgets.DropdownMenuElement<CheeseCommandConfig>> GenerateCommandMenu()
+        private IEnumerable<Widgets.DropdownMenuElement<CheeseCommandConfig>>
+        GenerateCommandMenu(Action<CheeseCommandConfig> onSelect)
         {
             foreach (var cfg in commandConfigs)
             {
@@ -458,7 +500,7 @@ namespace CheeseProtocol
                 {
                     option = new FloatMenuOption(
                         captured.label,
-                        () => selectedConfig = captured
+                        () => onSelect(captured)
                     ),
                     payload = captured
                 };
@@ -567,42 +609,41 @@ namespace CheeseProtocol
             Rect column,
             ref float curY,
             string title,
+            bool drawTitle,
             Func<Rect, float> drawContentAndReturnUsedHeight
         )
         {
             string key = title;
-
             // 이전 프레임에서 캐시된 content height (fallback)
             float contentH = sectionContentHeights.TryGetValue(key, out var h) ? h : 200f;
-
-            float sectionH =
-                SectionPad +
-                SectionHeaderH +
-                10f +
-                contentH +
-                SectionPad;
+            float sectionH = SectionPad + contentH + SectionPad;
+            if (drawTitle) sectionH += SectionHeaderH + 10f;
 
             // 전체 섹션 박스
             Rect outer = new Rect(column.x, curY, column.width, sectionH);
             Widgets.DrawMenuSection(outer);
 
             Rect inner = outer.ContractedBy(SectionPad);
-
+            float contentY = inner.y;
             // 헤더
-            Rect head = new Rect(inner.x, inner.y, inner.width, SectionHeaderH);
-            var oldFont = Text.Font;
-            Text.Font = GameFont.Medium;
-            Widgets.Label(head, title);
-            Text.Font = oldFont;
+            if (drawTitle)
+            {
+                Rect head = new Rect(inner.x, inner.y, inner.width, SectionHeaderH);
+                var oldFont = Text.Font;
+                Text.Font = GameFont.Medium;
+                Widgets.Label(head, title);
+                Text.Font = oldFont;
 
-            Widgets.DrawLineHorizontal(inner.x, head.yMax + 4f, inner.width);
+                Widgets.DrawLineHorizontal(inner.x, head.yMax + 4f, inner.width);
+                contentY += SectionHeaderH +10f;
+            }
 
             // 컨텐츠 영역 (content 좌표 기준)
             Rect contentRect = new Rect(
                 inner.x,
-                head.yMax + 10f,
+                contentY,
                 inner.width,
-                inner.yMax - (head.yMax + 10f)
+                inner.yMax - contentY
             );
 
             // 컨텐츠 그리기 + 실제 사용 높이 측정
@@ -620,20 +661,55 @@ namespace CheeseProtocol
 
         private void DrawAdvancedPage(Rect rect, ref float yL, ref float yR, float lineH, float paddingX, float paddingY)
         {
-            UIUtil.SplitVerticallyByRatio(rect, out Rect leftAdv, out Rect rightAdv, 0.5f, paddingX);
-            DrawSectionNoListing(leftAdv, ref yL, "명령어 설정", rect =>
+            float headerH = 54f;
+            UIUtil.SplitHorizontallyByHeight(rect, out Rect headerRect, out Rect contentRect, headerH, SectionGap);
+            Widgets.DrawMenuSection(headerRect);
+            yL+= headerH+paddingY;
+            yR+= headerH+paddingY;
+            var oldFont = Text.Font;
+            Text.Font = GameFont.Medium;
+            string headerTitle = "고급설정 대상 명령어 :";
+            UIUtil.SplitVerticallyByWidth(headerRect, out Rect headerTitleRect, out Rect headerCommandRect, Text.CalcSize(headerTitle).x + 12f, paddingX);
+            headerCommandRect = UIUtil.ResizeRectAligned(headerCommandRect, headerTitleRect.width, headerCommandRect.height, TextAlignment.Left).ContractedBy(8f);
+            UIUtil.DrawCenteredText(headerTitleRect, headerTitle, font: GameFont.Medium);
+            bool hasAny = commandConfigs != null && commandConfigs.Count > 0;
+            using (new UIUtil.GUIStateScope(hasAny))
             {
-                return joinAdvanced.DrawAdvancedSetting(rect, "!참여", lineH, paddingX, paddingY);
-            });
-            DrawSectionNoListing(leftAdv, ref yL, "선호/비선호 특성", rect =>
+                Widgets.Dropdown(
+                    headerCommandRect,
+                    selectedConfigAdv,
+                    c => c, // dummy payload
+                    _ => GenerateCommandMenu(cfg => selectedConfigAdv = cfg),
+                    selectedConfigAdv != null ? selectedConfigAdv.label : "(No commands)");
+            }
+            Text.Font = oldFont;
+            UIUtil.SplitVerticallyByRatio(contentRect, out Rect leftAdv, out Rect rightAdv, 0.5f, paddingX);
+            switch(selectedConfigAdv.cmd)
             {
-                return joinAdvanced.DrawTraitSetting(rect, "선호/비선호 특성", lineH, paddingX, paddingY);
-            });
-            DrawSectionNoListing(rightAdv, ref yR, "결과", rect =>
-            {
-                //listing.Label("명령어 대충 설정");
-                return 0f;
-            });
+                case CheeseCommand.Join:
+                    DrawSectionNoListing(leftAdv, ref yL, "명령어 설정", false, rect =>
+                    {
+                        return GetAdvSetting(CheeseCommand.Join).Draw(rect);
+                    });
+                    DrawSectionNoListing(leftAdv, ref yL, "선호/비선호 특성", false, rect =>
+                    {
+                        return GetAdvSetting<JoinAdvancedSettings>(CheeseCommand.Join).DrawTraitSetting(rect, "선호/비선호 특성", lineH, paddingX, paddingY);
+                    });
+                    break;
+                case CheeseCommand.Raid:
+                    break;
+                case CheeseCommand.Meteor:
+                    break;
+                case CheeseCommand.Caravan:
+                    break;
+                default:
+                    break;
+            }
+            DrawSectionNoListing(rightAdv, ref yR, "결과", true, rect =>
+                {
+                    //listing.Label("명령어 대충 설정");
+                    return 0f;
+                });
         }
 
         private void DrawCommandSection(Rect rect, float lineH, float paddingX, float paddingY)

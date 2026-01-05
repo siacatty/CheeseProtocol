@@ -15,7 +15,7 @@ namespace CheeseProtocol
     {
         public static void Spawn(string donorName, int amount, string message)
         {
-            var joinAdvSetting = CheeseProtocolMod.Settings?.joinAdvanced;
+            JoinAdvancedSettings joinAdvSetting = CheeseProtocolMod.Settings?.GetAdvSetting<JoinAdvancedSettings>(CheeseCommand.Join);
             if (joinAdvSetting == null) return;
             Map map = Find.CurrentMap;
             if (map == null) return;
@@ -45,7 +45,7 @@ namespace CheeseProtocol
             if (!string.IsNullOrWhiteSpace(donorName))
                 pawn.Name = new NameSingle(TrimName(donorName));
 
-            cleanPawn(pawn);
+            cleanPawn(pawn, joinAdvSetting.allowWorkDisable);
             ApplyPawnCustomization(pawn, quality);
             pawn.skills?.Notify_SkillDisablesChanged();
             pawn.Notify_DisabledWorkTypesChanged();
@@ -133,17 +133,16 @@ namespace CheeseProtocol
 
         }
 
-        private static void cleanPawn(Pawn pawn)
+        private static void cleanPawn(Pawn pawn, bool allowWorkDisable)
         {
             if (pawn == null) return;
-            var settings = CheeseProtocolMod.Settings;
             foreach (var skill in pawn.skills.skills)
             {
                 skill.Level = 0;
                 skill.passion = Passion.None;
             }
             pawn.story.traits.allTraits.Clear();
-            if (!settings.joinAdvanced.allowWorkDisable)
+            if (allowWorkDisable)
                 SetNoDisableBackstories(pawn);
             HealthApplier.ClearAllHediffs(pawn);
             pawn.Notify_DisabledWorkTypesChanged();
@@ -190,29 +189,29 @@ namespace CheeseProtocol
             if (pawn?.RaceProps == null || !pawn.RaceProps.Humanlike) return;
             if (pawn.skills?.skills == null || pawn.skills.skills.Count == 0) return;
             var settings = CheeseProtocolMod.Settings;
-            var joinSettings = settings.joinAdvanced;
+            JoinAdvancedSettings joinAdvSetting = settings.GetAdvSetting<JoinAdvancedSettings>(CheeseCommand.Join);
             float randomVar = settings.randomVar; //higher values --> bigger noise (lucky/unlucky)
             //float lower_tail = 0.1f; //higher values --> less likely for high amount donation to get unlucky
-            ApplyAge(pawn, quality, randomVar, joinSettings.ageRange);
+            ApplyAge(pawn, quality, randomVar, joinAdvSetting.ageRange);
             Log.Message("[CheeseProtocol] Timed : ApplyAge OK");
-            ApplySkills(pawn, quality, randomVar, joinSettings.skillRange);
+            ApplySkills(pawn, quality, randomVar, joinAdvSetting.skillRange);
             Log.Message("[CheeseProtocol] Timed : ApplySkills OK");
-            ApplyPassions(pawn, quality, randomVar, joinSettings.passionRange);
+            ApplyPassions(pawn, quality, randomVar, joinAdvSetting.passionRange);
             Log.Message("[CheeseProtocol] Timed : ApplyPassions OK");
-            if (!joinSettings.forceHuman)
+            if (!joinAdvSetting.forceHuman)
             {
                 ApplyXenotype(pawn);
                 Log.Message("[CheeseProtocol] Timed : ApplyXenotype OK");
             }
-            if (!joinSettings.forcePlayerIdeo)
+            if (!joinAdvSetting.forcePlayerIdeo)
             {
                 ApplyIdeo(pawn);
                 Log.Message("[CheeseProtocol] Timed : ApplyIdeo OK");
             }
             //Log.Warning($"[CheeseProtocol] traitsRange = {joinSettings.traitsRange.qMin} ~ {joinSettings.traitsRange.qMax}");
-            ApplyTraits(pawn, quality, randomVar, joinSettings.traitsRange);
+            ApplyTraits(pawn, quality, randomVar, joinAdvSetting.traitsRange);
             Log.Message("[CheeseProtocol] Timed : ApplyTraits OK");
-            ApplyHealth(pawn, quality, randomVar, joinSettings.healthRange);
+            ApplyHealth(pawn, quality, randomVar, joinAdvSetting.healthRange);
             Log.Message("[CheeseProtocol] Timed : ApplyHealth OK");
             //ApplyApparel(pawn, quality);
             //ApplyWeapon(pawn, quality);

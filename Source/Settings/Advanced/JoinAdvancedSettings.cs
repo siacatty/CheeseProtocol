@@ -8,7 +8,7 @@ using RimWorld;
 
 namespace CheeseProtocol
 {
-    public class JoinAdvancedSettings : IExposable
+    public class JoinAdvancedSettings : CommandAdvancedSettingsBase
     {
         public QualityRange ageRange;
         public QualityRange passionRange;
@@ -30,12 +30,15 @@ namespace CheeseProtocol
         public List<TraitCandidate> positiveCandidates;
         public List<TraitCandidate> neutralCandidates;
         public List<TraitCandidate> negativeCandidates;
+        public override CheeseCommand Command => CheeseCommand.Join;
+        public override string Label => "!참여";
+        private const float lineH = 26f;
         public JoinAdvancedSettings()
         {
             ResetToDefaults();
             InitializeAll();
         }
-        public void ExposeData()
+        public override void ExposeData()
         {
             // Scribe_Values.Look(...)들
             LookRange(ref ageRange, "ageRange", CheeseDefaults.AgeRange);
@@ -72,7 +75,7 @@ namespace CheeseProtocol
             Scribe_Values.Look(ref max, baseKey + "_max", defaultRange.qMax);
             range = QualityRange.init(min, max);
         }
-        public void ResetToDefaults()
+        public override void ResetToDefaults()
         {
             Log.Message("[CheeseProtocol] JoinAdvancedSettings ResetToDefaults");
             forcePlayerIdeo = CheeseDefaults.ForcePlayerIdeo;
@@ -134,7 +137,7 @@ namespace CheeseProtocol
             positiveTraitKeys = positiveTraitKeys.Distinct().ToList();
             UpdateTraitList();
         }
-        public float DrawAdvancedSetting(Rect rect, string title, float lineH, float paddingX, float paddingY)
+        public override float Draw(Rect rect)
         {
             float curY = rect.y;
             float usedH = 0;

@@ -13,6 +13,7 @@ namespace CheeseProtocol
         public CheeseProtocolMod(ModContentPack content) : base(content)
         {
             Settings = GetSettings<CheeseSettings>();
+            Settings.EnsureAdvSettingsInitialized();
             Log.Message("[CheeseProtocol] Loaded.");
             ChzzkChat = new ChzzkChatClient(Settings);
             LongEventHandler.ExecuteWhenFinished(() =>
@@ -20,7 +21,7 @@ namespace CheeseProtocol
                 TraitCatalog = TraitApplier.BuildCatalogAllCandidates();
                 //Log.Message($"[CheeseProtocol] TraitCatalog count = {TraitCatalog.Count}");
 
-                Settings.joinAdvanced.UpdateTraitList();
+                Settings.GetAdvSetting<JoinAdvancedSettings>(CheeseCommand.Join)?.UpdateTraitList();
             });
             Instance = this;
         }
