@@ -17,10 +17,10 @@ namespace CheeseProtocol
         public float qMin;
         public float qMax;
 
-        public static QualityRange Normalized(float min, float max)
+        public static QualityRange init(float min = 0f, float max = 1f)
         {
-            min = Mathf.Clamp01(min);
-            max = Mathf.Clamp01(max);
+            //min = Mathf.Clamp01(min);
+            //max = Mathf.Clamp01(max);
             if (max < min) (min, max) = (max, min);
 
             return new QualityRange { qMin = min, qMax = max };

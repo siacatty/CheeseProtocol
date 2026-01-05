@@ -242,7 +242,7 @@ namespace CheeseProtocol
             GUI.color = new Color(0.6f, 0.6f, 0.6f);
             string description = "후원 금액↑ = 증폭 확률↑\n초과 금액은 최대 확률";
             //Widgets.Label(inner, description);
-            DrawCenteredText(inner, description, GameFont.Small, false);
+            UIUtil.DrawCenteredText(inner, description, TextAlignment.Left);
             GUI.color = prev;
         }
         private void DrawTopBar(Rect rect, CheeseUiStatusSnapshot s)
@@ -259,7 +259,7 @@ namespace CheeseProtocol
             var prev = GUI.color;
             GUI.color = ConnColor(s.connectionState);
             //Widgets.Label(connLabel, $"연결상태: {ConnText(s.connectionState)}");
-            DrawCenteredText(connLabel, $"연결상태: {ConnText(s.connectionState)}", GameFont.Small, false);
+            UIUtil.DrawCenteredText(connLabel, $"연결상태: {ConnText(s.connectionState)}", TextAlignment.Left);
             GUI.color = prev;
 
             if (Mouse.IsOver(btnRect))
@@ -282,10 +282,10 @@ namespace CheeseProtocol
                 sizeDirty = true; // 토글되면 크기 다시 계산
             }
 
-            DrawCenteredText(btnRect, minimized ? "＋" : "－", GameFont.Medium, true);
+            UIUtil.DrawCenteredText(btnRect, minimized ? "＋" : "－", font: GameFont.Medium);
             y += inner.height;
             y += paddingY;
-            DrawCenteredText(slideBtnRect, slideHidden ? "▼" : "▲", GameFont.Small, true);
+            UIUtil.DrawCenteredText(slideBtnRect, slideHidden ? "▼" : "▲");
         }
 
         private void DrawBody(Rect rect, CheeseUiStatusSnapshot s)
@@ -313,9 +313,9 @@ namespace CheeseProtocol
             Rect rDesc = new Rect(rCd.xMax + paddingX, row.y, colDesc, rowH);
             Color prev = GUI.color;
             GUI.color = new Color(0.75f, 0.78f, 0.82f);
-            DrawCenteredText(rCmd, "명령어", GameFont.Small, true);
-            DrawCenteredText(rCd, "쿨타임", GameFont.Small, true);
-            DrawCenteredText(rDesc, "효과 기준 금액", GameFont.Small, true);
+            UIUtil.DrawCenteredText(rCmd, "명령어");
+            UIUtil.DrawCenteredText(rCd, "쿨타임");
+            UIUtil.DrawCenteredText(rDesc, "효과 기준 금액");
             GUI.color = prev;
             y += lineH;
             float lineY = y + separatorH * 0.5f;
@@ -369,7 +369,7 @@ namespace CheeseProtocol
             // ======================
             // 1) 명령어
             // ======================
-            DrawCenteredText(rCmd, cfg.label, GameFont.Small, true);
+            UIUtil.DrawCenteredText(rCmd, cfg.label);
 
             // ======================
             // 2) 쿨타임
@@ -383,7 +383,7 @@ namespace CheeseProtocol
                 ? "채팅"
                 : $"₩{cfg.minDonation} ~ ₩{cfg.maxDonation}";
 
-            DrawCenteredText(rDesc, desc, GameFont.Small, true);
+            UIUtil.DrawCenteredText(rDesc, desc);
             //Widgets.Label(rDesc, desc);
             GUI.color = oldColor;
         }
@@ -400,7 +400,7 @@ namespace CheeseProtocol
             GUI.color = Color.green;
             if (cdState == null || cfg.cooldownHours <= 0 || cdState.GetLastTick(cfg.cmd) < 0)
             {
-                DrawCenteredText(rect, "준비됨", GameFont.Small, true);
+                UIUtil.DrawCenteredText(rect, "준비됨");
                 GUI.color = prev;
                 return;
             }
@@ -410,7 +410,7 @@ namespace CheeseProtocol
             if (remain <= 0)
             {
                 // 준비됨
-                DrawCenteredText(rect, "준비됨", GameFont.Small, true);
+                UIUtil.DrawCenteredText(rect, "준비됨");
                 GUI.color = prev;
                 return;
             }
@@ -435,25 +435,6 @@ namespace CheeseProtocol
 
             
         }
-        private void DrawCenteredText(Rect rect, string text, GameFont font, bool horCenter)
-        {
-            var prevFont = Verse.Text.Font;
-            Verse.Text.Font = font;
-
-            // 텍스트의 픽셀 크기 측정
-            Vector2 size = Text.CalcSize(text);
-
-            // rect 중앙에 오도록 위치 계산
-            float x = rect.x;
-            if (horCenter)
-                x = rect.x + (rect.width - size.x) * 0.5f;
-            float y = rect.y + (rect.height - size.y) * 0.5f;
-
-            Widgets.Label(new Rect(x, y, size.x, size.y), text);
-
-            Verse.Text.Font = prevFont;
-        }
-
         private void EnsureSizeForContent(CheeseUiStatusSnapshot s)
         {
             if (!sizeDirty) return;

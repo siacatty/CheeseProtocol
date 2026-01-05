@@ -14,18 +14,20 @@ namespace CheeseProtocol
         /// </summary>
         public static float SampleQualityWeightedBeta(
             float quality,
-            QualityRange range01,
+            QualityRange range,
             float concentration01,
-            int baseMin,
-            int baseMax,
+            bool inverseQ = false,
             bool debugLog = false)
         {
             quality = Mathf.Clamp01(quality);
+            if (inverseQ) quality = 1f - quality;
             concentration01 = Mathf.Clamp01(concentration01);
 
             // Map qMin/qMax (0..1) to numeric range
-            float min = Mathf.Clamp01(range01.qMin) * baseMax;
-            float max = Mathf.Clamp01(range01.qMax) * baseMax;
+            //float min = Mathf.Clamp01(range01.qMin) * baseMax;
+            //float max = Mathf.Clamp01(range01.qMax) * baseMax;
+            float min = range.qMin;
+            float max = range.qMax;
             if (max < min) max = min;
 
             // === concentration split (internal only) ===
@@ -44,7 +46,7 @@ namespace CheeseProtocol
 
             float t01 = SampleBeta01(alpha, beta);     // 0..1
             float value = Mathf.Lerp(min, max, t01);   // min..max
-            value = Mathf.Clamp(value, baseMin, baseMax);
+            //value = Mathf.Clamp(value, baseMin, baseMax);
 
             if (debugLog && Prefs.DevMode)
             {
@@ -54,7 +56,7 @@ namespace CheeseProtocol
                     $" concentration01={concentration01:F2}\n" +
                     $" conc={conc:F2}\n" +
                     $" alpha={alpha:F3} beta={beta:F3}\n" +
-                    $" range01=[{range01.qMin:F2},{range01.qMax:F2}] -> min/max=[{min:F2},{max:F2}]\n" +
+                    $" range01=[{range.qMin:F2},{range.qMax:F2}] -> min/max=[{min:F2},{max:F2}]\n" +
                     $" t01={t01:F3} value={value:F2}"
                 );
             }

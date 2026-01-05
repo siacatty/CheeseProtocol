@@ -6,14 +6,14 @@ using Newtonsoft.Json.Linq;
 using System.Linq;
 using System.Xml.Schema;
 using System;
+using Newtonsoft.Json;
 
 namespace CheeseProtocol
 {
     public class CheeseSettings : ModSettings
     {
-        private Vector2 scrollPos = Vector2.zero;
+        private Vector2 mainScrollPos = Vector2.zero;
         private float viewHeight = 800f; // 대충 크게 잡아두면 OK
-        public bool useDropPod = CheeseDefaults.UseDropPod;
         public string chzzkStudioUrl = CheeseDefaults.ChzzkStudioUrl;
         public string chzzkStatus = CheeseDefaults.ChzzkStatus;
         public bool showHud = CheeseDefaults.ShowHud;
@@ -37,6 +37,7 @@ namespace CheeseProtocol
         private const float SectionGap = 10f;
         private const float separatorH = 12f;
         private const float lineH = 26f;
+        private float cachedScrollHeight = 900f;
         public List<CheeseCommandConfig> commandConfigs;
         public CheeseCommandConfig selectedConfig;
         private const int maxAllowedDonation = 1000000;
@@ -48,7 +49,6 @@ namespace CheeseProtocol
         public void ResetToDefaults()
         {
             joinAdvanced ??= new JoinAdvancedSettings();
-            useDropPod = CheeseDefaults.UseDropPod;
             chzzkStudioUrl = CheeseDefaults.ChzzkStudioUrl;
             chzzkStatus = CheeseDefaults.ChzzkStatus;
             showHud = CheeseDefaults.ShowHud;
@@ -71,13 +71,13 @@ namespace CheeseProtocol
                 c.maxDonation = CheeseDefaults.CmdMaxDonation;
                 c.cooldownHours = CheeseDefaults.CmdCooldownHours;
             }
+            joinAdvanced.ResetToDefaults();
 
         }
 
         public override void ExposeData()
         {
             base.ExposeData();
-            Scribe_Values.Look(ref useDropPod, "useDropPod", CheeseDefaults.UseDropPod);
             Scribe_Values.Look(ref chzzkStudioUrl, "chzzkStudioUrl", CheeseDefaults.ChzzkStudioUrl);
             Scribe_Values.Look(ref chzzkStatus, "chzzkStatus", CheeseDefaults.ChzzkStatus);
             Scribe_Values.Look(ref showHud, "showHud", CheeseDefaults.ShowHud);
@@ -119,6 +119,7 @@ namespace CheeseProtocol
 
         public void DoWindowContents(Rect inRect)
         {
+            float curY = 0;
             if (commandConfigs != null){
                 foreach (var c in commandConfigs)
                 {
@@ -133,20 +134,43 @@ namespace CheeseProtocol
             //const float pad = 10f;
             const float tabH = 32f;
             const float gap = 10f;
+            //const float paddingX = 6f;
+            //const float paddingY = 12f;
 
             // 1) 탭 바 영역
             Rect tabRect = new Rect(inRect.x, inRect.y, inRect.width, tabH);
-            Rect bodyRect = new Rect(inRect.x, inRect.y + tabH + gap, inRect.width, inRect.height - tabH - gap);
+            Rect bodyScrollRect = new Rect(inRect.x, inRect.y + tabH + gap, inRect.width, inRect.height - tabH - gap);
 
             DrawTabs(tabRect); // <- 아래에 구현 (activeTab 변경)
-
+            curY += tabH;
             // 2) 본문 (스크롤 유지)
-            float contentHeight = Mathf.Max(viewHeight, bodyRect.height, 900f);
-            Rect viewRect = new Rect(0f, 0f, bodyRect.width - 16f, contentHeight);
+            //float contentHeight = Mathf.Max(viewHeight, bodyScrollRect.height, cachedMainHeight);
+            //Rect viewRect = new Rect(0f, 0f, bodyScrollRect.width - 16f, contentHeight);
+            //Widgets.BeginScrollView(bodyRect, ref scrollPos, viewRect);
 
-            Widgets.BeginScrollView(bodyRect, ref scrollPos, viewRect);
-
+            UIUtil.AutoScrollView(
+                    bodyScrollRect,
+                    ref mainScrollPos,
+                    ref cachedScrollHeight,
+                    viewRect =>
+                    {
+                        // ...Rect 기반으로 그리면서 y 누적...
+                        return DrawScrollView(new Rect(0f, 0f, bodyScrollRect.width - 16f, cachedScrollHeight));
+                        //return Mathf.Max(yL, yR) + 20f; // 사용한 컨텐츠 높이 리턴
+                    }
+                );
+            curY += bodyScrollRect.height;
             // 3) 2컬럼
+
+            //Widgets.EndScrollView();
+        }
+
+        private float DrawScrollView(Rect viewRect)
+        {
+            //const float tabH = 32f;
+            //const float gap = 10f;
+            const float paddingX = 6f;
+            const float paddingY = 12f;
             float colGap = 12f;
             float colW = (viewRect.width - colGap) / 2f;
 
@@ -202,7 +226,7 @@ namespace CheeseProtocol
                         listing.CheckboxLabeled("HUD 표시", ref showHud);
                         listing.CheckboxLabeled("HUD 현재 위치 고정", ref hudLocked);
                         Rect opacityRect = listing.GetRect(lineH*2f);
-                        SplitVerticallyByRatio(opacityRect, out Rect opacityDesc, out Rect opacitySlider, 0.4f, paddingX);
+                        UIUtil.SplitVerticallyByRatio(opacityRect, out Rect opacityDesc, out Rect opacitySlider, 0.4f, paddingX);
                         var prevAnchor = Text.Anchor;
                         Text.Anchor = TextAnchor.MiddleLeft;
                         Widgets.Label(opacityDesc, "HUD 배경 불투명도");
@@ -221,41 +245,45 @@ namespace CheeseProtocol
                         GUI.color = prev;
                         listing.GapLine();
                         Rect cooldownResetRect = listing.GetRect(btnSize*2f);
-                        cooldownResetRect = ResizeRectCentered(cooldownResetRect, cooldownResetRect.width*0.5f, btnSize*1.5f);
+                        cooldownResetRect = UIUtil.ResizeRectAligned(cooldownResetRect, cooldownResetRect.width*0.5f, btnSize*1.5f);
                         if (Widgets.ButtonText(cooldownResetRect, "모든 명령어 쿨타임 리셋"))
                             CheeseProtocolMod.ChzzkChat.ResetCooldown();
                         listing.Gap(16);
                         Rect randomVarRect = listing.GetRect(lineH*3);
-                        SplitVerticallyByRatio(randomVarRect, out Rect randomVarLabel, out Rect randomVarSlider, 0.4f, paddingX);
+                        UIUtil.SplitVerticallyByRatio(randomVarRect, out Rect randomVarLabel, out Rect randomVarSlider, 0.4f, paddingX);
                         TextAnchor oldAnchor = Text.Anchor;
                         Text.Anchor = TextAnchor.MiddleLeft;
                         Widgets.Label(randomVarLabel, "이벤트 효과 강도 랜덤성:");
                         Text.Anchor = oldAnchor;
+                        randomVarSlider = UIUtil.ResizeRectAligned(randomVarSlider, randomVarSlider.width, lineH);
                         randomVar = Widgets.HorizontalSlider(randomVarSlider, randomVar, 0f, 1f, true, label:$"{Mathf.RoundToInt(randomVar * 100f)}%");
                         listing.Gap(8);
                         Rect resetSettingRect = listing.GetRect(btnSize*2f);
-                        resetSettingRect = ResizeRectCentered(resetSettingRect, resetSettingRect.width*0.5f, btnSize*1.5f);
+                        resetSettingRect = UIUtil.ResizeRectAligned(resetSettingRect, resetSettingRect.width*0.5f, btnSize*1.5f);
+
                         if (Widgets.ButtonText(resetSettingRect, "모든 설정 초기화"))
                         {
-                            Find.WindowStack.Add(
-                                Dialog_MessageBox.CreateConfirmation(
-                                    "모든 설정을 기본값으로 되돌릴까요?\n(되돌릴 수 없습니다)",
-                                    confirmedAct: () =>
-                                    {
-                                        ResetToDefaults();
-                                        Write();
-                                        CheeseProtocolMod.ChzzkChat.UserConnect();
-                                    },
-                                    destructive: true
-                                )
-                            );
+                            Log.Warning("[CheeseProtocol] Reset Button pressed");
+                            LongEventHandler.ExecuteWhenFinished(() =>
+                            {
+                                Find.WindowStack.Add(
+                                    Dialog_MessageBox.CreateConfirmation(
+                                        "모든 설정을 기본값으로 되돌릴까요?\n(되돌릴 수 없습니다)",
+                                        confirmedAct: () =>
+                                        {
+                                            ResetToDefaults();
+                                            Write();
+                                            CheeseProtocolMod.ChzzkChat.UserConnect();
+                                        },
+                                        destructive: true
+                                    )
+                                );
+                            });
                         }
                     });
                     break;
 
                 case CheeseSettingsTab.Command:
-                    float paddingX = 6f;
-                    float paddingY = 12f;
                     float rowH = lineH * 2f + paddingY;
                     float gridH = (rowH +separatorH)* (commandConfigs.Count+1); //header 포함
                     Rect commandsRect = new Rect(
@@ -267,14 +295,22 @@ namespace CheeseProtocol
 
                     DrawCommandSection(commandsRect, lineH, paddingX, paddingY);
 
-                    yL = gridH + 10f;
+                    yL = gridH + SectionGap;
                     break;
 
                 case CheeseSettingsTab.Advanced:
-                    DrawSection(left, ref yL, "고급", listing =>
-                    {
-                        listing.Label("Later: accent colors, HUD opacity, etc.");
-                    });
+                    //float gridH = (rowH +separatorH)* (commandConfigs.Count+1); //header 포함
+                    float advPageH = 300f;
+                    Rect advPageRect = new Rect(
+                        0f,
+                        0f,
+                        viewRect.width,
+                        advPageH
+                    );
+
+                    DrawAdvancedPage(advPageRect, ref yL, ref yR, lineH, paddingX, paddingY);
+
+                    //yL = gridH + SectionGap;
                     break;
                 case CheeseSettingsTab.Simulation:
                     DrawSection(left, ref yL, "시뮬레이션", listing =>
@@ -287,14 +323,14 @@ namespace CheeseProtocol
                         GUI.enabled = Prefs.DevMode;
                         Rect simCommandRect = listing.GetRect(lineH*2f);
                         //Widgets.DrawBox(simCommandRect);
-                        SplitVerticallyByRatio(
+                        UIUtil.SplitVerticallyByRatio(
                             simCommandRect,
                             out Rect simCommandDesc,
                             out Rect simCommandDropdown,
                             0.4f,
                             paddingX
                         );
-                        simCommandDropdown = ShrinkRect(simCommandDropdown, 0, simCommandDropdown.width*0.5f, simCommandDropdown.height*0.20f, simCommandDropdown.height*0.20f);
+                        simCommandDropdown = UIUtil.ShrinkRect(simCommandDropdown, 0, simCommandDropdown.width*0.5f, simCommandDropdown.height*0.20f, simCommandDropdown.height*0.20f);
                         var oldAnchor = Text.Anchor;
                         Text.Anchor = TextAnchor.MiddleCenter;
                         Widgets.Label(simCommandDesc, "명령어 :");
@@ -310,35 +346,35 @@ namespace CheeseProtocol
                         listing.Gap(8);
                         Rect simSrcRect=listing.GetRect(btnSize*2f+paddingY);
                         //Widgets.DrawBox(simSrcRect);
-                        SplitVerticallyByRatio(
+                        UIUtil.SplitVerticallyByRatio(
                             simSrcRect,
                             out Rect simSrcRad,
                             out Rect simDonAmountRect,
                             0.5f,
                             paddingX
                         );
-                        SplitHorizontallyByRatio(
+                        UIUtil.SplitHorizontallyByRatio(
                             simSrcRad,
                             out Rect simSrcChat,
                             out Rect simSrcDon,
                             0.5f,
                             paddingY
                         );
-                        SplitVerticallyByRatio(
+                        UIUtil.SplitVerticallyByRatio(
                             simSrcChat,
                             out Rect simSrcChatRadBtn,
                             out Rect simSrcChatDesc,
                             0.5f,
                             paddingX
                         );
-                        SplitVerticallyByRatio(
+                        UIUtil.SplitVerticallyByRatio(
                             simSrcDon,
                             out Rect simSrcDonRadBtn,
                             out Rect simSrcDonDesc,
                             0.5f,
                             paddingX
                         );
-                        SplitVerticallyByRatio(
+                        UIUtil.SplitVerticallyByRatio(
                             simDonAmountRect,
                             out Rect simDonAmountDesc,
                             out Rect simDonAmountField,
@@ -347,8 +383,8 @@ namespace CheeseProtocol
                         );
                         oldAnchor = Text.Anchor;
                         Text.Anchor = TextAnchor.MiddleLeft;
-                        simSrcChatRadBtn = ResizeRectCentered(simSrcChatRadBtn, btnSize, btnSize);
-                        simSrcDonRadBtn = ResizeRectCentered(simSrcDonRadBtn, btnSize, btnSize);
+                        simSrcChatRadBtn = UIUtil.ResizeRectAligned(simSrcChatRadBtn, btnSize, btnSize);
+                        simSrcDonRadBtn = UIUtil.ResizeRectAligned(simSrcDonRadBtn, btnSize, btnSize);
                         if (Widgets.RadioButton(simSrcChatRadBtn.position, simSource == CheeseCommandSource.Chat))
                             simSource = CheeseCommandSource.Chat;
                         Widgets.Label(simSrcChatDesc, "채팅");
@@ -362,13 +398,13 @@ namespace CheeseProtocol
                         Text.Anchor = TextAnchor.MiddleCenter;
                         Widgets.Label(simDonAmountDesc, "후원 금액 :");
                         Text.Anchor = oldAnchor;
-                        simDonAmountField = ShrinkRect(simDonAmountField, 0, 0, simDonAmountField.height*0.25f, simDonAmountField.height*0.25f);
-                        UiNumericField.IntFieldDigitsOnly(simDonAmountField, ref simDonAmount, ref simDonAmountBuf, 0, maxAllowedDonation);
+                        simDonAmountField = UIUtil.ShrinkRect(simDonAmountField, 0, 0, simDonAmountField.height*0.25f, simDonAmountField.height*0.25f);
+                        UIUtil.IntFieldDigitsOnly(simDonAmountField, ref simDonAmount, ref simDonAmountBuf, 0, maxAllowedDonation);
                         GUI.enabled = oldGUI2;
 
                         listing.Gap(lineH);
                         Rect simBtn  = listing.GetRect(btnSize*2f);
-                        simBtn = ResizeRectCentered(simBtn, simBtn.width*0.5f, btnSize*1.5f);
+                        simBtn = UIUtil.ResizeRectAligned(simBtn, simBtn.width*0.5f, btnSize*1.5f);
                         
                         if (Widgets.ButtonText(simBtn, "시뮬레이션 실행"))
                         {
@@ -393,7 +429,7 @@ namespace CheeseProtocol
                         }
                         listing.Gap(8);
                         Rect cooldownResetRect = listing.GetRect(btnSize*2f);
-                        cooldownResetRect = ResizeRectCentered(cooldownResetRect, cooldownResetRect.width*0.5f, btnSize*1.5f);
+                        cooldownResetRect = UIUtil.ResizeRectAligned(cooldownResetRect, cooldownResetRect.width*0.5f, btnSize*1.5f);
                         if (Widgets.ButtonText(cooldownResetRect, "모든 명령어 쿨타임 리셋"))
                             CheeseProtocolMod.ChzzkChat.ResetCooldown();
                         
@@ -410,9 +446,8 @@ namespace CheeseProtocol
                     });
                     break;
             }
-            viewHeight = Mathf.Max(yL, yR) + 20f;
-
-            Widgets.EndScrollView();
+            return viewHeight = Mathf.Max(yL, yR) + 20f;
+            //return Mathf.Max(curYL, curYR) + 20f;
         }
         private IEnumerable<Widgets.DropdownMenuElement<CheeseCommandConfig>> GenerateCommandMenu()
         {
@@ -528,6 +563,79 @@ namespace CheeseProtocol
             if (Widgets.ButtonText(new Rect(tabRect.x + (w + 6f) * 4, tabRect.y, w, h), "Credits")) activeTab = CheeseSettingsTab.Credits;
         }
 
+        private void DrawSectionNoListing(
+            Rect column,
+            ref float curY,
+            string title,
+            Func<Rect, float> drawContentAndReturnUsedHeight
+        )
+        {
+            string key = title;
+
+            // 이전 프레임에서 캐시된 content height (fallback)
+            float contentH = sectionContentHeights.TryGetValue(key, out var h) ? h : 200f;
+
+            float sectionH =
+                SectionPad +
+                SectionHeaderH +
+                10f +
+                contentH +
+                SectionPad;
+
+            // 전체 섹션 박스
+            Rect outer = new Rect(column.x, curY, column.width, sectionH);
+            Widgets.DrawMenuSection(outer);
+
+            Rect inner = outer.ContractedBy(SectionPad);
+
+            // 헤더
+            Rect head = new Rect(inner.x, inner.y, inner.width, SectionHeaderH);
+            var oldFont = Text.Font;
+            Text.Font = GameFont.Medium;
+            Widgets.Label(head, title);
+            Text.Font = oldFont;
+
+            Widgets.DrawLineHorizontal(inner.x, head.yMax + 4f, inner.width);
+
+            // 컨텐츠 영역 (content 좌표 기준)
+            Rect contentRect = new Rect(
+                inner.x,
+                head.yMax + 10f,
+                inner.width,
+                inner.yMax - (head.yMax + 10f)
+            );
+
+            // 컨텐츠 그리기 + 실제 사용 높이 측정
+            float usedH = 0f;
+            if (drawContentAndReturnUsedHeight != null)
+                usedH = drawContentAndReturnUsedHeight(contentRect);
+
+            // Layout 패스에서만 높이 캐시 갱신
+            if (Event.current.type == EventType.Layout)
+                sectionContentHeights[key] = usedH;
+
+            // 다음 섹션으로 y 이동
+            curY += sectionH + SectionGap;
+        }
+
+        private void DrawAdvancedPage(Rect rect, ref float yL, ref float yR, float lineH, float paddingX, float paddingY)
+        {
+            UIUtil.SplitVerticallyByRatio(rect, out Rect leftAdv, out Rect rightAdv, 0.5f, paddingX);
+            DrawSectionNoListing(leftAdv, ref yL, "명령어 설정", rect =>
+            {
+                return joinAdvanced.DrawAdvancedSetting(rect, "!참여", lineH, paddingX, paddingY);
+            });
+            DrawSectionNoListing(leftAdv, ref yL, "선호/비선호 특성", rect =>
+            {
+                return joinAdvanced.DrawTraitSetting(rect, "선호/비선호 특성", lineH, paddingX, paddingY);
+            });
+            DrawSectionNoListing(rightAdv, ref yR, "결과", rect =>
+            {
+                //listing.Label("명령어 대충 설정");
+                return 0f;
+            });
+        }
+
         private void DrawCommandSection(Rect rect, float lineH, float paddingX, float paddingY)
         {
             Widgets.DrawMenuSection(rect);
@@ -603,7 +711,7 @@ namespace CheeseProtocol
         private void DrawCommandRowHeader(Rect rect, ref float curY, float rowH, float paddingX, float[] ratios, List<float> separatorPosX)
         {
             var cols = new List<Rect>(ratios.Length);
-            SplitVerticallyByRatios(rect, ratios, paddingX, cols);
+            UIUtil.SplitVerticallyByRatios(rect, ratios, paddingX, cols);
             Rect cmdRect = cols[0];
             Rect enableRect  = cols[1];
             Rect srcRadioRect = cols[2];
@@ -647,7 +755,7 @@ namespace CheeseProtocol
         {
             Widgets.DrawHighlightIfMouseover(rect);
             var cols = new List<Rect>(ratios.Length);
-            SplitVerticallyByRatios(rect, ratios, paddingX, cols);
+            UIUtil.SplitVerticallyByRatios(rect, ratios, paddingX, cols);
 
             Rect cmdRect = cols[0];
             Rect enableRect  = cols[1];
@@ -674,21 +782,21 @@ namespace CheeseProtocol
             GUI.enabled = enabled;
 
             //Source radiobuttons
-            SplitHorizontallyByRatio(
+            UIUtil.SplitHorizontallyByRatio(
                 srcRadioRect,
                 out Rect srcChatRad,
                 out Rect srcDonRad,
                 0.5f,
                 paddingY
             );
-            SplitVerticallyByRatio(
+            UIUtil.SplitVerticallyByRatio(
                 srcChatRad,
                 out Rect chatRadBtn,
                 out Rect chatRadDesc,
                 0.3f,
                 paddingX
             );
-            SplitVerticallyByRatio(
+            UIUtil.SplitVerticallyByRatio(
                 srcDonRad,
                 out Rect donRadBtn,
                 out Rect donRadDesc,
@@ -718,14 +826,14 @@ namespace CheeseProtocol
             Text.Anchor = oldAnchor;
 
             //Minimum donation amount text field
-            SplitHorizontallyByRatio(
+            UIUtil.SplitHorizontallyByRatio(
                 minDonRect,
                 out Rect minDonSlider,
                 out Rect minDonText,
                 0.5f,
                 paddingY
             );
-            SplitVerticallyByRatio(
+            UIUtil.SplitVerticallyByRatio(
                 minDonText,
                 out Rect minDonField,
                 out Rect minDonWarning,
@@ -734,7 +842,7 @@ namespace CheeseProtocol
             );
             bool oldGui2 = GUI.enabled;
             GUI.enabled = enabled && source == CheeseCommandSource.Donation;
-            UiNumericField.IntFieldDigitsOnly(minDonField, ref minDonation, ref minDonationBuf, 0, maxDonation);
+            UIUtil.IntFieldDigitsOnly(minDonField, ref minDonation, ref minDonationBuf, 0, maxDonation);
 
             float sliderDonValue = minDonation;
             int stepDon = 500;
@@ -778,27 +886,27 @@ namespace CheeseProtocol
                 GUI.color = prev;
             }
             //Maximum donation amount text field
-            SplitHorizontallyByRatio(
+            UIUtil.SplitHorizontallyByRatio(
                 maxDonRect,
                 out Rect maxDonEmpty,
                 out Rect maxDonField,
                 0.5f,
                 paddingY
             );
-            maxDonField = ResizeRectCentered(maxDonField, maxDonField.width*0.6f, maxDonField.height);
-            UiNumericField.IntFieldDigitsOnly(maxDonField, ref maxDonation, ref maxDonationBuf, 0, maxAllowedDonation);
+            maxDonField = UIUtil.ResizeRectAligned(maxDonField, maxDonField.width*0.6f, maxDonField.height);
+            UIUtil.IntFieldDigitsOnly(maxDonField, ref maxDonation, ref maxDonationBuf, 0, maxAllowedDonation);
 
             GUI.enabled = oldGui2;
 
             //Cooldown text field
-            SplitHorizontallyByRatio(
+            UIUtil.SplitHorizontallyByRatio(
                 cdRect,
                 out Rect cdSlider,
                 out Rect cdText,
                 0.5f,
                 paddingY
             );
-            SplitVerticallyByRatio(
+            UIUtil.SplitVerticallyByRatio(
                 cdText,
                 out Rect cdField,
                 out Rect cdDesc,
@@ -808,7 +916,7 @@ namespace CheeseProtocol
 
             int maxAllowedCD = 1440;
             int minAllowedCD = 0;
-            UiNumericField.IntFieldDigitsOnly(cdField, ref cooldownHours, ref cooldownBuf, minAllowedCD, maxAllowedCD);
+            UIUtil.IntFieldDigitsOnly(cdField, ref cooldownHours, ref cooldownBuf, minAllowedCD, maxAllowedCD);
 
             float sliderCDValue = cooldownHours;
             int stepCD = 1;
@@ -867,82 +975,6 @@ namespace CheeseProtocol
             if (step <= 1) return value;
             return Mathf.RoundToInt((float)value / step) * step;
         }
-        private void SplitVerticallyByRatio(
-            Rect rect,
-            out Rect left,
-            out Rect right,
-            float leftRatio,
-            float margin)
-        {
-            leftRatio = Mathf.Clamp01(leftRatio);
-
-            float leftWidth = (rect.width - margin) * leftRatio;
-
-            left = new Rect(rect.x, rect.y, leftWidth, rect.height);
-            right = new Rect(
-                rect.x + leftWidth + margin,
-                rect.y,
-                rect.width - leftWidth - margin,
-                rect.height
-            );
-        }
-        private void SplitHorizontallyByRatio(
-            Rect rect,
-            out Rect top,
-            out Rect bottom,
-            float topRatio,
-            float margin)
-        {
-            topRatio = Mathf.Clamp01(topRatio);
-
-            float topHeight = (rect.height - margin) * topRatio;
-
-            top = new Rect(rect.x, rect.y, rect.width, topHeight);
-
-            bottom = new Rect(
-                rect.x,
-                rect.y + topHeight + margin,
-                rect.width,
-                rect.height - topHeight - margin
-            );
-        }
-
-        
-        private void SplitVerticallyByRatios(
-            Rect rect,
-            IList<float> ratios,
-            float margin,
-            List<Rect> outRects)
-        {
-            outRects.Clear();
-            if (ratios == null || ratios.Count == 0) return;
-
-            // margin 때문에 실제 사용 가능한 폭
-            float totalMargin = margin * (ratios.Count - 1);
-            float usableW = Mathf.Max(0f, rect.width - totalMargin);
-
-            // ratios 합으로 정규화(합이 1이 아니어도 동작)
-            float sum = 0f;
-            for (int i = 0; i < ratios.Count; i++)
-                sum += Mathf.Max(0f, ratios[i]);
-
-            if (sum <= 0f) return;
-
-            float x = rect.x;
-
-            for (int i = 0; i < ratios.Count; i++)
-            {
-                float r = Mathf.Max(0f, ratios[i]) / sum;
-                float w = (i == ratios.Count - 1)
-                    ? (rect.xMax - x)
-                    : usableW * r;
-
-                var part = new Rect(x, rect.y, Mathf.Max(0f, w), rect.height);
-                outRects.Add(part);
-
-                x = part.xMax + margin;
-            }
-        }
         private Color GetStatusColor(string status)
         {
             if (status.StartsWith("Connected"))
@@ -956,59 +988,5 @@ namespace CheeseProtocol
 
             return Color.white;
         }
-        private void SplitHorizontallyByRatios(
-            Rect rect,
-            IList<float> ratios,
-            float margin,
-            List<Rect> outRects)
-        {
-            outRects.Clear();
-            if (ratios == null || ratios.Count == 0) return;
-
-            float totalMargin = margin * (ratios.Count - 1);
-            float usableH = Mathf.Max(0f, rect.height - totalMargin);
-
-            float sum = 0f;
-            for (int i = 0; i < ratios.Count; i++)
-                sum += Mathf.Max(0f, ratios[i]);
-
-            if (sum <= 0f) return;
-
-            float y = rect.y;
-
-            for (int i = 0; i < ratios.Count; i++)
-            {
-                float r = Mathf.Max(0f, ratios[i]) / sum;
-                float h = (i == ratios.Count - 1)
-                    ? (rect.yMax - y)
-                    : usableH * r;
-
-                var part = new Rect(rect.x, y, rect.width, Mathf.Max(0f, h));
-                outRects.Add(part);
-
-                y = part.yMax + margin;
-            }
-        }
-        public static Rect ShrinkRect(Rect rect, float left=0, float right=0, float top=0, float bottom=0)
-        {
-            return new Rect(
-                rect.x + left,
-                rect.y + top,
-                rect.width - left - right,
-                rect.height - top - bottom
-            );
-        }
-        public static Rect ResizeRectCentered(Rect rect, float targetWidth, float targetHeight)
-        {
-            float newWidth  = rect.width  > targetWidth  ? targetWidth  : rect.width;
-            float newHeight = rect.height > targetHeight ? targetHeight : rect.height;
-
-            return new Rect(
-                rect.x + (rect.width  - newWidth)  * 0.5f,
-                rect.y + (rect.height - newHeight) * 0.5f,
-                newWidth,
-                newHeight
-            );
-        }
-            }
+    }
 }

@@ -7,7 +7,6 @@ namespace CheeseProtocol
     public static class CheeseDefaults
     {
         //Main setting 
-        public const bool UseDropPod = true;
         public const string ChzzkStudioUrl = "";
         public const string ChzzkStatus = "Disconnected";
         public const bool ShowHud = true;
@@ -31,19 +30,25 @@ namespace CheeseProtocol
 
         //Advanced Setting
         //!참여
-        public static readonly QualityRange PassionRange = QualityRange.Normalized(0f, 1f);
-        public static readonly QualityRange TraitsRange  = QualityRange.Normalized(0f, 1f);
-        public static readonly QualityRange SkillRange   = QualityRange.Normalized(0f, 1f);
-        public static readonly QualityRange WorkDisableRange = QualityRange.Normalized(0f, 1f);
-        public static readonly QualityRange HealthRange  = QualityRange.Normalized(0f, 1f);
-        public static readonly QualityRange ApparelRange = QualityRange.Normalized(0f, 1f);
-        public static readonly QualityRange WeaponRange  = QualityRange.Normalized(0f, 1f);
-        public static List<TraitDef> CreatePreferredTraitsDefault()
-        {
-            return new List<TraitDef>();
-        }
-        public const float PreferredTraitWeight = 0.25f;
+        public static readonly QualityRange PassionRange = QualityRange.init(GameplayConstants.PassionMin, GameplayConstants.PassionMax);
+        public static readonly QualityRange SkillRange   = QualityRange.init(GameplayConstants.SkillLevelMin, GameplayConstants.SkillLevelMax);
+        public static readonly QualityRange AgeRange = QualityRange.init(GameplayConstants.AgeMin, GameplayConstants.AgeMax);
+        public static readonly QualityRange TraitsRange  = QualityRange.init();
+        public static readonly QualityRange HealthRange  = QualityRange.init();
+        public static readonly QualityRange ApparelRange = QualityRange.init();
+        public static readonly QualityRange WeaponRange  = QualityRange.init();
         public const bool ForcePlayerIdeo = true;
         public const bool ForceHuman = true;
+        public const bool AllowWorkDisable = true;
+        public const bool UseDropPod = true;
+        public static readonly string[] NegativeTraitKeys =
+        {
+            "TorturedArtist(0)",
+            "Gourmand(0)",
+            "SpeedOffset(-1)"
+        };
+        public static readonly string[] PositiveTraitKeys =
+        {
+        };
     }
 }

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Verse;
 
 namespace CheeseProtocol
@@ -7,12 +8,20 @@ namespace CheeseProtocol
         public static CheeseProtocolMod Instance;
         public static ChzzkChatClient ChzzkChat;
         public static CheeseSettings Settings;
+        public static List<TraitCandidate> TraitCatalog;
 
         public CheeseProtocolMod(ModContentPack content) : base(content)
         {
             Settings = GetSettings<CheeseSettings>();
             Log.Message("[CheeseProtocol] Loaded.");
             ChzzkChat = new ChzzkChatClient(Settings);
+            LongEventHandler.ExecuteWhenFinished(() =>
+            {
+                TraitCatalog = TraitApplier.BuildCatalogAllCandidates();
+                //Log.Message($"[CheeseProtocol] TraitCatalog count = {TraitCatalog.Count}");
+
+                Settings.joinAdvanced.UpdateTraitList();
+            });
             Instance = this;
         }
 
