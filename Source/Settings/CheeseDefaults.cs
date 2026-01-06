@@ -50,5 +50,8 @@ namespace CheeseProtocol
         public static readonly string[] PositiveTraitKeys =
         {
         };
+        //!습격
+        public static readonly QualityRange RaidScaleRange = QualityRange.init(GameplayConstants.RaidScaleMin, GameplayConstants.RaidScaleMax);
+
     }
 }

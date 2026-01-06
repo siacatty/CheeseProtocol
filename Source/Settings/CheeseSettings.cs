@@ -133,9 +133,6 @@ namespace CheeseProtocol
             if (advancedSettings == null)
                 advancedSettings = new List<CommandAdvancedSettingsBase>();
             EnsureAdvSettingsInitialized();
-            //EnsureAdvanced(CheeseCommand.Raid, () => new RaidAdvancedSettings());
-            //EnsureAdvanced(CheeseCommand.Caravan, () => new CaravanAdvancedSettings());
-            //EnsureAdvanced(CheeseCommand.Meteor, () => new MeteorAdvancedSettings());
             EnsureCommandConfigs();
 
             for (int i = 0; i < commandConfigs.Count; i++)
@@ -160,11 +157,9 @@ namespace CheeseProtocol
             advancedSettings ??= new List<CommandAdvancedSettingsBase>();
 
             EnsureAdv(CheeseCommand.Join, () => new JoinAdvancedSettings());
-            //EnsureAdv(CheeseCommand.Raid, () => new RaidAdvancedSettings());
-            //EnsureAdv(CheeseCommand.Caravan, () => new CaravanAdvancedSettings());
-            //EnsureAdv(CheeseCommand.Meteor, () => new MeteorAdvancedSettings());
-
-            // 나중에 커맨드 늘어나면 여기만 추가하면 됨
+            EnsureAdv(CheeseCommand.Raid, () => new RaidAdvancedSettings());
+            EnsureAdv(CheeseCommand.Caravan, () => new CaravanAdvancedSettings());
+            EnsureAdv(CheeseCommand.Meteor, () => new MeteorAdvancedSettings());
         }
         private void EnsureAdv(CheeseCommand command, Func<CommandAdvancedSettingsBase> factory)
         {
@@ -687,7 +682,7 @@ namespace CheeseProtocol
             switch(selectedConfigAdv.cmd)
             {
                 case CheeseCommand.Join:
-                    DrawSectionNoListing(leftAdv, ref yL, "명령어 설정", false, rect =>
+                    DrawSectionNoListing(leftAdv, ref yL, "!참여", false, rect =>
                     {
                         return GetAdvSetting(CheeseCommand.Join).Draw(rect);
                     });
@@ -697,6 +692,10 @@ namespace CheeseProtocol
                     });
                     break;
                 case CheeseCommand.Raid:
+                    DrawSectionNoListing(leftAdv, ref yL, "!습격", false, rect =>
+                    {
+                        return GetAdvSetting(CheeseCommand.Raid).Draw(rect);
+                    });
                     break;
                 case CheeseCommand.Meteor:
                     break;

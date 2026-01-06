@@ -77,7 +77,6 @@ namespace CheeseProtocol
         }
         public override void ResetToDefaults()
         {
-            Log.Message("[CheeseProtocol] JoinAdvancedSettings ResetToDefaults");
             forcePlayerIdeo = CheeseDefaults.ForcePlayerIdeo;
             forceHuman = CheeseDefaults.ForceHuman;
             allowWorkDisable = CheeseDefaults.AllowWorkDisable;
@@ -147,11 +146,11 @@ namespace CheeseProtocol
             UIUtil.RowWithHighlight(rect, ref curY, rowH, r =>{Widgets.CheckboxLabeled(r, "플레이어 이념 강제", ref forcePlayerIdeo);});
             UIUtil.RowWithHighlight(rect, ref curY, rowH, r =>{Widgets.CheckboxLabeled(r, "인간 종족만 허용", ref forceHuman);});
             UIUtil.RowWithHighlight(rect, ref curY, rowH, r =>{Widgets.CheckboxLabeled(r, "합류 시 수송포드 사용", ref useDropPod);});
-            RangeSlider(rect, ref curY, lineH, "스킬 레벨", ref skillRange, baseMin: GameplayConstants.SkillLevelMin, baseMax: GameplayConstants.SkillLevelMax, roundTo: 1f);
-            RangeSlider(rect, ref curY, lineH, "열정 개수", ref passionRange, baseMin: GameplayConstants.PassionMin, baseMax: GameplayConstants.PassionMax, roundTo: 1f);
-            RangeSlider(rect, ref curY, lineH, "특성 퀄리티", ref traitsRange, isPercentile: true);
-            RangeSlider(rect, ref curY, lineH, "나이", ref ageRange, baseMin: GameplayConstants.AgeMin, baseMax: GameplayConstants.AgeMax, roundTo: 1f);
-            RangeSlider(rect, ref curY, lineH, "건강", ref healthRange, isPercentile: true);
+            UIUtil.RangeSliderWrapper(rect, ref curY, lineH, "스킬 레벨", ref skillRange, baseMin: GameplayConstants.SkillLevelMin, baseMax: GameplayConstants.SkillLevelMax, roundTo: 1f);
+            UIUtil.RangeSliderWrapper(rect, ref curY, lineH, "열정 개수", ref passionRange, baseMin: GameplayConstants.PassionMin, baseMax: GameplayConstants.PassionMax, roundTo: 1f);
+            UIUtil.RangeSliderWrapper(rect, ref curY, lineH, "특성 퀄리티", ref traitsRange, isPercentile: true);
+            UIUtil.RangeSliderWrapper(rect, ref curY, lineH, "나이", ref ageRange, baseMin: GameplayConstants.AgeMin, baseMax: GameplayConstants.AgeMax, roundTo: 1f);
+            UIUtil.RangeSliderWrapper(rect, ref curY, lineH, "건강", ref healthRange, isPercentile: true);
             //TODO: add apparel and weapon range as well
             //RangeSlider(rect, ref curY, lineH, "의상 퀄리티", ref apparelRange, isPercentile: true);
             //RangeSlider(rect, ref curY, lineH, "무기 퀄리티", ref weaponRange, isPercentile: true);
@@ -374,36 +373,6 @@ namespace CheeseProtocol
         {
             if (list.Any(t => t.key == cand.key)) return;
             list.Add(cand);
-        }
-
-        public static void RangeSlider(Rect rect, ref float curY, float height, string label, ref QualityRange range, float baseMin=0f, float baseMax=1f, bool isPercentile=false, bool highlightMouseover = true, bool highlightRange = true, float roundTo = 0.01f)
-        {
-            float paddingX = 6f;
-            float min = range.qMin;
-            float max = range.qMax;
-            Rect row = new Rect(rect.x, curY, rect.width, height);
-            curY+=height;
-
-            if (highlightMouseover)
-                Widgets.DrawHighlightIfMouseover(row);
-
-            UIUtil.SplitVerticallyByRatio(row, out Rect labelRect, out Rect sliderWrapRect, 0.4f, paddingX);
-            var cols = new List<Rect>(3);
-            UIUtil.SplitVerticallyByRatios(sliderWrapRect, new float[] { 0.15f, 0.7f, 0.15f }, paddingX, cols);
-            Rect minRect = cols[0];
-            Rect sliderRect = cols[1];
-            Rect maxRect = cols[2];
-            UIUtil.DrawCenteredText(labelRect, label, TextAlignment.Left);
-
-            UIUtil.RangeSlider(sliderRect, ref min, ref max, baseMin, baseMax, highlightRange: highlightRange, roundTo: roundTo);
-
-            string minString = isPercentile? $"{Mathf.RoundToInt(min*100f)}%" : Mathf.RoundToInt(min).ToString();
-            string maxString = isPercentile? $"{Mathf.RoundToInt(max*100f)}%" : Mathf.RoundToInt(max).ToString();
-            UIUtil.DrawCenteredText(minRect, minString);
-            UIUtil.DrawCenteredText(maxRect, maxString);
-
-
-            range = QualityRange.init(min, max);
         }
     }
 }

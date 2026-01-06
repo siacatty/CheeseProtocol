@@ -5,6 +5,21 @@ namespace CheeseProtocol
 {
     internal static class QualityEvaluator
     {
+        public static float evaluateQuality(int amount, CheeseCommand cmd)
+        {
+            var settings = CheeseProtocolMod.Settings;
+
+            if (!settings.TryGetCommandConfig(cmd, out var cfg))
+                return 0f;
+
+            return Evaluate(
+                amount,
+                cfg.minDonation,
+                cfg.maxDonation,
+                cfg.curve
+            );
+
+        }
         public static float Evaluate(int amount, int minDonation, int effectiveDonation, QualityCurve curve = QualityCurve.Linear)
         {
             amount = Mathf.Max(0, amount);

@@ -153,6 +153,7 @@ namespace CheeseProtocol
             draw?.Invoke(content);
             return content;
         }
+        
         public static void RangeSlider(
             Rect rect,
             ref float minValue,
@@ -288,6 +289,33 @@ namespace CheeseProtocol
                     e.Use();
                 }
             }
+        }
+        public static void RangeSliderWrapper(Rect rect, ref float curY, float height, string label, ref QualityRange range, float baseMin=0f, float baseMax=1f, bool isPercentile=false, bool highlightMouseover = true, bool highlightRange = true, float roundTo = 0.01f)
+        {
+            float paddingX = 6f;
+            float min = range.qMin;
+            float max = range.qMax;
+            Rect row = new Rect(rect.x, curY, rect.width, height);
+            curY+=height;
+
+            if (highlightMouseover)
+                Widgets.DrawHighlightIfMouseover(row);
+
+            SplitVerticallyByRatio(row, out Rect labelRect, out Rect sliderWrapRect, 0.4f, paddingX);
+            var cols = new List<Rect>(3);
+            SplitVerticallyByRatios(sliderWrapRect, new float[] { 0.15f, 0.7f, 0.15f }, paddingX, cols);
+            Rect minRect = cols[0];
+            Rect sliderRect = cols[1];
+            Rect maxRect = cols[2];
+            DrawCenteredText(labelRect, label, TextAlignment.Left);
+
+            RangeSlider(sliderRect, ref min, ref max, baseMin, baseMax, highlightRange: highlightRange, roundTo: roundTo);
+
+            string minString = isPercentile? $"{Mathf.RoundToInt(min*100f)}%" : Mathf.RoundToInt(min).ToString();
+            string maxString = isPercentile? $"{Mathf.RoundToInt(max*100f)}%" : Mathf.RoundToInt(max).ToString();
+            DrawCenteredText(minRect, minString);
+            DrawCenteredText(maxRect, maxString);
+            range = QualityRange.init(min, max);
         }
         public static void SplitHorizontallyByRatios(
             Rect rect,

@@ -18,4 +18,8 @@ public static class GameplayConstants
     {
         ThingDefOf.Human,
     };
+
+    //!습격
+    public const int RaidScaleMin = 1;
+    public const int RaidScaleMax = 10;
 }

@@ -15,22 +15,12 @@ namespace CheeseProtocol.Protocols
 
         public void Execute(ProtocolContext ctx)
         {
-            var map = ctx.Map;
+            var evt = ctx.CheeseEvt;
+            Log.Warning($"[CheeseProtocol] Executing protocol={Id} for {evt}");
 
-            var parms = StorytellerUtility.DefaultParmsNow(
-                IncidentCategoryDefOf.ThreatBig,
-                map
-            );
-
+            // Use your existing spawner
+            RaidSpawner.Spawn(evt.username, evt.amount, evt.message);
             // Vanilla incident defName: "RaidEnemy"
-            IncidentDef def = DefDatabase<IncidentDef>.GetNamed("RaidEnemy", false);
-            if (def == null)
-            {
-                Log.Warning("[CheeseProtocol] RaidEnemy def not found.");
-                return;
-            }
-            if (!def.Worker.TryExecute(parms))
-                Log.Warning("[CheeseProtocol] RaidEnemy failed to execute.");
         }
     }
 }

@@ -6,8 +6,6 @@ using Verse;
 using UnityEngine;
 using System.Linq;
 using System.Collections;
-using System.Web.Profile;
-using System.Drawing.Text;
 
 namespace CheeseProtocol
 {
@@ -17,7 +15,7 @@ namespace CheeseProtocol
         {
             JoinAdvancedSettings joinAdvSetting = CheeseProtocolMod.Settings?.GetAdvSetting<JoinAdvancedSettings>(CheeseCommand.Join);
             if (joinAdvSetting == null) return;
-            Map map = Find.CurrentMap;
+            Map map = Find.AnyPlayerHomeMap;
             if (map == null) return;
             
             // Generate a player colonist
@@ -31,7 +29,7 @@ namespace CheeseProtocol
             );
             Pawn pawn = PawnGenerator.GeneratePawn(req);
 
-            float quality = evaluatePawnQuality(amount);
+            float quality = QualityEvaluator.evaluateQuality(amount, CheeseCommand.Join);
             if (Prefs.DevMode)
             {
                 Log.Message($"[CheeseProtocol] Spawn quality={quality:0.00}");
@@ -72,37 +70,49 @@ namespace CheeseProtocol
             );
         }
 
-        private static void ApplyIdeo(Pawn pawn)
+        private static void ApplyIdeo(Pawn pawn, bool forcePlayerIdeo)
         {
             if (pawn == null) return;
             if (!ModsConfig.IdeologyActive) return;
             if (pawn.ideo == null) return;
-
             var ideos = Find.IdeoManager?.IdeosListForReading;
             if (ideos == null || ideos.Count == 0) return;
+            Ideo chosen = null;
+            if (forcePlayerIdeo)
+            {
+                chosen = Faction.OfPlayer?.ideos?.PrimaryIdeo;
+                if (chosen == null)
+                    chosen = ideos.RandomElement(); // fallback
+            }
+            else
+            {
+                chosen = ideos.RandomElement();
+            }
 
-            Ideo chosen = ideos.RandomElement();
+            if (chosen == null) return; // 방어
             pawn.ideo.SetIdeo(chosen);
         }
 
-        private static void ApplyXenotype(Pawn pawn)
+        private static void ApplyXenotype(Pawn pawn, bool forceHuman)
         {
+            if (forceHuman) return;
             if (pawn == null) return;
             if (!ModsConfig.BiotechActive) return;
-            Def xenotypeDef = TryPickRandomXenotypeDef();
-            if (xenotypeDef == null) return;
 
-            // pawn.genes 가져오기
-            var genesProp = pawn.GetType().GetProperty("genes");
-            var genesObj = genesProp?.GetValue(pawn);
-            if (genesObj == null) return;
+            var genes = pawn.genes;
+            if (genes == null) return;
 
-            // genes.SetXenotype(XenotypeDef) 호출
-            var setXeno = genesObj.GetType().GetMethod("SetXenotype", new[] { xenotypeDef.GetType() });
-            if (setXeno != null)
-            {
-                setXeno.Invoke(genesObj, new object[] { xenotypeDef });
-            }
+            XenotypeDef xeno = TryPickRandomXenotypeDef_NoReflection();
+            if (xeno == null) return;
+            genes.SetXenotype(xeno);
+        }
+
+        private static XenotypeDef TryPickRandomXenotypeDef_NoReflection()
+        {
+            if (!ModsConfig.BiotechActive) return null;
+            return DefDatabase<XenotypeDef>.AllDefsListForReading
+                .Where(x => x != null)
+                .RandomElementWithFallback();
         }
 
         private static Def TryPickRandomXenotypeDef()
@@ -117,22 +127,6 @@ namespace CheeseProtocol
             return allXenos.RandomElement();
         }
 
-        private static float evaluatePawnQuality(int amount)
-        {
-            var settings = CheeseProtocolMod.Settings;
-
-            if (!settings.TryGetCommandConfig(CheeseCommand.Join, out var cfg))
-                return 0f;
-
-            return QualityEvaluator.Evaluate(
-                amount,
-                cfg.minDonation,
-                cfg.maxDonation,
-                cfg.curve
-            );
-
-        }
-
         private static void cleanPawn(Pawn pawn, bool allowWorkDisable)
         {
             if (pawn == null) return;
@@ -142,7 +136,7 @@ namespace CheeseProtocol
                 skill.passion = Passion.None;
             }
             pawn.story.traits.allTraits.Clear();
-            if (allowWorkDisable)
+            if (!allowWorkDisable)
                 SetNoDisableBackstories(pawn);
             HealthApplier.ClearAllHediffs(pawn);
             pawn.Notify_DisabledWorkTypesChanged();
@@ -193,26 +187,13 @@ namespace CheeseProtocol
             float randomVar = settings.randomVar; //higher values --> bigger noise (lucky/unlucky)
             //float lower_tail = 0.1f; //higher values --> less likely for high amount donation to get unlucky
             ApplyAge(pawn, quality, randomVar, joinAdvSetting.ageRange);
-            Log.Message("[CheeseProtocol] Timed : ApplyAge OK");
             ApplySkills(pawn, quality, randomVar, joinAdvSetting.skillRange);
-            Log.Message("[CheeseProtocol] Timed : ApplySkills OK");
             ApplyPassions(pawn, quality, randomVar, joinAdvSetting.passionRange);
-            Log.Message("[CheeseProtocol] Timed : ApplyPassions OK");
-            if (!joinAdvSetting.forceHuman)
-            {
-                ApplyXenotype(pawn);
-                Log.Message("[CheeseProtocol] Timed : ApplyXenotype OK");
-            }
-            if (!joinAdvSetting.forcePlayerIdeo)
-            {
-                ApplyIdeo(pawn);
-                Log.Message("[CheeseProtocol] Timed : ApplyIdeo OK");
-            }
+            ApplyXenotype(pawn, joinAdvSetting.forceHuman);
+            ApplyIdeo(pawn, joinAdvSetting.forcePlayerIdeo);
             //Log.Warning($"[CheeseProtocol] traitsRange = {joinSettings.traitsRange.qMin} ~ {joinSettings.traitsRange.qMax}");
             ApplyTraits(pawn, quality, randomVar, joinAdvSetting.traitsRange);
-            Log.Message("[CheeseProtocol] Timed : ApplyTraits OK");
             ApplyHealth(pawn, quality, randomVar, joinAdvSetting.healthRange);
-            Log.Message("[CheeseProtocol] Timed : ApplyHealth OK");
             //ApplyApparel(pawn, quality);
             //ApplyWeapon(pawn, quality);
         }
@@ -246,7 +227,6 @@ namespace CheeseProtocol
                     debugLog: false
             );
             traitQuality = Mathf.Clamp01(traitQuality);
-            int traitCount = SampleTraitCount(traitQuality);
             TraitApplier.ApplyTraitsHelper(pawn, traitQuality);    
         }
 
@@ -330,23 +310,6 @@ namespace CheeseProtocol
                     passionCount -= 1;
                 }
             }
-        }
-        static int SampleTraitCount(float tq)
-        {
-            tq = Mathf.Clamp01(tq);
-
-            // w1: high quality에서 거의 0으로
-            float w1 = Mathf.Pow(1f - tq, 3f);          // tq=1 -> 0, tq=0 -> 1
-
-            // w3: high quality에서 커지게
-            float w3 = Mathf.Pow(tq, 2f);
-            float w2 = 1.2f + 0.6f * (1f - Mathf.Abs(2f * tq - 1f));
-            float sum = w1 + w2 + w3;
-            float r = Rand.Value * sum;
-            if (r < w1) return 1;
-            r -= w1;
-            if (r < w2) return 2;
-            return 3;
         }
         private static SkillRecord DrawWeightedByLevel(
             List<SkillRecord> pool,
@@ -587,28 +550,6 @@ namespace CheeseProtocol
 
             Log.Message("[CheeseProtocol][TraitDegreeDump] === degreeDatas[0] Fields ===\n" + string.Join("\n", fields));
             Log.Message("[CheeseProtocol][TraitDegreeDump] === degreeDatas[0] Properties ===\n" + string.Join("\n", props));
-        }
-        private static string GetTraitLabelFromDegree(TraitDef def, int degree = 0)
-        {
-            // 1) TraitDef.label이 있으면 우선 사용
-            var label = TryGet(def, "label") as string;
-            if (!string.IsNullOrWhiteSpace(label)) return label;
-
-            // 2) degreeDatas[0].label 시도
-            var degreeDatasObj = TryGet(def, "degreeDatas") as IList;
-            if (degreeDatasObj != null && degreeDatasObj.Count > 0)
-            {
-                var data0 = degreeDatasObj[0];
-                var dLabel = TryGet(data0, "label") as string;
-                if (!string.IsNullOrWhiteSpace(dLabel)) return dLabel;
-
-                // 어떤 버전에선 labelCap / labelMale/Female 같은 변형이 있을 수도 있음
-                var dLabelCap = TryGet(data0, "labelCap");
-                if (dLabelCap != null) return dLabelCap.ToString();
-            }
-
-            // 3) fallback
-            return def.defName;
         }
         private static string FormatEnum(object o)
         {
