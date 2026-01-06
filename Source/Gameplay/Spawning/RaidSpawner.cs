@@ -89,5 +89,6 @@ namespace CheeseProtocol
             parms.points = Mathf.Max(0f, finalRaidPoints);
             Log.Message($"[CheeseProtocol][Raid] base={baseRaidPoints:0} final={finalRaidPoints:0} scale={raidScale:0.00}");
         }
+        
     }
 }

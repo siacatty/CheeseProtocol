@@ -52,6 +52,9 @@ namespace CheeseProtocol
         };
         //!습격
         public static readonly QualityRange RaidScaleRange = QualityRange.init(GameplayConstants.RaidScaleMin, GameplayConstants.RaidScaleMax);
+        public const bool AllowCenterDrop = true;
+        public const bool AllowBreacher = true;
+        public const bool AllowSiege = true;
 
     }
 }

@@ -13,6 +13,9 @@ namespace CheeseProtocol
         public override CheeseCommand Command => CheeseCommand.Raid;
         public override string Label => "!습격";
         private const float lineH = 26f;
+        public bool allowCenterDrop;
+        public bool allowBreacher;
+        public bool allowSiege;
         public QualityRange raidScaleRange;
         public RaidAdvancedSettings()
         {
@@ -22,6 +25,9 @@ namespace CheeseProtocol
         public override void ExposeData()
         {
             LookRange(ref raidScaleRange, "raidScaleRange", CheeseDefaults.RaidScaleRange);
+            Scribe_Values.Look(ref allowCenterDrop, "allowCenterDrop", CheeseDefaults.AllowCenterDrop);
+            Scribe_Values.Look(ref allowBreacher, "allowBreacher", CheeseDefaults.AllowBreacher);
+            Scribe_Values.Look(ref allowSiege, "allowSiege", CheeseDefaults.AllowSiege);
             if (Scribe.mode == LoadSaveMode.PostLoadInit)
             {
                 InitializeAll();
@@ -37,6 +43,9 @@ namespace CheeseProtocol
         }
         public override void ResetToDefaults()
         {
+            allowCenterDrop = CheeseDefaults.AllowCenterDrop;
+            allowBreacher = CheeseDefaults.AllowBreacher;
+            allowSiege = CheeseDefaults.AllowSiege;
             ResetLeverRangesToDefaults();
         }
         private void ResetLeverRangesToDefaults()
@@ -55,7 +64,9 @@ namespace CheeseProtocol
             float usedH = 0;
             float checkboxPaddingY = 6f;
             float rowH = lineH+checkboxPaddingY;
-            //UIUtil.RowWithHighlight(rect, ref curY, rowH, r =>{Widgets.CheckboxLabeled(r, "결격사항 허용", ref allowWorkDisable);});
+            //UIUtil.RowWithHighlight(rect, ref curY, rowH, r =>{Widgets.CheckboxLabeled(r, "중앙드랍 허용", ref allowCenterDrop);});
+            //UIUtil.RowWithHighlight(rect, ref curY, rowH, r =>{Widgets.CheckboxLabeled(r, "벽파괴 습격 (브리처+새퍼) 허용", ref allowBreacher);});
+            //UIUtil.RowWithHighlight(rect, ref curY, rowH, r =>{Widgets.CheckboxLabeled(r, "공성(박격포) 허용", ref allowSiege);});
             UIUtil.RangeSliderWrapper(rect, ref curY, lineH, "습격 강도 배율", ref raidScaleRange, baseMin: GameplayConstants.RaidScaleMin, baseMax: GameplayConstants.RaidScaleMax, isPercentile: true);
             usedH = curY - rect.y;
             return usedH;
