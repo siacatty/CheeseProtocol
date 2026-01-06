@@ -56,8 +56,7 @@ namespace CheeseProtocol
             float checkboxPaddingY = 6f;
             float rowH = lineH+checkboxPaddingY;
             //UIUtil.RowWithHighlight(rect, ref curY, rowH, r =>{Widgets.CheckboxLabeled(r, "결격사항 허용", ref allowWorkDisable);});
-            Log.Warning($"[CheeseProtocol] raidScale min = {raidScaleRange.qMin}, raidScale max = {raidScaleRange.qMax}");
-            UIUtil.RangeSliderWrapper(rect, ref curY, lineH, "습격 강도", ref raidScaleRange, baseMin: GameplayConstants.RaidScaleMin, baseMax: GameplayConstants.RaidScaleMax, isPercentile: true);
+            UIUtil.RangeSliderWrapper(rect, ref curY, lineH, "습격 강도 배율", ref raidScaleRange, baseMin: GameplayConstants.RaidScaleMin, baseMax: GameplayConstants.RaidScaleMax, isPercentile: true);
             usedH = curY - rect.y;
             return usedH;
         }

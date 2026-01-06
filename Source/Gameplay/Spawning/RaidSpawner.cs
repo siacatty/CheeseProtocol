@@ -29,9 +29,44 @@ namespace CheeseProtocol
                 Log.Warning("[CheeseProtocol] RaidEnemy def not found.");
                 return;
             }
-            bool ok = def.Worker.TryExecute(parms);
-            if (!ok)
-                Log.Warning("[CheeseProtocol] RaidEnemy failed to execute.");
+            string reason;
+            bool ok = TryExecuteRaidWithFallback(IncidentDefOf.RaidEnemy, parms, out reason);
+            if (Prefs.DevMode)
+            {
+                Log.Message($"[CheeseProtocol] ok={ok} points={parms.points:0} reason={reason ?? "n/a"}");
+                if (!ok)
+                    Log.Warning("[CheeseProtocol] RaidEnemy failed to execute.");
+            }
+        }
+
+        private static bool TryExecuteRaidWithFallback(
+            IncidentDef def,
+            IncidentParms parms,
+            out string reason)
+        {
+            reason = null;
+
+            // 1차 시도 (바닐라 자동)
+            if (def.Worker.TryExecute(parms))
+                return true;
+
+            // 2차: 안전 fallback
+            var prevArrival = parms.raidArrivalMode;
+            var prevStrategy = parms.raidStrategy;
+
+            parms.raidArrivalMode = PawnsArrivalModeDefOf.EdgeWalkIn;
+            parms.raidStrategy = RaidStrategyDefOf.ImmediateAttack;
+
+            if (def.Worker.TryExecute(parms))
+            {
+                reason =
+                    $"fallback used: arrival {prevArrival?.defName ?? "auto"} -> EdgeWalkIn, " +
+                    $"strategy {prevStrategy?.defName ?? "auto"} -> ImmediateAttack";
+                return true;
+            }
+
+            reason = "raid execute failed even after fallback";
+            return false;
         }
 
         private static void ApplyRaidCustomization(IncidentParms parms, float quality)
@@ -53,42 +88,6 @@ namespace CheeseProtocol
             float finalRaidPoints = baseRaidPoints * raidScale;
             parms.points = Mathf.Max(0f, finalRaidPoints);
             Log.Message($"[CheeseProtocol][Raid] base={baseRaidPoints:0} final={finalRaidPoints:0} scale={raidScale:0.00}");
-        }
-        private static float GetThreatScale()
-        {
-            float threatScale = 1f;
-
-            if (Find.Storyteller == null)
-                return threatScale;
-
-            var diff = Find.Storyteller.difficulty;
-            if (diff == null) return threatScale;
-
-            threatScale = diff.threatScale;
-            return threatScale;
-        }
-        private static bool TryGetWealth(Map map, out float total, out float items, out float buildings, out float pawns)
-        {
-            if (map == null || map.wealthWatcher == null)
-            {
-                total = items = buildings = pawns = 0f;
-                return false;
-            }
-
-            var w = map.wealthWatcher;
-            total = w.WealthTotal;
-            items = w.WealthItems;
-            buildings = w.WealthBuildings;
-            pawns = w.WealthPawns;
-            return true;
-        }
-
-        //Raid Points = (Wealth Points + Pawn Points) * (Difficulty) * (Starting Factor) * (Adaption Factor)
-        //"Storyteller Wealth" = (Colony Wealth Items + Colony Wealth Creatures + (Colony Wealth Buildings * 0.5))
-        private static float GetCurrentThreatPoints(Map map)
-        {
-            if (map == null) return 0f;
-            return StorytellerUtility.DefaultThreatPointsNow(map);
         }
     }
 }
