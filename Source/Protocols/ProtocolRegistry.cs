@@ -11,6 +11,9 @@ namespace CheeseProtocol
             new RaidProtocol(),
             new CaravanProtocol(),
             new MeteorProtocol(),
+            new SupplyProtocol(),
+            new TameProtocol(),
+            new ThrumboProtocol(),
             new NoOpProtocol()
         };
 

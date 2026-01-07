@@ -22,7 +22,7 @@ namespace CheeseProtocol
             var parms = StorytellerUtility.DefaultParmsNow(IncidentCategoryDefOf.Misc, map);
             MeteorObject meteor = new MeteorObject(parms);
             ApplyMeteorCustomization(meteor, quality);
-            SpawnThrumbo(map);
+
             ThingDef skyfallerDef = ResolveMeteoriteIncomingDef();
             if (skyfallerDef == null)
             {
@@ -53,35 +53,7 @@ namespace CheeseProtocol
                 );
             }
         }
-
-        private static void SpawnThrumbo(Map map)
-        {
-            PawnKindDef thrumboKind =
-            DefDatabase<PawnKindDef>.GetNamedSilentFail("AlphaThrumbo");
-
-            if (thrumboKind == null)
-            {
-                Log.Warning("[CheeseProtocol] AlphaThrumbo not found. Falling back to Thrumbo.");
-                thrumboKind = PawnKindDefOf.Thrumbo;
-            }
-
-            // 2) 스폰 위치 찾기
-            if (!CellFinder.TryFindRandomCellNear(
-                    map.Center,
-                    map,
-                    20,
-                    c => c.Standable(map) && !c.Fogged(map),
-                    out IntVec3 cell))
-            {
-                Log.Warning("[CheeseProtocol] Failed to find spawn cell.");
-                return;
-        }
-
-        // 3) Pawn 생성 (야생)
-        Pawn pawn = PawnGenerator.GeneratePawn(thrumboKind, faction: null);
-        GenSpawn.Spawn(pawn, cell, map);
-        }
-
+        
         private static void FallbackVanillaMeteor(MeteorObject meteor)
         {
             IncidentDef def = DefDatabase<IncidentDef>.GetNamed("MeteoriteImpact", false);

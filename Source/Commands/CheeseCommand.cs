@@ -6,6 +6,9 @@ namespace CheeseProtocol
         Join,       // !참여
         Raid,       // !습격
         Caravan,        // !상단
-        Meteor      // !운석
+        Meteor,      // !운석
+        Supply,     //!보급
+        Tame,       //!조련
+        Thrumbo     //!트럼보
     }
 }

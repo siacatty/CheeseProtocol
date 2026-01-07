@@ -51,9 +51,12 @@ namespace CheeseProtocol
         = new()
         {
             { CheeseCommand.Join,    () => new JoinAdvancedSettings() },
-            //{ CheeseCommand.Raid,    () => new RaidAdvancedSettings() },
-            //{ CheeseCommand.Caravan, () => new CaravanAdvancedSettings() },
-            //{ CheeseCommand.Meteor,  () => new MeteorAdvancedSettings() },
+            { CheeseCommand.Raid,    () => new RaidAdvancedSettings() },
+            { CheeseCommand.Caravan, () => new CaravanAdvancedSettings() },
+            { CheeseCommand.Meteor,  () => new MeteorAdvancedSettings() },
+            { CheeseCommand.Supply,  () => new SupplyAdvancedSettings() },
+            { CheeseCommand.Tame,  () => new TameAdvancedSettings() },
+            { CheeseCommand.Thrumbo,  () => new ThrumboAdvancedSettings() },
         };
         public T GetAdvSetting<T>(CheeseCommand cmd) where T : CommandAdvancedSettingsBase
         {
@@ -160,6 +163,9 @@ namespace CheeseProtocol
             EnsureAdv(CheeseCommand.Raid, () => new RaidAdvancedSettings());
             EnsureAdv(CheeseCommand.Caravan, () => new CaravanAdvancedSettings());
             EnsureAdv(CheeseCommand.Meteor, () => new MeteorAdvancedSettings());
+            EnsureAdv(CheeseCommand.Supply, () => new SupplyAdvancedSettings());
+            EnsureAdv(CheeseCommand.Tame, () => new TameAdvancedSettings());
+            EnsureAdv(CheeseCommand.Thrumbo, () => new ThrumboAdvancedSettings());
         }
         private void EnsureAdv(CheeseCommand command, Func<CommandAdvancedSettingsBase> factory)
         {
@@ -541,6 +547,9 @@ namespace CheeseProtocol
                 new CheeseCommandConfig { cmd = CheeseCommand.Raid,   label = "!습격" },
                 new CheeseCommandConfig { cmd = CheeseCommand.Caravan,    label = "!상단" },
                 new CheeseCommandConfig { cmd = CheeseCommand.Meteor, label = "!운석" },
+                new CheeseCommandConfig { cmd = CheeseCommand.Supply, label = "!보급" },
+                new CheeseCommandConfig { cmd = CheeseCommand.Tame, label = "!조련" },
+                new CheeseCommandConfig { cmd = CheeseCommand.Thrumbo, label = "!트럼보" },
             };
         }
         private void DrawSection(
