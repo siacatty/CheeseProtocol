@@ -10,9 +10,16 @@ namespace CheeseProtocol
 {
     public class MeteorAdvancedSettings : CommandAdvancedSettingsBase
     {
+        public List<string> allowedMeteorKeys;
+        public List<MeteorCandidate> allowedMeteorCandidates;
+        public List<MeteorCandidate> disallowedMeteorCandidates;
         public override CheeseCommand Command => CheeseCommand.Meteor;
         public override string Label => "!운석";
         private const float lineH = 26f;
+        private Vector2 allowedMeteorScrollPos;
+        private float allowedMeteorListHeight = 400f;
+        public QualityRange meteorTypeRange;
+        public QualityRange meteorSizeRange;
         public MeteorAdvancedSettings()
         {
             ResetToDefaults();
@@ -20,26 +27,251 @@ namespace CheeseProtocol
         }
         public override void ExposeData()
         {
+            LookRange(ref meteorTypeRange, "meteorTypeRange", CheeseDefaults.MeteorTypeRange);
+            LookRange(ref meteorSizeRange, "meteorSizeRange", CheeseDefaults.MeteorSizeRange);
+
+            Scribe_Collections.Look(ref allowedMeteorKeys, "allowedMeteorKeys", LookMode.Value);
+            if (allowedMeteorKeys == null)
+                allowedMeteorKeys = new List<string>(CheeseDefaults.AllowedMeteorKeys);
             if (Scribe.mode == LoadSaveMode.PostLoadInit)
             {
                 InitializeAll();
             }
         }
+        private void LookRange(ref QualityRange range, string baseKey, QualityRange defaultRange)
+        {
+            float min = range.qMin;
+            float max = range.qMax;
+            Scribe_Values.Look(ref min, baseKey + "_min", defaultRange.qMin);
+            Scribe_Values.Look(ref max, baseKey + "_max", defaultRange.qMax);
+            range = QualityRange.init(min, max);
+        }
         public override void ResetToDefaults()
         {
+            allowedMeteorScrollPos = Vector2.zero;
+            
+            allowedMeteorKeys = new List<string>(CheeseDefaults.AllowedMeteorKeys);
+            if (CheeseProtocolMod.MeteorCatalog != null)
+            {
+                UpdateMeteorList();
+            }
+            else
+            {
+                LongEventHandler.ExecuteWhenFinished(UpdateMeteorList);
+            }
             ResetLeverRangesToDefaults();
         }
         private void ResetLeverRangesToDefaults()
         {
-            //ageRange = CheeseDefaults.AgeRange;
+            meteorTypeRange = CheeseDefaults.MeteorTypeRange;
+            meteorSizeRange = CheeseDefaults.MeteorSizeRange;
         }
         private void InitializeAll()
         {
+            meteorTypeRange = QualityRange.init(meteorTypeRange.qMin, meteorTypeRange.qMax);
+            meteorSizeRange = QualityRange.init(meteorSizeRange.qMin, meteorSizeRange.qMax);
+
             //ageRange = QualityRange.init(ageRange.qMin, ageRange.qMax);
+            allowedMeteorKeys = allowedMeteorKeys.Distinct().ToList();
+            UpdateMeteorList();
         }
         public override float Draw(Rect rect)
         {
-            return 0f;
+            float curY = rect.y;
+            float usedH = 0;
+            float checkboxPaddingY = 6f;
+            float rowH = lineH+checkboxPaddingY;
+            //UIUtil.RowWithHighlight(rect, ref curY, rowH, r =>{Widgets.CheckboxLabeled(r, "결격사항 허용", ref allowWorkDisable);});
+            UIUtil.RangeSliderWrapper(rect, ref curY, lineH, "운석 종류 퀄리티", ref meteorTypeRange, isPercentile: true);
+            UIUtil.RangeSliderWrapper(rect, ref curY, lineH, "운석 크기", ref meteorSizeRange, baseMin: GameplayConstants.MeteorSizeMin, baseMax: GameplayConstants.MeteorSizeMax, roundTo: 1f);
+            usedH = curY - rect.y;
+            return usedH;
+        }
+        public float DrawEditableList(Rect rect, string title, float lineH, float paddingX, float paddingY)
+        {
+            float usedH = 0f;
+            float windowH = 220f;
+            float topBarH = 34f;
+            float btnSize = 24f;
+            Rect windowRect = new Rect(rect.x, rect.y, rect.width, windowH);
+            UIUtil.SplitVerticallyByRatio(windowRect, out Rect allowedMeteorRect, out Rect unused, 0.5f, paddingX);
+            UIUtil.SplitHorizontallyByHeight(allowedMeteorRect, out Rect allowedTopRect, out Rect allowedListRect, topBarH, 0f);
+            UIUtil.SplitVerticallyByRatio(allowedTopRect, out Rect allowedTopLabel, out Rect allowedAddBtn, 0.7f, 0f);
+
+            allowedTopLabel = UIUtil.ShrinkRect(allowedTopLabel, 6f);
+            UIUtil.DrawCenteredText(allowedTopLabel, "허용 운석 종류", align: TextAlignment.Left);
+
+            allowedAddBtn = UIUtil.ResizeRectAligned(allowedAddBtn, btnSize, btnSize, TextAlignment.Right);
+            Widgets.DrawHighlightIfMouseover(allowedAddBtn);
+
+            DrawAddMeteorDropdownButton(allowedAddBtn, allowedMeteorCandidates);
+            UIUtil.AutoScrollView(
+                allowedListRect,
+                ref allowedMeteorScrollPos,
+                ref allowedMeteorListHeight,
+                viewRect =>
+                {
+                    return DrawMeteorList(viewRect, allowedMeteorCandidates);
+                },
+                true);
+            Widgets.DrawBox(allowedTopRect);
+            Widgets.DrawBox(allowedListRect);
+            usedH += windowH;
+            return usedH;
+        }
+        private void DrawAddMeteorDropdownButton(
+            Rect plusRect,
+            List<MeteorCandidate> targetCandidates)
+        {
+            plusRect.x -= 4f; //additional padding for + button
+            bool hasAny = disallowedMeteorCandidates != null && disallowedMeteorCandidates.Count > 0;
+            using (new UIUtil.GUIStateScope(hasAny))
+            {
+                Widgets.Dropdown(
+                    plusRect,
+                    hasAny ? (object)disallowedMeteorCandidates : null,
+                    _ => 0, // dummy payload
+                    _ => BuildMeteorDropdown(targetCandidates),
+                    "");
+            }
+            Rect contentRect = plusRect.ContractedBy(4f);
+            contentRect.y -= 1f;
+            contentRect.x += 1f;
+
+            UIUtil.DrawCenteredText(
+                contentRect,
+                "＋",
+                TextAlignment.Center,
+                font: GameFont.Medium
+            );
+        }
+
+        private List<Widgets.DropdownMenuElement<int>> BuildMeteorDropdown(List<MeteorCandidate> targetCandidates)
+        {
+            var oldFont = Text.Font;
+            Text.Font = GameFont.Small;
+            var menu = new List<Widgets.DropdownMenuElement<int>>();
+
+            if (disallowedMeteorCandidates == null || disallowedMeteorCandidates.Count == 0)
+            {
+                menu.Add(new Widgets.DropdownMenuElement<int>
+                {
+                    option = new FloatMenuOption("(none)", null),
+                    payload = 0
+                });
+                return menu;
+            }
+
+            // Snapshot to avoid issues if we modify neutralCandidates after selection.
+            // We store the key in a local var for the closure.
+            foreach (var cand in disallowedMeteorCandidates.ToList())
+            {
+                var captured = cand;
+                string key = captured.key;
+                string label = captured.label;
+
+                menu.Add(new Widgets.DropdownMenuElement<int>
+                {
+                    option = new FloatMenuOption(label, () =>
+                    {
+                        TryAddMeteor(captured);
+                    }),
+                    payload = 0
+                });
+            }
+            Text.Font = oldFont;
+
+            return menu;
+        }
+        private float DrawMeteorList(Rect rect, List<MeteorCandidate> meteorCandidates)
+        {
+            if (meteorCandidates == null)
+                return 0f;
+            float margin = 8f;
+            var listing = new Listing_Standard();
+            float lineH = 26f;
+            //float btnSize = 24f;
+
+            listing.maxOneColumn = true;
+            listing.Begin(rect.ContractedBy(margin));
+
+            foreach (var cand in meteorCandidates.ToList()) //mutate list for safety
+            {
+                var captured = cand;
+                Rect row = listing.GetRect(lineH);
+                Widgets.DrawHighlightIfMouseover(row);
+                UIUtil.SplitVerticallyByRatio(row, out Rect labelRect, out Rect deleteBtn, 0.5f, 0f);
+                labelRect = UIUtil.ShrinkRect(labelRect, 4f);
+                UIUtil.DrawCenteredText(labelRect, captured.label, TextAlignment.Left);
+                Rect xRect = deleteBtn;
+                xRect = UIUtil.ResizeRectAligned(xRect, lineH, lineH, TextAlignment.Right); // uses the aligned version we made
+                xRect.x -= 4f; //additional padding for X button
+
+                // Use an invisible button to render "×" ourselves (font/color control)
+                if (Widgets.ButtonInvisible(xRect))
+                {
+                    TryRemoveMeteor(captured);
+                    break;
+                }
+                Color xColor = Mouse.IsOver(xRect) ? Color.red : new Color(0.7f,0.7f,0.7f);
+                UIUtil.DrawCenteredText(xRect, "×", TextAlignment.Center, font: GameFont.Medium, color: xColor);
+            }
+            listing.End();
+
+            return listing.CurHeight + margin*2f;
+        }
+
+        public void UpdateMeteorList()
+        {
+            if (CheeseProtocolMod.MeteorCatalog != null)
+            {
+                MeteorApplier.BuildPools(
+                    CheeseProtocolMod.MeteorCatalog,
+                    allowedMeteorKeys,
+                    out List<MeteorCandidate> allowed,
+                    out List<MeteorCandidate> disallowed
+                );
+                allowedMeteorCandidates = allowed;
+                disallowedMeteorCandidates = disallowed;
+            }
+        }
+        private bool TryAddMeteor(MeteorCandidate cand)
+        {
+            if (string.IsNullOrEmpty(cand.key)) return false;
+
+            // already selected?
+            if (allowedMeteorKeys.Contains(cand.key))
+                return false;
+
+            RemoveByKey(disallowedMeteorCandidates, cand.key);
+            AddUniqueByKey(allowedMeteorCandidates, cand);
+            allowedMeteorKeys.Add(cand.key);
+            return true;
+        }
+
+        private bool TryRemoveMeteor(MeteorCandidate cand)
+        {
+            if (string.IsNullOrEmpty(cand.key)) return false;
+
+            bool removed;
+            removed = RemoveByKey(allowedMeteorCandidates, cand.key);
+            if (!removed) return false;
+            allowedMeteorKeys.Remove(cand.key);
+            AddUniqueByKey(disallowedMeteorCandidates, cand);
+            return true;
+        }
+        private static bool RemoveByKey(List<MeteorCandidate> list, string key)
+        {
+            int idx = list.FindIndex(t => t.key == key);
+            if (idx < 0) return false;
+            list.RemoveAt(idx);
+            return true;
+        }
+
+        private static void AddUniqueByKey(List<MeteorCandidate> list, MeteorCandidate cand)
+        {
+            if (list.Any(t => t.key == cand.key)) return;
+            list.Add(cand);
         }
     }
 }

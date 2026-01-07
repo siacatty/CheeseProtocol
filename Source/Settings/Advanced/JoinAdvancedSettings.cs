@@ -23,8 +23,8 @@ namespace CheeseProtocol
         public bool useDropPod;
         public List<string> negativeTraitKeys;
         public List<string> positiveTraitKeys;
-        private Vector2 blackTraitScrollPos = Vector2.zero;
-        private Vector2 whiteTraitScrollPos = Vector2.zero;
+        private Vector2 blackTraitScrollPos;
+        private Vector2 whiteTraitScrollPos;
         private float blackListHeight = 400f;
         private float whiteListHeight = 400f;
         public List<TraitCandidate> positiveCandidates;
@@ -77,6 +77,9 @@ namespace CheeseProtocol
         }
         public override void ResetToDefaults()
         {
+            blackTraitScrollPos = Vector2.zero;
+            whiteTraitScrollPos = Vector2.zero;
+
             forcePlayerIdeo = CheeseDefaults.ForcePlayerIdeo;
             forceHuman = CheeseDefaults.ForceHuman;
             allowWorkDisable = CheeseDefaults.AllowWorkDisable;
@@ -157,7 +160,7 @@ namespace CheeseProtocol
             usedH = curY - rect.y;
             return usedH;
         }
-        public float DrawTraitSetting(Rect rect, string title, float lineH, float paddingX, float paddingY)
+        public float DrawEditableList(Rect rect, string title, float lineH, float paddingX, float paddingY)
         {
             float usedH = 0f;
             float traitWindowH = 220f;

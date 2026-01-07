@@ -9,6 +9,7 @@ namespace CheeseProtocol
         public static ChzzkChatClient ChzzkChat;
         public static CheeseSettings Settings;
         public static List<TraitCandidate> TraitCatalog;
+        public static List<MeteorCandidate> MeteorCatalog;
 
         public CheeseProtocolMod(ModContentPack content) : base(content)
         {
@@ -18,10 +19,12 @@ namespace CheeseProtocol
             ChzzkChat = new ChzzkChatClient(Settings);
             LongEventHandler.ExecuteWhenFinished(() =>
             {
-                TraitCatalog = TraitApplier.BuildCatalogAllCandidates();
+                TraitCatalog = TraitApplier.BuildCatalogTraitCandidates();
+                MeteorCatalog = MeteorApplier.BuildCatalogMeteorCandidates();
                 //Log.Message($"[CheeseProtocol] TraitCatalog count = {TraitCatalog.Count}");
 
                 Settings.GetAdvSetting<JoinAdvancedSettings>(CheeseCommand.Join)?.UpdateTraitList();
+                Settings.GetAdvSetting<MeteorAdvancedSettings>(CheeseCommand.Meteor)?.UpdateMeteorList();
             });
             Instance = this;
         }

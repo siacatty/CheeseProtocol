@@ -55,6 +55,32 @@ namespace CheeseProtocol
         public const bool AllowCenterDrop = true;
         public const bool AllowBreacher = true;
         public const bool AllowSiege = true;
-
+        //!운석
+        public static readonly QualityRange MeteorTypeRange = QualityRange.init();
+        public static readonly QualityRange MeteorSizeRange = QualityRange.init(GameplayConstants.MeteorSizeMin, GameplayConstants.MeteorSizeMax);
+        public static readonly string[] AllowedMeteorKeys =
+        {
+            "MineableSteel",
+            "MineableSilver",
+            "MineableGold",
+            "MineableUranium",
+            "MineablePlasteel",
+            "MineableJade",
+            "MineableComponentsIndustrial",
+            "Sandstone",
+            "Granite",
+            "Limestone",
+            "Slate"
+            //"Marble"
+        };
+        //!상단
+        public static readonly QualityRange OrbitalRange = QualityRange.init();
+        public const bool AllowShamanCaravan = true;
+        public const bool AllowBulkCaravan = true;
+        public const bool AllowSlaverCaravan = true;
+        public const bool AllowExoticCaravan = true;
+        public const bool AllowCombatCaravan = true;
+        public const bool AllowRoyalCaravan = true;
+        public const bool AllowImperialCaravan = true;
     }
 }

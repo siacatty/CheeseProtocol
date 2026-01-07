@@ -226,7 +226,6 @@ namespace CheeseProtocol
                     concentration01: 1f-randomVar,
                     debugLog: false
             );
-            traitQuality = Mathf.Clamp01(traitQuality);
             TraitApplier.ApplyTraitsHelper(pawn, traitQuality);    
         }
 
@@ -239,8 +238,7 @@ namespace CheeseProtocol
                 float levelF = QualityBetaSampler.SampleQualityWeightedBeta(
                     quality,
                     minMaxRange,
-                    concentration01: 1f-randomVar,
-                    false
+                    concentration01: 1f-randomVar
                 );
                 skill.Level = Mathf.Clamp(Mathf.RoundToInt(levelF), baseMin, baseMax);
             }

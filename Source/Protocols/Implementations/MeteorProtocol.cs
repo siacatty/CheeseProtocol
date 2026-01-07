@@ -15,19 +15,11 @@ namespace CheeseProtocol
 
         public void Execute(ProtocolContext ctx)
         {
-            Map map = ctx.Map;
-            IncidentDef def = DefDatabase<IncidentDef>.GetNamed("MeteoriteImpact", false);
-            if (def == null)
-            {
-                Log.Warning("[CheeseProtocol] MeteoriteImpact def not found.");
-                return;
-            }
+            var evt = ctx.CheeseEvt;
+            Log.Warning($"[CheeseProtocol] Executing protocol={Id} for {evt}");
 
-            var parms = StorytellerUtility.DefaultParmsNow(IncidentCategoryDefOf.Misc, map);
-            // (선택) 운석 크기/위치 조절은 이 incident는 내부에서 랜덤 처리됨
-
-            if (!def.Worker.TryExecute(parms))
-                Log.Warning("[CheeseProtocol] MeteoriteImpact failed to execute.");
+            // Use your existing spawner
+            MeteorSpawner.Spawn(evt.username, evt.amount, evt.message);
         }
     }
 }

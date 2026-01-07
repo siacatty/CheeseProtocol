@@ -56,7 +56,7 @@ namespace CheeseProtocol
             return false;
         }
 
-        public static List<TraitCandidate> BuildCatalogAllCandidates()
+        public static List<TraitCandidate> BuildCatalogTraitCandidates()
         {
             var list = new List<TraitCandidate>(512);
 
@@ -159,64 +159,6 @@ namespace CheeseProtocol
 
             return true;
         }
-
-        // Step 2: build candidates and split into 3 pools: POS / NEU / NEG (POS wins if overlap)
-        // private static void BuildPools(
-        //     Pawn pawn,
-        //     HashSet<string> positiveSet,
-        //     HashSet<string> negativeSet,
-        //     out List<TraitCandidate> pos,
-        //     out List<TraitCandidate> neu,
-        //     out List<TraitCandidate> neg)
-        // {
-        //     pos = new List<TraitCandidate>(64);
-        //     neu = new List<TraitCandidate>(256);
-        //     neg = new List<TraitCandidate>(64);
-
-        //     // Using all TraitDefs. If you want to restrict to humanlike etc, filter here.
-        //     foreach (TraitDef def in DefDatabase<TraitDef>.AllDefs)
-        //     {
-        //         if (def == null) continue;
-        //         if (IsSexualOrientationTrait(def)) continue;
-
-        //         // If you want: skip traits that shouldn't appear on pawns like this.
-        //         // (Optional) if (!def.commonality > 0f) continue;  // not recommended; modded traits vary.
-
-        //         // Expand degrees: spectrum traits have degreeDatas; singular traits treated as (0).
-        //         if (def.degreeDatas != null && def.degreeDatas.Count > 0)
-        //         {
-        //             for (int i = 0; i < def.degreeDatas.Count; i++)
-        //             {
-        //                 var dd = def.degreeDatas[i];
-        //                 if (dd == null) continue;
-
-        //                 int degree = dd.degree;
-        //                 var cand = new TraitCandidate(def, degree);
-
-        //                 // Pool classification
-        //                 bool isPos = (positiveSet != null && positiveSet.Contains(cand.key));
-        //                 bool isNeg = (negativeSet != null && negativeSet.Contains(cand.key));
-
-        //                 if (isPos) pos.Add(cand);
-        //                 else if (isNeg) neg.Add(cand);
-        //                 else neu.Add(cand);
-        //             }
-        //         }
-        //         else
-        //         {
-        //             var cand = new TraitCandidate(def, 0);
-
-        //             bool isPos = (positiveSet != null && positiveSet.Contains(cand.key));
-        //             bool isNeg = (negativeSet != null && negativeSet.Contains(cand.key));
-
-        //             if (isPos) pos.Add(cand);
-        //             else if (isNeg) neg.Add(cand);
-        //             else neu.Add(cand);
-        //         }
-        //     }
-        // }
-
-        // Step 3: decide negCount from traitQuality (0..1)
         private static int DecideNegCount(int traitCount, float traitQuality, int negAvailable)
         {
             if (traitCount <= 0 || negAvailable <= 0) return 0;

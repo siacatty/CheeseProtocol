@@ -22,4 +22,8 @@ public static class GameplayConstants
     //!습격
     public const int RaidScaleMin = 1;
     public const int RaidScaleMax = 10;
+
+    //!운석
+    public const int MeteorSizeMin = 1;
+    public const int MeteorSizeMax = 200;
 }

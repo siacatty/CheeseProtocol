@@ -688,7 +688,7 @@ namespace CheeseProtocol
                     });
                     DrawSectionNoListing(leftAdv, ref yL, "선호/비선호 특성", false, rect =>
                     {
-                        return GetAdvSetting<JoinAdvancedSettings>(CheeseCommand.Join).DrawTraitSetting(rect, "선호/비선호 특성", lineH, paddingX, paddingY);
+                        return GetAdvSetting<JoinAdvancedSettings>(CheeseCommand.Join).DrawEditableList(rect, "선호/비선호 특성", lineH, paddingX, paddingY);
                     });
                     break;
                 case CheeseCommand.Raid:
@@ -698,8 +698,20 @@ namespace CheeseProtocol
                     });
                     break;
                 case CheeseCommand.Meteor:
+                    DrawSectionNoListing(leftAdv, ref yL, "!운석", false, rect =>
+                    {
+                        return GetAdvSetting(CheeseCommand.Meteor).Draw(rect);
+                    });
+                    DrawSectionNoListing(leftAdv, ref yL, "선호/비선호 특성", false, rect =>
+                    {
+                        return GetAdvSetting<MeteorAdvancedSettings>(CheeseCommand.Meteor).DrawEditableList(rect, "선호/비선호 특성", lineH, paddingX, paddingY);
+                    });
                     break;
                 case CheeseCommand.Caravan:
+                    DrawSectionNoListing(leftAdv, ref yL, "!상단", false, rect =>
+                    {
+                        return GetAdvSetting(CheeseCommand.Caravan).Draw(rect);
+                    });
                     break;
                 default:
                     break;

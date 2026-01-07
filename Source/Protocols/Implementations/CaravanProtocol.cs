@@ -15,23 +15,10 @@ namespace CheeseProtocol.Protocols
 
         public void Execute(ProtocolContext ctx)
         {
-            var map = ctx.Map;
+            var evt = ctx.CheeseEvt;
+            Log.Warning($"[CheeseProtocol] Executing protocol={Id} for {evt}");
 
-            var parms = StorytellerUtility.DefaultParmsNow(
-                IncidentCategoryDefOf.Misc,
-                map
-            );
-
-            // Vanilla incident defName: "TraderCaravanArrival"
-            IncidentDef def = DefDatabase<IncidentDef>.GetNamed("TraderCaravanArrival", false);
-            if (def == null)
-            {
-                Log.Warning("[CheeseProtocol] TraderCaravanArrival def not found.");
-                return;
-            }
-
-            if (!def.Worker.TryExecute(parms))
-                Log.Warning("[CheeseProtocol] TraderCaravanArrival failed to execute.");
+            CaravanSpawner.Spawn(evt.username, evt.amount, evt.message);
         }
     }
 }
