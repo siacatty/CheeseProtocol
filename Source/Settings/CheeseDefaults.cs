@@ -82,5 +82,16 @@ namespace CheeseProtocol
         public const bool AllowCombatCaravan = true;
         public const bool AllowRoyalCaravan = true;
         public const bool AllowImperialCaravan = true;
+        //!보급
+        public static readonly QualityRange SupplyTierRange = QualityRange.init();
+        public static readonly QualityRange SupplyValueRange = QualityRange.init(GameplayConstants.SupplyValueMin, GameplayConstants.SupplyValueMax);
+        public static readonly QualityRange WeaponTierRange = QualityRange.init(GameplayConstants.ThingTierMin, GameplayConstants.ThingTierMax);
+        public static readonly QualityRange WeaponTechRange = QualityRange.init(GameplayConstants.TechLevelMin, GameplayConstants.TechLevelMax);
+        public const bool AllowFoodSupply = true;
+        public const bool AllowMedSupply = true;
+        public const bool AllowDrugSupply = true;
+        public const bool AllowWeaponSupply = true;
+        //!조련
+        public static readonly QualityRange TameValueRange = QualityRange.init();
     }
 }

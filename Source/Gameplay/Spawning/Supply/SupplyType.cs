@@ -5,6 +5,7 @@ namespace CheeseProtocol
     /// </summary>
     public enum SupplyType
     {
+        Undefined,
         Food,       // 식량 보급
         Medicine,   // 의약품 보급
         Drug,       // 기호품 / 드럭

@@ -70,7 +70,7 @@ namespace CheeseProtocol
         {
             var a = advancedSettings.FirstOrDefault(x => x.Command == cmd);
             if (a != null) return a;
-
+            Log.Warning($"[CheeseProtocol] GetAdvSetting --> Command is null {cmd}");
             if (!AdvFactories.TryGetValue(cmd, out var factory))
             {
                 Log.Error($"[CheeseProtocol] No AdvancedSettings factory for {cmd}");
@@ -132,11 +132,14 @@ namespace CheeseProtocol
 
             //Advanced settings
             Scribe_Collections.Look(ref advancedSettings, "advancedSettings", LookMode.Deep);
-
-            if (advancedSettings == null)
-                advancedSettings = new List<CommandAdvancedSettingsBase>();
-            EnsureAdvSettingsInitialized();
             EnsureCommandConfigs();
+            if (Scribe.mode == LoadSaveMode.PostLoadInit)
+            {
+                DedupAdvancedSettings();
+                advancedSettings ??= new List<CommandAdvancedSettingsBase>();
+                EnsureAdvSettingsInitialized();
+                FixupCommandDefaults();
+            }
 
             for (int i = 0; i < commandConfigs.Count; i++)
             {
@@ -149,16 +152,23 @@ namespace CheeseProtocol
                 Scribe_Values.Look(ref c.maxDonation, p + "maxDonation", CheeseDefaults.CmdMaxDonation);
                 Scribe_Values.Look(ref c.cooldownHours, p + "cooldownHours", CheeseDefaults.CmdCooldownHours);
             }
+        }
+        private void DedupAdvancedSettings()
+        {
+            advancedSettings.RemoveAll(a => a == null);
 
-            if (Scribe.mode == LoadSaveMode.PostLoadInit || Scribe.mode == LoadSaveMode.Saving)
+            var seen = new HashSet<CheeseCommand>();
+            for (int i = advancedSettings.Count - 1; i >= 0; i--)
             {
-                FixupCommandDefaults();
+                var cmd = advancedSettings[i].Command;
+                if (!seen.Add(cmd))
+                    advancedSettings.RemoveAt(i); // 뒤에서부터 지우면 안전
             }
         }
         public void EnsureAdvSettingsInitialized()
         {
+            Log.Warning("[CheeseProtocol] EnsureAdvSettingsInitialized");
             advancedSettings ??= new List<CommandAdvancedSettingsBase>();
-
             EnsureAdv(CheeseCommand.Join, () => new JoinAdvancedSettings());
             EnsureAdv(CheeseCommand.Raid, () => new RaidAdvancedSettings());
             EnsureAdv(CheeseCommand.Caravan, () => new CaravanAdvancedSettings());
@@ -507,17 +517,6 @@ namespace CheeseProtocol
                 };
             }
         }
-        private int DefaultMinDonationFor(CheeseCommand cmd)
-        {
-            switch (cmd)
-            {
-                case CheeseCommand.Join:   return 1000;
-                case CheeseCommand.Raid:   return 1000;
-                case CheeseCommand.Caravan:return 1000;
-                case CheeseCommand.Meteor: return 1000;
-                default: return 1000;
-            }
-        }
 
         private void FixupCommandDefaults()
         {
@@ -720,6 +719,24 @@ namespace CheeseProtocol
                     DrawSectionNoListing(leftAdv, ref yL, "!상단", false, rect =>
                     {
                         return GetAdvSetting(CheeseCommand.Caravan).Draw(rect);
+                    });
+                    break;
+                case CheeseCommand.Supply:
+                    DrawSectionNoListing(leftAdv, ref yL, "!보급", false, rect =>
+                    {
+                        return GetAdvSetting(CheeseCommand.Supply).Draw(rect);
+                    });
+                    break;
+                case CheeseCommand.Tame:
+                    DrawSectionNoListing(leftAdv, ref yL, "!조련", false, rect =>
+                    {
+                        return GetAdvSetting(CheeseCommand.Tame).Draw(rect);
+                    });
+                    break;
+                case CheeseCommand.Thrumbo:
+                    DrawSectionNoListing(leftAdv, ref yL, "!트럼보", false, rect =>
+                    {
+                        return GetAdvSetting(CheeseCommand.Thrumbo).Draw(rect);
                     });
                     break;
                 default:

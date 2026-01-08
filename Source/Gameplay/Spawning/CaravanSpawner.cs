@@ -37,7 +37,7 @@ namespace CheeseProtocol
             {
                 Log.Warning("[CheeseProtocol] No trader is allowed");
                 Messages.Message(
-                    "!상단 실행 실패: 허용된 상단 종류 중 현재 도착 가능한 상단이 없습니다.\n",
+                    "!상단 실행 실패: 허용된 상단 종류 중 현재 도착 가능한 상단이 없습니다.",
                     MessageTypeDefOf.RejectInput
                 );
                 return false;
@@ -57,7 +57,7 @@ namespace CheeseProtocol
             }
             Log.Warning("[CheeseProtocol] No trader among allowed can be called");
             Messages.Message(
-                "!상단 실행 실패: 허용된 상단 종류 중 현재 도착 가능한 상단이 없습니다.\n",
+                "!상단 실행 실패: 허용된 상단 종류 중 현재 도착 가능한 상단이 없습니다.",
                 MessageTypeDefOf.RejectInput
             );
             return false;

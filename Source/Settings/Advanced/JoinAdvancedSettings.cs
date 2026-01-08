@@ -35,6 +35,7 @@ namespace CheeseProtocol
         private const float lineH = 26f;
         public JoinAdvancedSettings()
         {
+            Log.Warning("[CheeseProtocol] JoinAdvancedSettings Initialized");
             ResetToDefaults();
             InitializeAll();
         }

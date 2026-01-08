@@ -13,7 +13,7 @@ namespace CheeseProtocol
         public static void SendMeteorSuccessLetter(
             Map map,
             IntVec3 impactCell,
-            MeteorObject meteor)
+            MeteorRequest meteor)
         {
             if (map == null) return;
             if (!impactCell.IsValid) return;
@@ -22,6 +22,36 @@ namespace CheeseProtocol
             string letterText = $"큰 운석이 이 지역에 충돌했습니다. {meteor.label} 더미를 남겼습니다.";
             LookTargets look = new LookTargets(impactCell, map);
             LetterDef def = PickLetterDef(meteor);
+
+            Find.LetterStack.ReceiveLetter(letterLabel, letterText, def, look);
+        }
+        public static void SendTameSuccessLetter(
+            Map map,
+            IntVec3 impactCell,
+            TameRequest tame)
+        {
+            if (map == null) return;
+            if (!impactCell.IsValid) return;
+
+            string letterLabel = $"애완동물: {tame.label}";
+            string letterText = $"새로운 애완동물이 합류합니다. {tame.label}(이)가 반갑게 인사를 합니다.";
+            LookTargets look = new LookTargets(impactCell, map);
+            LetterDef def = LetterDefOf.PositiveEvent;
+
+            Find.LetterStack.ReceiveLetter(letterLabel, letterText, def, look);
+        }
+        public static void SendSupplySuccessLetter(
+            Map map,
+            IntVec3 impactCell,
+            SupplyRequest supply)
+        {
+            if (map == null) return;
+            if (!impactCell.IsValid) return;
+
+            string letterLabel = $"보급: {supply.label}";
+            string letterText = $"보급이 도착했습니다. {supply.label}{(supply.count>1 ? $" {supply.count}개" : "")}.";
+            LookTargets look = new LookTargets(impactCell, map);
+            LetterDef def = LetterDefOf.PositiveEvent;
 
             Find.LetterStack.ReceiveLetter(letterLabel, letterText, def, look);
         }
@@ -36,7 +66,7 @@ namespace CheeseProtocol
 
         /// Rule: Stones/chunks -> Neutral (gray)
         /// Valuable/tech -> Positive (blue)
-        private static LetterDef PickLetterDef(MeteorObject meteor)
+        private static LetterDef PickLetterDef(MeteorRequest meteor)
         {
             if (meteor == null) return LetterDefOf.NeutralEvent;
 

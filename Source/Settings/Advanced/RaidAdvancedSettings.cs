@@ -19,6 +19,7 @@ namespace CheeseProtocol
         public QualityRange raidScaleRange;
         public RaidAdvancedSettings()
         {
+            Log.Warning("[CheeseProtocol] JoinAdvancedSettings Initialized");
             ResetToDefaults();
             InitializeAll();
         }

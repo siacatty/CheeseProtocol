@@ -10,7 +10,7 @@ namespace CheeseProtocol
 {
     public class ThrumboAdvancedSettings : CommandAdvancedSettingsBase
     {
-        public override CheeseCommand Command => CheeseCommand.None;
+        public override CheeseCommand Command => CheeseCommand.Thrumbo;
         public override string Label => "!??";
         private const float lineH = 26f;
         public ThrumboAdvancedSettings()

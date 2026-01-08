@@ -7,7 +7,7 @@ using Verse;
 
 namespace CheeseProtocol
 {
-    public class MeteorObject
+    public class MeteorRequest
     {
         public string type;
         public int size;
@@ -18,7 +18,7 @@ namespace CheeseProtocol
         public IncidentParms parms;
         public string label;
 
-        public MeteorObject(IncidentParms parms)
+        public MeteorRequest(IncidentParms parms)
         {
             type = "";
             size = 0;

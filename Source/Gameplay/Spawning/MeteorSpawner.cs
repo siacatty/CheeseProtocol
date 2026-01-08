@@ -20,7 +20,7 @@ namespace CheeseProtocol
             IntVec3 near = DropCellFinder.TradeDropSpot(map);
             float quality = QualityEvaluator.evaluateQuality(amount, CheeseCommand.Meteor);
             var parms = StorytellerUtility.DefaultParmsNow(IncidentCategoryDefOf.Misc, map);
-            MeteorObject meteor = new MeteorObject(parms);
+            MeteorRequest meteor = new MeteorRequest(parms);
             ApplyMeteorCustomization(meteor, quality);
 
             ThingDef skyfallerDef = ResolveMeteoriteIncomingDef();
@@ -54,7 +54,7 @@ namespace CheeseProtocol
             }
         }
         
-        private static void FallbackVanillaMeteor(MeteorObject meteor)
+        private static void FallbackVanillaMeteor(MeteorRequest meteor)
         {
             IncidentDef def = DefDatabase<IncidentDef>.GetNamed("MeteoriteImpact", false);
             if (def == null)
@@ -69,7 +69,7 @@ namespace CheeseProtocol
                     Log.Warning("[CheeseProtocol] Vanilla MeteorSpawn failed to execute.");
             }
         }
-        private static void ApplyMeteorCustomization(MeteorObject meteor, float quality)
+        private static void ApplyMeteorCustomization(MeteorRequest meteor, float quality)
         {
             var settings = CheeseProtocolMod.Settings;
             MeteorAdvancedSettings meteorAdvSettings = settings.GetAdvSetting<MeteorAdvancedSettings>(CheeseCommand.Meteor);
@@ -80,7 +80,7 @@ namespace CheeseProtocol
             //DebugDumpMineables();
         }
 
-        private static void ApplyMeteorType(MeteorObject meteor, float quality, float randomVar, QualityRange minMaxRange, List<MeteorCandidate> candidates)
+        private static void ApplyMeteorType(MeteorRequest meteor, float quality, float randomVar, QualityRange minMaxRange, List<MeteorCandidate> candidates)
         {
             float meteorTypeQuality = QualityBetaSampler.SampleQualityWeightedBeta(
                     quality,
@@ -90,7 +90,7 @@ namespace CheeseProtocol
             );
             MeteorApplier.ApplyMeteorTypeHelper(meteor, meteorTypeQuality, candidates); 
         }
-        private static void ApplyMeteorSize(MeteorObject meteor, float quality, float randomVar, QualityRange minMaxRange)
+        private static void ApplyMeteorSize(MeteorRequest meteor, float quality, float randomVar, QualityRange minMaxRange)
         {
             int baseMinSize = GameplayConstants.MeteorSizeMin;
             int baseMaxSize = GameplayConstants.MeteorSizeMax;

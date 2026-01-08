@@ -22,6 +22,7 @@ namespace CheeseProtocol
         public QualityRange meteorSizeRange;
         public MeteorAdvancedSettings()
         {
+            Log.Warning("[CheeseProtocol] Meteor Initialized");
             ResetToDefaults();
             InitializeAll();
         }

@@ -9,7 +9,7 @@ namespace CheeseProtocol
 {
     public static class MeteorApplier
     {
-        public static void ApplyMeteorSizeHelper(MeteorObject meteor, int baseSize)
+        public static void ApplyMeteorSizeHelper(MeteorRequest meteor, int baseSize)
         {
             float sizeFactor =
                 Mathf.Clamp(
@@ -23,7 +23,7 @@ namespace CheeseProtocol
             meteor.scatterRadius = 0;
             Log.Warning($"[CheeseProtocol] baseSize = {baseSize}, sizeFactor = {sizeFactor}");
         }
-        public static void ApplyMeteorTypeHelper(MeteorObject meteor, float meteorQuality, List<MeteorCandidate> candidates)
+        public static void ApplyMeteorTypeHelper(MeteorRequest meteor, float meteorQuality, List<MeteorCandidate> candidates)
         {
             MeteorCandidate chosenType = default;
             if (candidates == null || candidates.Count == 0)

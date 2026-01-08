@@ -10,19 +10,26 @@ namespace CheeseProtocol
         public static CheeseSettings Settings;
         public static List<TraitCandidate> TraitCatalog;
         public static List<MeteorCandidate> MeteorCatalog;
+        public static List<TameCandidate> TameCatalog;
+        public static List<SupplyCandidate> SupplyFoodCatalog;
+        public static List<SupplyCandidate> SupplyMedCatalog;
+        public static List<SupplyCandidate> SupplyDrugCatalog;
+        public static List<SupplyCandidate> SupplyWeaponCatalog;
 
         public CheeseProtocolMod(ModContentPack content) : base(content)
         {
-            Settings = GetSettings<CheeseSettings>();
-            Settings.EnsureAdvSettingsInitialized();
             Log.Message("[CheeseProtocol] Loaded.");
-            ChzzkChat = new ChzzkChatClient(Settings);
             LongEventHandler.ExecuteWhenFinished(() =>
             {
+                Settings = GetSettings<CheeseSettings>();
+                Settings.EnsureAdvSettingsInitialized();
+                ChzzkChat = new ChzzkChatClient(Settings);
                 TraitCatalog = TraitApplier.BuildCatalogTraitCandidates();
                 MeteorCatalog = MeteorApplier.BuildCatalogMeteorCandidates();
+                TameCatalog = TameApplier.BuildCatalogTameCandidates();
+                SupplyApplier.BuildCatalogSupplyCandidates(out SupplyFoodCatalog, out SupplyMedCatalog, out SupplyDrugCatalog, out SupplyWeaponCatalog);
                 //Log.Message($"[CheeseProtocol] TraitCatalog count = {TraitCatalog.Count}");
-
+                Log.Message($"[CheeseProtocol] TameCatalog built: count={TameCatalog.Count}");
                 Settings.GetAdvSetting<JoinAdvancedSettings>(CheeseCommand.Join)?.UpdateTraitList();
                 Settings.GetAdvSetting<MeteorAdvancedSettings>(CheeseCommand.Meteor)?.UpdateMeteorList();
             });
