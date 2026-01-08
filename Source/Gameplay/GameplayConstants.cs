@@ -44,5 +44,9 @@ namespace CheeseProtocol
 
         public static readonly int ThingTierMax = 
             System.Enum.GetValues(typeof(QualityCategory)).Cast<QualityCategory>().Max(q => (int)q);
+        
+        //!트럼보
+        public const int ThrumboMax = 20;
+        public const int ThrumboMin = 1;
     }
 }

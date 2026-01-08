@@ -35,15 +35,7 @@ namespace CheeseProtocol
             int count = sorted.Count;
 
             // tameValue01 → 중심 인덱스
-            int centerIndex = Mathf.RoundToInt(tameValue01 * (count - 1));
-
-            // ramdom window 5%
-            int window = Mathf.Max(1, Mathf.RoundToInt(count * 0.05f));
-
-            int min = Mathf.Max(0, centerIndex - window);
-            int max = Mathf.Min(count - 1, centerIndex + window);
-
-            int pickIndex = Rand.RangeInclusive(min, max);
+            int pickIndex = Mathf.RoundToInt(tameValue01 * (count - 1));
             TameCandidate picked = sorted[pickIndex];
             tame.setChosen(picked);
             return true;

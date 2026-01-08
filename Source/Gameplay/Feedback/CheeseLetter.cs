@@ -25,6 +25,48 @@ namespace CheeseProtocol
 
             Find.LetterStack.ReceiveLetter(letterLabel, letterText, def, look);
         }
+        public static void SendThrumboSuccessLetter(
+            Map map,
+            IntVec3 impactCell,
+            ThrumboRequest req)
+        {
+            if (map == null) return;
+            if (!impactCell.IsValid) return;
+
+            string letterLabel = "트럼보";
+            string letterText = "";
+            int count = req.alphaCount + req.thrumboCount;
+            if (count < 4)
+            {
+                letterText += "작은 ";
+            }
+            else if (count < 8)
+            {
+                letterText += "큰 ";
+            }
+            else
+            {
+                letterText += "굉장히 큰 ";
+            }
+            letterText += "무리의 트럼보들이 다가옵니다.";
+            letterText += $"\n\n총 {count}마리의 트럼보가 관측됩니다.";
+
+            if (req.alphaCount > 0)
+            {
+                letterLabel = "알파 " + letterLabel;
+                letterText += "\n\n이 무리는 알파 트럼보가 이끌고 있습니다. 각별한 주의가 필요합니다.";
+            }
+            else
+            {
+                letterLabel = "희귀 " + letterLabel;
+            }
+            letterText += "\n\n트럼보는 희귀한 동물로, 천성은 순하나 맞설 경우 매우 위험합니다. 트럼보의 뿔과 가죽은 상인들 사이에서 아주 귀중한 재료로 여겨집니다.";
+            letterText += "\n\n트럼보는들은 며칠 머무른 뒤 이곳을 떠날 것입니다.";
+            LookTargets look = new LookTargets(impactCell, map);
+            LetterDef def = LetterDefOf.PositiveEvent;
+
+            Find.LetterStack.ReceiveLetter(letterLabel, letterText, def, look);
+        }
         public static void SendTameSuccessLetter(
             Map map,
             IntVec3 impactCell,

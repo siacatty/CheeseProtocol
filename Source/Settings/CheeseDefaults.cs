@@ -93,5 +93,10 @@ namespace CheeseProtocol
         public const bool AllowWeaponSupply = true;
         //!조련
         public static readonly QualityRange TameValueRange = QualityRange.init();
+
+        //!트럼보
+        public static readonly QualityRange AlphaProbRange = QualityRange.init();
+        public static readonly QualityRange ThrumboCountRange = QualityRange.init(GameplayConstants.ThrumboMin, GameplayConstants.ThrumboMax);
+        public const bool AllowAlpha = true;
     }
 }

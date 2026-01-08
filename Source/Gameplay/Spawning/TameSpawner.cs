@@ -19,7 +19,7 @@ namespace CheeseProtocol
             var parms = StorytellerUtility.DefaultParmsNow(IncidentCategoryDefOf.Misc, map);
             TameRequest tame = new TameRequest(parms);
             TryApplyTameCustomization(tame, quality, settings.randomVar, tameAdvSetting);
-            if (tame.def == null) return;
+            if (!tame.IsValid) return;
             var req = new PawnGenerationRequest(
                 tame.def,
                 Faction.OfPlayer,
@@ -67,6 +67,7 @@ namespace CheeseProtocol
                     "!조련 실행 실패: 조련할수있는 동물 목록이 비어있습니다.",
                     MessageTypeDefOf.RejectInput
                 );
+                return false;
             }
             return true;
         }
