@@ -22,7 +22,8 @@ namespace CheeseProtocol
                 IncidentCategoryDefOf.ThreatBig,
                 map
             );
-            ApplyRaidCustomization(parms, quality);
+            CheeseRollTrace trace = new CheeseRollTrace(donorName, CheeseCommand.Raid);
+            ApplyRaidCustomization(parms, quality, trace);
             IncidentDef def = DefDatabase<IncidentDef>.GetNamed("RaidEnemy", false);
             if (def == null)
             {
@@ -30,27 +31,29 @@ namespace CheeseProtocol
                 return;
             }
             string reason;
-            bool ok = TryExecuteRaidWithFallback(IncidentDefOf.RaidEnemy, parms, out reason);
+            bool ok = TryExecuteRaidWithFallback(IncidentDefOf.RaidEnemy, parms, out reason, trace);
             if (Prefs.DevMode)
             {
                 Log.Message($"[CheeseProtocol] ok={ok} points={parms.points:0} reason={reason ?? "n/a"}");
-                if (!ok)
-                    Log.Warning("[CheeseProtocol] RaidEnemy failed to execute.");
+            }
+            if (!ok)
+            {
+                Log.Warning("[CheeseProtocol] RaidEnemy failed to execute.");
+                CheeseLetter.AlertFail("!습격", "실행 실패: 로그 확인 필요.");
             }
         }
 
         private static bool TryExecuteRaidWithFallback(
             IncidentDef def,
             IncidentParms parms,
-            out string reason)
+            out string reason,
+            CheeseRollTrace trace)
         {
             reason = null;
 
-            // 1차 시도 (바닐라 자동)
-            if (def.Worker.TryExecute(parms))
+            if (VanillaIncidentRunner.TryExecuteWithTrace(def, parms, trace))
                 return true;
 
-            // 2차: 안전 fallback
             var prevArrival = parms.raidArrivalMode;
             var prevStrategy = parms.raidStrategy;
 
@@ -69,21 +72,23 @@ namespace CheeseProtocol
             return false;
         }
 
-        private static void ApplyRaidCustomization(IncidentParms parms, float quality)
+        private static void ApplyRaidCustomization(IncidentParms parms, float quality, CheeseRollTrace trace)
         {
             var settings = CheeseProtocolMod.Settings;
             RaidAdvancedSettings raidAdvSetting = settings?.GetAdvSetting<RaidAdvancedSettings>(CheeseCommand.Raid);
             float randomVar = settings.randomVar;
 
-            ApplyRaidScale(parms, quality, randomVar, raidAdvSetting.raidScaleRange);
+            ApplyRaidScale(parms, quality, randomVar, raidAdvSetting.raidScaleRange, trace);
         }
-        private static void ApplyRaidScale(IncidentParms parms, float quality, float randomVar, QualityRange minMaxRange)
+        private static void ApplyRaidScale(IncidentParms parms, float quality, float randomVar, QualityRange minMaxRange, CheeseRollTrace trace)
         {
             float raidScale = QualityBetaSampler.SampleQualityWeightedBeta(
                 quality,
                 minMaxRange,
-                concentration01: 1f-randomVar
+                concentration01: 1f-randomVar,
+                out float score
             );
+            trace.steps.Add(new TraceStep("습격 강도 배율", score, minMaxRange.Expected(quality), raidScale));
             float baseRaidPoints = parms.points;
             float finalRaidPoints = baseRaidPoints * raidScale;
             parms.points = Mathf.Max(0f, finalRaidPoints);

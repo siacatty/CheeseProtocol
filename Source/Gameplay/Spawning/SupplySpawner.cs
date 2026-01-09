@@ -19,7 +19,8 @@ namespace CheeseProtocol
             var parms = StorytellerUtility.DefaultParmsNow(IncidentCategoryDefOf.Misc, map);
             SupplyRequest supply = new SupplyRequest(parms);
             float quality = QualityEvaluator.evaluateQuality(amount, CheeseCommand.Supply);
-            if(!TryApplySupplyCustomization(supply, quality, settings.randomVar, supplyAdvSetting))
+            CheeseRollTrace trace = new CheeseRollTrace(donorName, CheeseCommand.Supply);
+            if(!TryApplySupplyCustomization(supply, quality, settings.randomVar, supplyAdvSetting, trace))
                 return;
             Log.Message(supply);
             IntVec3 rootCell;
@@ -32,44 +33,42 @@ namespace CheeseProtocol
             if (!ok)
             {
                 Log.Warning($"[CheeseProtocol] Supply failed (center: {rootCell} | {supply})");
-                Messages.Message(
-                    "!보급 실행 실패: 보급 운송포드 착지 가능한 Cell이 없습니다.",
-                    MessageTypeDefOf.RejectInput
-                );
+                CheeseLetter.AlertFail("!보급", "보급 운송포드 착지 가능한 Cell이 없습니다.");
             }
             else
             {
-                CheeseLetter.SendSupplySuccessLetter(map, rootCell, supply);
+                string letterLabel = $"보급: {supply.label}";
+                string letterText = $"보급이 도착했습니다. {supply.label}{(supply.count>1 ? $" {supply.count}개" : "")}.";
+                CheeseLetter.SendCheeseLetter(
+                    CheeseCommand.Supply,
+                    letterLabel,
+                    letterText,
+                    new LookTargets(rootCell, map),
+                    trace,
+                    map,
+                    LetterDefOf.PositiveEvent
+                );
                 Log.Message($"[CheeseProtocol] Supply successful (center: {rootCell} | {supply})");
             }
         }
-        public static bool TryApplySupplyCustomization(SupplyRequest supply, float quality, float randomVar, SupplyAdvancedSettings adv)
+        public static bool TryApplySupplyCustomization(SupplyRequest supply, float quality, float randomVar, SupplyAdvancedSettings adv, CheeseRollTrace trace)
         {
             if (!TryApplyType(supply, adv))
             {
                 Log.Warning("[CheeseProtocol] No supply is allowed");
-                Messages.Message(
-                    "!보급 실행 실패: 허용된 보급 종류가 없습니다.",
-                    MessageTypeDefOf.RejectInput
-                );
+                CheeseLetter.AlertFail("!보급", "허용된 보급 종류가 없습니다.");
                 return false;
             }
-            if (!TryApplyTier(supply, quality, randomVar, supply.type == SupplyType.Weapon ? adv.weaponTierRange : adv.supplyTierRange))
+            if (!TryApplyTier(supply, quality, randomVar, supply.type == SupplyType.Weapon ? adv.weaponTierRange : adv.supplyTierRange, trace))
             {
                 Log.Warning("[CheeseProtocol] No available items among allowed supplies");
-                Messages.Message(
-                    "!보급 실행 실패: 허용된 보급 종류 중 유효한 아이템이 없습니다.",
-                    MessageTypeDefOf.RejectInput
-                );
+                CheeseLetter.AlertFail("!보급", "허용된 보급 종류 중 유효한 아이템이 없습니다.");
                 return false;
             }
-            if (!TryApplyValue(supply, quality, randomVar, adv.supplyValueRange, adv.weaponTechRange))
+            if (!TryApplyValue(supply, quality, randomVar, adv.supplyValueRange, adv.weaponTechRange, trace))
             {
                 Log.Warning("[CheeseProtocol] No supply meets the market Value");
-                Messages.Message(
-                    "!보급 실행 실패: 설정된 보급 시장가치에 충족하는 아이템이 없습니다.",
-                    MessageTypeDefOf.RejectInput
-                );
+                CheeseLetter.AlertFail("!보급", "설정된 보급 시장가치에 충족하는 아이템이 없습니다.");
                 return false;
             }
             return true;
@@ -78,31 +77,34 @@ namespace CheeseProtocol
         {
             return SupplyApplier.TryApplyTypeHelper(supply, adv);
         }
-        public static bool TryApplyTier(SupplyRequest supply, float quality, float randomVar, QualityRange tierRange)
+        public static bool TryApplyTier(SupplyRequest supply, float quality, float randomVar, QualityRange tierRange, CheeseRollTrace trace)
         {
             float tier = QualityBetaSampler.SampleQualityWeightedBeta(
                     quality,
                     tierRange,
-                    concentration01: 1f-randomVar
+                    concentration01: 1f-randomVar,
+                    out float score
             );
+            trace.steps.Add(new TraceStep("보급 품질", score, tierRange.Expected(quality), tier));
             return SupplyApplier.TryApplyTierHelper(supply, tier);
         }
-        public static bool TryApplyValue(SupplyRequest supply, float quality, float randomVar, QualityRange supplyValueRange, QualityRange weaponTechRange)
+        public static bool TryApplyValue(SupplyRequest supply, float quality, float randomVar, QualityRange supplyValueRange, QualityRange weaponTechRange, CheeseRollTrace trace)
         {
-            int techLevel = (int) TechLevel.Undefined;
-            if (supply.type == SupplyType.Weapon)
-            {
-                techLevel = Mathf.RoundToInt(QualityBetaSampler.SampleQualityWeightedBeta(
-                    quality,
-                    weaponTechRange,
-                    concentration01: 1f-randomVar
-                ));
-            }
+            //int techLevel = (int) TechLevel.Undefined;
+            int techLevel = Mathf.RoundToInt(QualityBetaSampler.SampleQualityWeightedBeta(
+                quality,
+                weaponTechRange,
+                concentration01: 1f-randomVar,
+                out float techScore
+            ));
             float supplyValue = QualityBetaSampler.SampleQualityWeightedBeta(
                     quality,
                     supplyValueRange,
-                    concentration01: 1f-randomVar
+                    concentration01: 1f-randomVar,
+                    out float valueScore
             );
+            trace.steps.Add(new TraceStep("무기 적용기술", techScore, weaponTechRange.Expected(quality), techLevel));
+            trace.steps.Add(new TraceStep("총 시장가치", valueScore, supplyValueRange.Expected(quality), supplyValue));
             return SupplyApplier.TryApplyValueHelper(supply, supplyValue, (TechLevel)techLevel);
         }
     }

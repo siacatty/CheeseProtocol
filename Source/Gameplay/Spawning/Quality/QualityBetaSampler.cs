@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using Verse;
 
@@ -16,6 +17,7 @@ namespace CheeseProtocol
             float quality,
             QualityRange range,
             float concentration01,
+            out float score,
             bool inverseQ = false,
             bool debugLog = false)
         {
@@ -29,25 +31,14 @@ namespace CheeseProtocol
             float min = range.qMin;
             float max = range.qMax;
             if (max < min) max = min;
-
-            // === concentration split (internal only) ===
-            // Low quality: still some luck
-            //float concLow  = Mathf.Lerp(0f, 12f, concentration01);
-            // High quality: strong protection
-            //float concHigh = Mathf.Lerp(0f, 12f, concentration01);
-
-            // Quality-based protection
-            //float conc = Mathf.Lerp(concLow, concHigh, quality);
             float conc = Mathf.Lerp(0f, 20f, concentration01);
-            // Beta parameters
-            // conc == 0 → alpha=beta=1 → uniform random
             float alpha = 1f + quality * conc;
             float beta  = 1f + (1f - quality) * conc;
 
             float t01 = SampleBeta01(alpha, beta);     // 0..1
             float value = Mathf.Lerp(min, max, t01);   // min..max
-            //value = Mathf.Clamp(value, baseMin, baseMax);
-
+            float expected = Mathf.Lerp(min, max, quality);
+            score = LuckScore(LuckDeltaSigned(value, expected, min, max, inverseQ));
             if (debugLog && Prefs.DevMode)
             {
                 Log.Message(
@@ -60,10 +51,29 @@ namespace CheeseProtocol
                     $" t01={t01:F3} value={value:F2}"
                 );
             }
-
             return value;
         }
 
+        private static float LuckDeltaSigned(float v, float e, float min, float max, bool isInverse)
+        {
+            const float eps = 1e-6f;
+
+            if (isInverse)
+            {
+                // 뒤집기: "작을수록 좋음"
+                if (v <= e) return (e - v) / Mathf.Max(eps, (e - min));
+                else        return -(v - e) / Mathf.Max(eps, (max - e));
+            }
+            else
+            {
+                if (v >= e) return (v - e) / Mathf.Max(eps, (max - e));
+                else        return -(e - v) / Mathf.Max(eps, (e - min));
+            }
+        }
+        private static float LuckScore(float deltaSigned)
+        {
+            return Mathf.Clamp(50f * (deltaSigned + 1f), 0, 100);
+        }
         // ---------- Beta / Gamma helpers ----------
 
         public static float SampleBeta01(float alpha, float beta)

@@ -29,6 +29,7 @@ namespace CheeseProtocol
         public bool hudMinimized = CheeseDefaults.HudMinimized;
         public bool hudSlideHidden = CheeseDefaults.HudSlideHidden;
         public float randomVar = CheeseDefaults.RandomVar;
+        public bool appendRollLogToLetters = CheeseDefaults.AppendRollLogToLetters;
         private enum CheeseSettingsTab { General, Command, Advanced, Simulation, Credits }
         private CheeseSettingsTab activeTab = CheeseSettingsTab.General;
 
@@ -95,6 +96,7 @@ namespace CheeseProtocol
             simDonAmount = CheeseDefaults.SimDonAmount;
             simDonAmountBuf = CheeseDefaults.SimDonAmountBuf;
             drainQueue = CheeseDefaults.DrainQueue;
+            appendRollLogToLetters = CheeseDefaults.AppendRollLogToLetters;
             EnsureCommandConfigs();
             for (int i = 0; i < commandConfigs.Count; i++)
             {
@@ -129,14 +131,15 @@ namespace CheeseProtocol
             Scribe_Values.Look(ref simDonAmount, "simDonAmount", CheeseDefaults.SimDonAmount);
             Scribe_Values.Look(ref simDonAmountBuf, "simDonAmountBuf", CheeseDefaults.SimDonAmountBuf);
             Scribe_Values.Look(ref drainQueue, "drainQueue", CheeseDefaults.DrainQueue);
+            Scribe_Values.Look(ref appendRollLogToLetters, "appendRollLogToLetters", CheeseDefaults.AppendRollLogToLetters);
 
             //Advanced settings
             Scribe_Collections.Look(ref advancedSettings, "advancedSettings", LookMode.Deep);
             EnsureCommandConfigs();
             if (Scribe.mode == LoadSaveMode.PostLoadInit)
             {
-                DedupAdvancedSettings();
                 advancedSettings ??= new List<CommandAdvancedSettingsBase>();
+                DedupAdvancedSettings();
                 EnsureAdvSettingsInitialized();
                 FixupCommandDefaults();
             }
@@ -295,6 +298,8 @@ namespace CheeseProtocol
                         GUI.color = new Color(230f / 255f, 195f / 255f, 92f / 255f);
                         listing.Label("[WARNING!]\n모드가 많거나 렉이 심하면 비활성화를 권장.\n비활성화 시, 퍼즈 중 명령어는 퍼즈 해제 후 일괄 처리");
                         GUI.color = prev;
+                        listing.GapLine();
+                        listing.CheckboxLabeled("알림 메세지에 상세결과 표시", ref appendRollLogToLetters);
                         listing.GapLine();
                         Rect cooldownResetRect = listing.GetRect(btnSize*2f);
                         cooldownResetRect = UIUtil.ResizeRectAligned(cooldownResetRect, cooldownResetRect.width*0.5f, btnSize*1.5f);

@@ -122,6 +122,11 @@ namespace CheeseProtocol
                 inner.TryAdd(t);
             Thing pod = ThingMaker.MakeThing(ThingDefOf.ActiveDropPod);
             ActiveTransporter transporter = pod as ActiveTransporter;
+            if (transporter == null)
+            {
+                Log.Error($"[CheeseProtocol] ActiveDropPod is not ActiveTransporter. class={pod?.GetType().Name}");
+                return null;
+            }
             transporter.Contents = info;
             return pod;
         }
@@ -192,7 +197,6 @@ namespace CheeseProtocol
             if (!near.IsValid || !near.InBounds(map))
                 near = map.Center;
 
-            // ✅ 0) contents를 함수 내부에서 만든다
             List<Thing> contents = BuildContentsFromSupplyRequest(supply);
             if (contents.Count == 0)
             {
@@ -201,8 +205,6 @@ namespace CheeseProtocol
             }
 
             var skyfallerDef = ThingDefOf.DropPodIncoming;
-
-            // ✅ 1) root cell 찾기
             int cur = Mathf.Max(1, initialNearMaxDist);
             bool found = false;
 
@@ -239,10 +241,12 @@ namespace CheeseProtocol
                 return false;
             }
 
-            // ✅ 2) DropPodIncoming 내부는 ActiveDropPod 여야 함
+            //DropPodIncoming 내부는 ActiveDropPod 여야 함
             Thing pod = MakeActiveDropPodWithContents(contents);
-
-            // ✅ 3) Skyfaller 생성 + Spawn
+            if (pod == null)
+            {
+                return false;
+            }
             Skyfaller skyfaller = SkyfallerMaker.MakeSkyfaller(skyfallerDef, pod);
             if (skyfaller == null)
             {

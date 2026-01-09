@@ -9,12 +9,7 @@ namespace CheeseProtocol
         {
             if (evt == null) return;
 
-            Map map = Find.AnyPlayerHomeMap ?? Find.CurrentMap;
-            if (map == null)
-            {
-                Log.Warning("[CheeseProtocol] No map available; skipping donation: " + evt);
-                return;
-            }
+            Map map = Find.AnyPlayerHomeMap;
 
             var ctx = new ProtocolContext(evt, map);
 
@@ -38,13 +33,17 @@ namespace CheeseProtocol
                 Log.Warning("[CheeseProtocol] No protocol matched donation: " + evt);
                 return;
             }
-
+            if (map == null)
+            {
+                CheeseLetter.AlertFail(CheeseCommands.GetCommandText(cmd));
+                Log.Warning("[CheeseProtocol] No map available; skipping donation: " + evt);
+                return;
+            }
             if (!protocol.CanExecute(ctx))
             {
                 Log.Warning($"[CheeseProtocol] Protocol {protocol.Id} cannot execute right now.");
                 return;
             }
-
             try
             {
                 protocol.Execute(ctx);

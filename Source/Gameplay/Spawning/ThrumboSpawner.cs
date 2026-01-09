@@ -4,6 +4,7 @@ using RimWorld;
 using Verse;
 using System.Linq;
 using Verse.AI.Group;
+using UnityEngine;
 
 namespace CheeseProtocol
 {
@@ -20,7 +21,8 @@ namespace CheeseProtocol
             float quality = QualityEvaluator.evaluateQuality(amount, CheeseCommand.Thrumbo);
             var parms = StorytellerUtility.DefaultParmsNow(IncidentCategoryDefOf.Misc, map);
             ThrumboRequest thrumboRequest = new ThrumboRequest(parms);
-            if (!TryApplyThrumboCustomization(thrumboRequest, quality, settings.randomVar, thrumboAdvSetting))
+            CheeseRollTrace trace = new CheeseRollTrace(donorName, CheeseCommand.Thrumbo);
+            if (!TryApplyThrumboCustomization(thrumboRequest, quality, settings.randomVar, thrumboAdvSetting, trace))
             {
                 FallbackVanilla(map);
                 return;
@@ -28,10 +30,6 @@ namespace CheeseProtocol
             if (!TrySpawnThrumboList(thrumboRequest, map, out IntVec3 rootCell))
             {
                 Log.Warning("[CheeseProtocol] Failed to spawn thrumbos.");
-                Messages.Message(
-                    "!트럼보 실패: 트럼보를 소환하지 못했습니다. 소환할 수 있는 경로를 못찾았습니다.",
-                    MessageTypeDefOf.RejectInput
-                );
                 FallbackVanilla(map);
                 return;
             }
@@ -40,8 +38,32 @@ namespace CheeseProtocol
             {
                 Log.Warning("[CheeseProtocol] Failed to make lord thrumbo.");
             }
-            
-            CheeseLetter.SendThrumboSuccessLetter(map, rootCell, thrumboRequest);
+            string letterLabel = (thrumboRequest.alphaCount > 0 ? "알파 " : "희귀 ") + "트럼보";
+
+            int count = thrumboRequest.alphaCount + thrumboRequest.thrumboCount;
+            string size =
+                count < 4 ? "작은 " :
+                count < 8 ? "큰 " :
+                            "굉장히 큰 ";
+            string letterText =
+                $"{size}무리의 트럼보들이 다가옵니다.\n\n" +
+                $"총 {count}마리의 트럼보가 관측됩니다." +
+                (thrumboRequest.alphaCount > 0
+                    ? "\n\n이 무리는 알파 트럼보가 이끌고 있습니다. 각별한 주의가 필요합니다."
+                    : "") +
+                "\n\n트럼보는 희귀한 동물로, 천성은 순하나 맞설 경우 매우 위험합니다. " +
+                "트럼보의 뿔과 가죽은 상인들 사이에서 아주 귀중한 재료로 여겨집니다." +
+                "\n\n트럼보들은 며칠 머무른 뒤 이곳을 떠날 것입니다.";
+
+            CheeseLetter.SendCheeseLetter(
+                CheeseCommand.Thrumbo,
+                letterLabel,
+                letterText,
+                new LookTargets(thrumboRequest.thrumboList),
+                trace,
+                map,
+                LetterDefOf.PositiveEvent
+            );
             Log.Message($"[CheeseProtocol] Thrumbo request successful: {thrumboRequest}");
         }
         public static void FallbackVanilla(Map map)
@@ -108,42 +130,18 @@ namespace CheeseProtocol
             lord = null;
             if (!req.IsValid) return false; //additional safeguard
 
-            // 3) Pick leader: alpha > first thrumbo
             req.leader = req.alphaThrumbo ?? req.thrumboList[0];
-
-            // 4) Make Lord and add pawns
-            // NOTE: req.parms.faction 이 null이면 Lord를 만들 수 없는 경우가 많아서
-            //       너 incident 설계상 faction이 들어온다고 가정하고 진행.
-            /*if (req.parms?.faction == null)
-            {
-                Log.Warning("[CheeseProtocol] No faction is set. MakeLord failed. Fallback");
-                return false;
-            }
-            */
-            // 원하는 LordJob으로 교체 가능:
-            // - 습격/적대 이벤트 느낌: LordJob_AssaultColony(...)
-            // - 맨헌터 느낌: LordJob_Manhunter(...)
-            // 네 Thrumbo 커맨드 의도에 맞춰 선택.
             LordJob job = MakeThrumboLordJob(req, map, req.leader);
 
             lord = LordMaker.MakeNewLord(req.parms.faction, job, map, req.thrumboList);
 
-            // 리더 강제 지정이 필요하면(상황에 따라):
-            // lord.ownedPawns 를 구성한 뒤 leader를 먼저 Add하는 식으로 컨트롤할 수도 있음.
-            // 하지만 보통은 job/AI가 자동으로 처리해서 크게 신경 안 써도 됨.
             return true;
         }
         private static LordJob MakeThrumboLordJob(ThrumboRequest req, Map map, Pawn leader)
         {
-            // 예시 1) 습격/적대 이벤트처럼
-            // return new LordJob_AssaultColony(req.parms.faction, canKidnap: false, canTimeoutOrFlee: true);
-
-            // 예시 2) 맨헌터 이벤트처럼
-            //return new LordJob_Manhunter(req.parms.faction, canTimeoutOrFlee: true);
-
-            // 일단 임시로 "AssaultColony" 추천 (네 의도에 맞게 교체)
-            //return new LordJob_AssaultColony(req.parms.faction, canKidnap: false, canTimeoutOrFlee: true);
-            return new LordJob_AnimalPass(map, 60000);
+            int ticksToStay = Rand.RangeInclusive(100000, 200000);
+            if (req.alphaCount > 0) ticksToStay = Mathf.RoundToInt(ticksToStay*1.2f);
+            return new LordJob_AnimalPass(map, ticksToStay);
         }
         private static Pawn SpawnOne(PawnKindDef kind, Map map, IncidentParms parms, IntVec3 rootCell)
         {
@@ -196,11 +194,11 @@ namespace CheeseProtocol
             GenSpawn.Spawn(pawn, cell, map);
             return pawn;
         }
-        public static bool TryApplyThrumboCustomization(ThrumboRequest request, float quality, float randomVar, ThrumboAdvancedSettings adv)
+        public static bool TryApplyThrumboCustomization(ThrumboRequest request, float quality, float randomVar, ThrumboAdvancedSettings adv, CheeseRollTrace trace)
         {
             if (adv.allowAlpha)
             {
-                if(!TryApplyAlphaProb(request, quality, randomVar, adv.alphaProbRange))
+                if(!TryApplyAlphaProb(request, quality, randomVar, adv.alphaProbRange, trace))
                 {
                     Log.Warning("[CheeseProtocol] Alpha Thrumbo not available.");
                     Messages.Message(
@@ -209,7 +207,7 @@ namespace CheeseProtocol
                     );
                 }
             }
-            if(!TryApplyThrumboCount(request, quality, randomVar, adv.thrumboCountRange))
+            if(!TryApplyThrumboCount(request, quality, randomVar, adv.thrumboCountRange, trace))
             {
                 Log.Warning("[CheeseProtocol] Alpha Thrumbo not available.");
                 Messages.Message(
@@ -220,24 +218,27 @@ namespace CheeseProtocol
             }
             return true;
         }
-        public static bool TryApplyAlphaProb(ThrumboRequest request, float quality, float randomVar, QualityRange alphaProbRange)
+        public static bool TryApplyAlphaProb(ThrumboRequest request, float quality, float randomVar, QualityRange alphaProbRange, CheeseRollTrace trace)
         {
-            float alhphaProb01 = QualityBetaSampler.SampleQualityWeightedBeta(
+            float alphaProb01 = QualityBetaSampler.SampleQualityWeightedBeta(
                     quality,
                     alphaProbRange,
-                    concentration01: 1f-randomVar
+                    concentration01: 1f-randomVar,
+                    out float score
             );
-            return ThrumboApplier.TryApplyAlphaProbHelper(request, alhphaProb01);
+            trace.steps.Add(new TraceStep("알파트럼보 확률", score, alphaProbRange.Expected(quality), alphaProb01));
+            return ThrumboApplier.TryApplyAlphaProbHelper(request, alphaProb01);
         }
 
-        public static bool TryApplyThrumboCount(ThrumboRequest request, float quality, float randomVar, QualityRange thrumboCountRange)
+        public static bool TryApplyThrumboCount(ThrumboRequest request, float quality, float randomVar, QualityRange thrumboCountRange, CheeseRollTrace trace)
         {
             float thrumboCountF = QualityBetaSampler.SampleQualityWeightedBeta(
                     quality,
                     thrumboCountRange,
-                    concentration01: 1f-randomVar
+                    concentration01: 1f-randomVar,
+                    out float score
             );
-            Log.Warning($"[CheeseProtocol] ThrumboCountF = {thrumboCountF}");
+            trace.steps.Add(new TraceStep("트럼보 수", score, thrumboCountRange.Expected(quality), thrumboCountF));
             return ThrumboApplier.TryApplyThrumboCountHelper(request, thrumboCountF);
         }
     }

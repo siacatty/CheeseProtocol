@@ -11,6 +11,10 @@ namespace CheeseProtocol
 
             if (!settings.TryGetCommandConfig(cmd, out var cfg))
                 return 0f;
+            if (amount == 0 ||(cfg.minDonation == cfg.maxDonation)) //Chat || min == max
+            {
+                return 0.5f;
+            }
 
             return Evaluate(
                 amount,
@@ -20,18 +24,18 @@ namespace CheeseProtocol
             );
 
         }
-        public static float Evaluate(int amount, int minDonation, int effectiveDonation, QualityCurve curve = QualityCurve.Linear)
+        public static float Evaluate(int amount, int minDonation, int maxDonation, QualityCurve curve = QualityCurve.Linear)
         {
             amount = Mathf.Max(0, amount);
             minDonation = Mathf.Max(0, minDonation);
-            effectiveDonation = Mathf.Max(minDonation + 1, effectiveDonation);
+            maxDonation = Mathf.Max(minDonation + 1, maxDonation);
             float t;
             if (amount <= minDonation)
                 t = 0f;
-            else if (amount >= effectiveDonation)
+            else if (amount >= maxDonation)
                 t = 1f;
             else
-                t = (amount - minDonation) / (float)(effectiveDonation - minDonation);
+                t = (amount - minDonation) / (float)(maxDonation - minDonation);
 
             // 커브 적용
             return ApplyCurve01(t, curve);

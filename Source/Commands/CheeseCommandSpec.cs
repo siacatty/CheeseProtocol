@@ -1,3 +1,5 @@
+using System.Linq;
+
 namespace CheeseProtocol
 {
     public struct CheeseCommandSpec
@@ -18,7 +20,6 @@ namespace CheeseProtocol
 
     public static class CheeseCommands
     {
-        // ✅ 여기만 수정하면 Parser/HUD/Router 전부 반영됨
         public static readonly CheeseCommandSpec[] Specs = new[]
         {
             new CheeseCommandSpec(CheeseCommand.Join, "!참여", "colonist", "Join / 참여"),
@@ -29,5 +30,14 @@ namespace CheeseProtocol
             new CheeseCommandSpec(CheeseCommand.Tame, "!조련", "tame",  "Tame / 조련"),
             new CheeseCommandSpec(CheeseCommand.Thrumbo, "!트럼보", "thrumbo",  "Thrumbo / 트럼보"),
         };
+        public static string GetCommandText(CheeseCommand cmd)
+        {
+            var spec = CheeseCommands.Specs
+                .FirstOrDefault(s => s.cmd == cmd);
+
+            return spec.cmd != default
+                ? spec.prefix
+                : "";
+        }
     }
 }

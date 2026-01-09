@@ -11,22 +11,38 @@ namespace CheeseProtocol
         public static void Spawn(string donorName, int amount, string message)
         {
             CaravanAdvancedSettings caravanAdvSetting = CheeseProtocolMod.Settings?.GetAdvSetting<CaravanAdvancedSettings>(CheeseCommand.Caravan);
-            if (caravanAdvSetting == null) return;
-            Map map = Find.AnyPlayerHomeMap;
-            if (map == null) return;
-            float quality = QualityEvaluator.evaluateQuality(amount, CheeseCommand.Caravan);
-
-            if (!TryApplyTradeCustomization(map, quality, out IncidentDef def, out IncidentParms parms))
+            if (caravanAdvSetting == null) 
+            {
+                CheeseLetter.AlertFail("!상단", "설정이 로드되지 않았습니다.");
                 return;
-            Log.Message($"[CheeseProtocol] Caravan called ==> TraderKind={parms.traderKind.defName}");
-
-            if (!def.Worker.TryExecute(parms))
+            }
+            Map map = Find.AnyPlayerHomeMap;
+            if (map == null) 
+            {
+                CheeseLetter.AlertFail("!상단");
+                return;
+            }
+            if (map.mapPawns.FreeColonistsSpawnedCount == 0)
+            {
+                CheeseLetter.AlertFail("!상단", "본진에 정착민이 없어 상단이 도착하지 않습니다.");
+                return;
+            }
+            float quality = QualityEvaluator.evaluateQuality(amount, CheeseCommand.Caravan);
+            CheeseRollTrace trace = new CheeseRollTrace(donorName, CheeseCommand.Caravan);
+            if (!TryApplyTradeCustomization(map, quality, out IncidentDef def, out IncidentParms parms, trace))
+                return;
+            
+            if (!VanillaIncidentRunner.TryExecuteWithTrace(def, parms, trace))
+            {
+                CheeseLetter.AlertFail("!상단", "실행 실패: 로그 확인 필요.");
                 Log.Warning("[CheeseProtocol] TraderCaravanArrival failed to execute.");
+            }
+            Log.Message($"[CheeseProtocol] Caravan called ==> TraderKind={parms.traderKind.defName}");
         }
 
-        private static bool TryApplyTradeCustomization(Map map, float quality, out IncidentDef def, out IncidentParms parms)
+        private static bool TryApplyTradeCustomization(Map map, float quality, out IncidentDef def, out IncidentParms parms, CheeseRollTrace trace)
         {
-            List<TraderKindDef> pool = BuildAllowedTraderKindPool(map, quality, out IncidentDef incidentDef, out IncidentParms incidentParms);
+            List<TraderKindDef> pool = BuildAllowedTraderKindPool(map, quality, out IncidentDef incidentDef, out IncidentParms incidentParms, trace);
             def = incidentDef;
             parms = incidentParms;
             if (def == null || parms == null) {
@@ -36,10 +52,7 @@ namespace CheeseProtocol
             if (pool.Count <= 0)
             {
                 Log.Warning("[CheeseProtocol] No trader is allowed");
-                Messages.Message(
-                    "!상단 실행 실패: 허용된 상단 종류 중 현재 도착 가능한 상단이 없습니다.",
-                    MessageTypeDefOf.RejectInput
-                );
+                CheeseLetter.AlertFail("!상단", "!상단 실행 실패: 허용된 상단 종류 중 현재 도착 가능한 상단이 없습니다.");
                 return false;
             }
             while (pool.Count > 0)
@@ -56,17 +69,14 @@ namespace CheeseProtocol
                 }
             }
             Log.Warning("[CheeseProtocol] No trader among allowed can be called");
-            Messages.Message(
-                "!상단 실행 실패: 허용된 상단 종류 중 현재 도착 가능한 상단이 없습니다.",
-                MessageTypeDefOf.RejectInput
-            );
+            CheeseLetter.AlertFail("!상단", "!상단 실행 실패: 허용된 상단 종류 중 현재 도착 가능한 상단이 없습니다.");
             return false;
         }
 
-        private static List<TraderKindDef> BuildAllowedTraderKindPool(Map map, float quality, out IncidentDef incidentDef, out IncidentParms incidentParms)
+        private static List<TraderKindDef> BuildAllowedTraderKindPool(Map map, float quality, out IncidentDef incidentDef, out IncidentParms incidentParms, CheeseRollTrace trace)
         {
             CaravanAdvancedSettings adv = CheeseProtocolMod.Settings.GetAdvSetting<CaravanAdvancedSettings>(CheeseCommand.Caravan);
-            incidentDef = PickCaravanOrOrbital(map, quality, out IncidentParms parms);
+            incidentDef = PickCaravanOrOrbital(map, quality, out IncidentParms parms, trace);
             incidentParms = parms;
             if (incidentDef == null)
                 return new List<TraderKindDef>();
@@ -86,7 +96,7 @@ namespace CheeseProtocol
             return filtered;
         }
 
-        public static IncidentDef PickCaravanOrOrbital(Map map, float quality, out IncidentParms parms)
+        public static IncidentDef PickCaravanOrOrbital(Map map, float quality, out IncidentParms parms, CheeseRollTrace trace)
         {
             var settings = CheeseProtocolMod.Settings;
             CaravanAdvancedSettings caravanAdvSettings = settings.GetAdvSetting<CaravanAdvancedSettings>(CheeseCommand.Caravan);
@@ -104,8 +114,10 @@ namespace CheeseProtocol
                     quality,
                     orbitalRange,
                     concentration01: 1f-randomVar,
+                    out float score,
                     debugLog: false
-            ); 
+            );
+            trace.steps.Add(new TraceStep("궤도상선 확률", score, orbitalRange.Expected(quality), pOrbital));
 
             if (Rand.Chance(pOrbital))
             {

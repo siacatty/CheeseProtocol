@@ -6,6 +6,7 @@ using Verse;
 using UnityEngine;
 using System.Linq;
 using System.Collections;
+using Verse.Noise;
 
 namespace CheeseProtocol
 {
@@ -44,29 +45,34 @@ namespace CheeseProtocol
                 pawn.Name = new NameSingle(TrimName(donorName));
 
             cleanPawn(pawn, joinAdvSetting.allowWorkDisable);
-            ApplyPawnCustomization(pawn, quality);
+            CheeseRollTrace trace = new CheeseRollTrace(donorName, CheeseCommand.Join);
+            ApplyPawnCustomization(pawn, quality, trace);
             pawn.skills?.Notify_SkillDisablesChanged();
             pawn.Notify_DisabledWorkTypesChanged();
             pawn.workSettings?.Notify_DisabledWorkTypesChanged();
-
+            IntVec3 rootCell = IntVec3.Invalid;
             if (joinAdvSetting.useDropPod)
             {
-                IntVec3 dropSpot = DropCellFinder.TradeDropSpot(map);
-                DropPodUtility.DropThingsNear(dropSpot, map, new Thing[] { pawn }, 110, canInstaDropDuringInit: false, leaveSlag: false);
+                rootCell = DropCellFinder.TradeDropSpot(map);
+                DropPodUtility.DropThingsNear(rootCell, map, new Thing[] { pawn }, 110, canInstaDropDuringInit: false, leaveSlag: false);
             }
             else
             {
-                IntVec3 spot = CellFinderLoose.RandomCellWith(
+                rootCell = CellFinderLoose.RandomCellWith(
                     c => c.Standable(map) && !c.Fogged(map),
                     map, 200);
 
-                GenSpawn.Spawn(pawn, spot, map);
+                GenSpawn.Spawn(pawn, rootCell, map);
             }
-
-            Messages.Message(
-                $"[CheeseProtocol] New colonist joined: {pawn.LabelShort} (₩{amount})",
-                MessageTypeDefOf.PositiveEvent,
-                false
+            string letterText = $"새로운 동료가 합류합니다.\n<color=#d09b61>{donorName}</color>님이 조심스럽게 인사를 건넵니다.";
+            CheeseLetter.SendCheeseLetter(
+                CheeseCommand.Join,
+                "합류",
+                letterText,
+                new LookTargets(pawn),
+                trace,
+                map,
+                LetterDefOf.PositiveEvent
             );
         }
 
@@ -178,7 +184,7 @@ namespace CheeseProtocol
             return result.ToList();
         }
 
-        private static void ApplyPawnCustomization(Pawn pawn, float quality)
+        private static void ApplyPawnCustomization(Pawn pawn, float quality, CheeseRollTrace trace)
         {
             if (pawn?.RaceProps == null || !pawn.RaceProps.Humanlike) return;
             if (pawn.skills?.skills == null || pawn.skills.skills.Count == 0) return;
@@ -186,19 +192,19 @@ namespace CheeseProtocol
             JoinAdvancedSettings joinAdvSetting = settings.GetAdvSetting<JoinAdvancedSettings>(CheeseCommand.Join);
             float randomVar = settings.randomVar; //higher values --> bigger noise (lucky/unlucky)
             //float lower_tail = 0.1f; //higher values --> less likely for high amount donation to get unlucky
-            ApplyAge(pawn, quality, randomVar, joinAdvSetting.ageRange);
-            ApplySkills(pawn, quality, randomVar, joinAdvSetting.skillRange);
-            ApplyPassions(pawn, quality, randomVar, joinAdvSetting.passionRange);
+            ApplyAge(pawn, quality, randomVar, joinAdvSetting.ageRange, trace);
+            ApplySkills(pawn, quality, randomVar, joinAdvSetting.skillRange, trace);
+            ApplyPassions(pawn, quality, randomVar, joinAdvSetting.passionRange, trace);
             ApplyXenotype(pawn, joinAdvSetting.forceHuman);
             ApplyIdeo(pawn, joinAdvSetting.forcePlayerIdeo);
             //Log.Warning($"[CheeseProtocol] traitsRange = {joinSettings.traitsRange.qMin} ~ {joinSettings.traitsRange.qMax}");
-            ApplyTraits(pawn, quality, randomVar, joinAdvSetting.traitsRange);
-            ApplyHealth(pawn, quality, randomVar, joinAdvSetting.healthRange);
+            ApplyTraits(pawn, quality, randomVar, joinAdvSetting.traitsRange, trace);
+            ApplyHealth(pawn, quality, randomVar, joinAdvSetting.healthRange, trace);
             //ApplyApparel(pawn, quality);
             //ApplyWeapon(pawn, quality);
         }
 
-        private static void ApplyAge(Pawn pawn, float quality, float randomVar, QualityRange minMaxRange)
+        private static void ApplyAge(Pawn pawn, float quality, float randomVar, QualityRange minMaxRange, CheeseRollTrace trace)
         {
             int baseMin = GameplayConstants.AgeMin;
             int baseMax = GameplayConstants.AgeMax;
@@ -206,55 +212,71 @@ namespace CheeseProtocol
                 quality,
                 minMaxRange,
                 concentration01: 1f-randomVar,
+                out float score,
                 inverseQ: true
             );
             int age = Mathf.Clamp(Mathf.RoundToInt(ageQuality), baseMin, baseMax);
+            trace.steps.Add(new TraceStep("나이", score, minMaxRange.Expected(1-quality), age, isInverse: true));
             long bioTicks = age * 3600000L;
             long chronoTicks = age * 3600000L;
-
+            
             pawn.ageTracker.AgeBiologicalTicks = bioTicks;
             pawn.ageTracker.AgeChronologicalTicks = chronoTicks;
 
             pawn.ageTracker.ResetAgeReversalDemand(Pawn_AgeTracker.AgeReversalReason.Initial, false);
         }
 
-        private static void ApplyTraits(Pawn pawn, float quality, float randomVar, QualityRange minMaxRange)
+        private static void ApplyTraits(Pawn pawn, float quality, float randomVar, QualityRange minMaxRange, CheeseRollTrace trace)
         {
             float traitQuality = QualityBetaSampler.SampleQualityWeightedBeta(
                     quality,
                     minMaxRange,
                     concentration01: 1f-randomVar,
+                    out float score,
                     debugLog: false
             );
+            //Mathf.Lerp(minMaxRange.qMin, minMaxRange.qMax, quality)
+            trace.steps.Add(new TraceStep("특성", score, minMaxRange.Expected(quality), traitQuality));
             TraitApplier.ApplyTraitsHelper(pawn, traitQuality);    
         }
 
-        private static void ApplySkills(Pawn pawn, float quality, float randomVar, QualityRange minMaxRange)
+        private static void ApplySkills(Pawn pawn, float quality, float randomVar, QualityRange minMaxRange, CheeseRollTrace trace)
         {
             int baseMin = GameplayConstants.SkillLevelMin;
             int baseMax = GameplayConstants.SkillLevelMax;
+            float totalscore = 0;
+            float totalskills = 0;
             foreach (var skill in pawn.skills.skills)
             {
                 float levelF = QualityBetaSampler.SampleQualityWeightedBeta(
                     quality,
                     minMaxRange,
-                    concentration01: 1f-randomVar
+                    concentration01: 1f-randomVar,
+                    out float score
                 );
+                totalscore += score;
+                totalskills += levelF;
                 skill.Level = Mathf.Clamp(Mathf.RoundToInt(levelF), baseMin, baseMax);
             }
+            int count = pawn.skills.skills.Count;
+            if (count == 0)
+                return;
+            trace.steps.Add(new TraceStep("스킬 평균레벨", totalscore/count, minMaxRange.Expected(quality), totalskills/count));
         }
 
-        private static void ApplyHealth(Pawn pawn, float quality, float randomVar, QualityRange minMaxRange)
+        private static void ApplyHealth(Pawn pawn, float quality, float randomVar, QualityRange minMaxRange, CheeseRollTrace trace)
         {
             float healthQuality = QualityBetaSampler.SampleQualityWeightedBeta(
                 quality,
                 minMaxRange,
-                concentration01: 1f-randomVar
+                concentration01: 1f-randomVar,
+                out float score
             );
+            trace.steps.Add(new TraceStep("건강", score, minMaxRange.Expected(quality), healthQuality));
             HealthApplier.ApplyHealthHelper(pawn, healthQuality);
         }
 
-        private static void ApplyPassions(Pawn pawn, float quality, float randomVar, QualityRange minMaxRange)
+        private static void ApplyPassions(Pawn pawn, float quality, float randomVar, QualityRange minMaxRange, CheeseRollTrace trace)
         {
             int baseMin = GameplayConstants.PassionMin;
             int baseMax = GameplayConstants.PassionMax;
@@ -262,11 +284,12 @@ namespace CheeseProtocol
                     quality,
                     minMaxRange,
                     concentration01: 1f-randomVar,
-                    false
+                    out float score
                 );
             int baseCount = Mathf.Clamp(Mathf.RoundToInt(passionCountF), baseMin, baseMax);                 // floor
             float frac = passionCountF - baseCount;             // [0,1)
             int passionCount = baseCount + (Rand.Value < frac ? 1 : 0);
+            trace.steps.Add(new TraceStep("열정 개수", score, minMaxRange.Expected(quality), passionCount));
 
             if (passionCount <= 0) return;
             if (pawn?.skills?.skills == null) return;

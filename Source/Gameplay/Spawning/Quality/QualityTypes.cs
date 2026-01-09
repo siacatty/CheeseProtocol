@@ -1,3 +1,5 @@
+using RimWorld;
+using RimWorld.QuestGen;
 using UnityEngine;
 namespace CheeseProtocol
 {
@@ -24,6 +26,14 @@ namespace CheeseProtocol
             if (max < min) (min, max) = (max, min);
 
             return new QualityRange { qMin = min, qMax = max };
+        }
+        public float Mean()
+        {
+            return (qMin + qMax)/2f;
+        }
+        public float Expected(float v)
+        {
+            return Mathf.Lerp(qMin, qMax, v);
         }
     }
 } 
