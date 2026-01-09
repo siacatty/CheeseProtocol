@@ -1,5 +1,6 @@
 using UnityEngine;
 using Verse;
+using static CheeseProtocol.CheeseLog;
 
 namespace CheeseProtocol
 {
@@ -92,21 +93,19 @@ namespace CheeseProtocol
                 noise = Mathf.Clamp(noise, minNoise, maxNoise);
             }
             float value = mean + noise * std;
-            if (Prefs.DevMode)
-            {
-                Log.Message(
-                    "[CheeseProtocol][QualitySample]\n" +
-                    $" quality = {quality:F3}\n" +
-                    $" range01 = [{weightRange.qMin:F2}, {weightRange.qMax:F2}]\n" +
-                    $" baseRange = [{baseMin}, {baseMax}]\n" +
-                    $" min/max = [{min:F2}, {max:F2}]\n" +
-                    $" mean = {mean:F2}\n" +
-                    $" std = {std:F2}\n" +
-                    $" noise(raw) = {noiseRaw:F3}\n" +
-                    $" noise(final) = {noise:F3}\n" +
-                    $" value = {value:F2}"
-                );
-            }
+            QMsg(
+                "QualitySample:\n" +
+                $" quality = {quality:F3}\n" +
+                $" range01 = [{weightRange.qMin:F2}, {weightRange.qMax:F2}]\n" +
+                $" baseRange = [{baseMin}, {baseMax}]\n" +
+                $" min/max = [{min:F2}, {max:F2}]\n" +
+                $" mean = {mean:F2}\n" +
+                $" std = {std:F2}\n" +
+                $" noise(raw) = {noiseRaw:F3}\n" +
+                $" noise(final) = {noise:F3}\n" +
+                $" value = {value:F2}",
+                Channel.Debug
+            );
             return value;
         }
     }

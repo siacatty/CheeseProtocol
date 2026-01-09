@@ -7,6 +7,7 @@ using System.Globalization;
 using System.IO;
 using System.Text;
 using Verse;
+using static CheeseProtocol.CheeseLog;
 
 namespace CheeseProtocol
 {
@@ -15,7 +16,7 @@ namespace CheeseProtocol
         public static object Deserialize(string json)
         {
             if (json == null) {
-                Log.Warning("[CheeseProtocol] MiniJSON.Deserialize called with null json");
+                QWarn("MiniJSON.Deserialize called with null json", Channel.Verse);
                 return null;
             }
             return Parser.Parse(json);
@@ -151,12 +152,10 @@ namespace CheeseProtocol
                 {
                     var nextToken = NextToken;
                     if (nextToken == TOKEN.NONE) {
-                        //Log.Warning("[CheeseProtocol] nextToken is None");
                         return null;
                     }
                     // }
                     if (nextToken == TOKEN.CURLY_CLOSE) {
-                        //Log.Warning("[CheeseProtocol] nextToken is curlyClose");
                         return table;
                     }
                     // ,
@@ -167,16 +166,13 @@ namespace CheeseProtocol
                     }
                     // key
                     string name = ParseString();
-                    //Log.Warning("[CheeseProtocol] MiniJSON key: " + name);
                     if (name == null) {
-                        //Log.Warning("[CheeseProtocol] key is null");
                         return null;
                     }
 
                     // ':'
                     var tok = NextToken;
                     if (tok != TOKEN.COLON){
-                        //Log.Warning("[CheeseProtocol] no colon found.");
                         return null;
                     }
                     json.Read();
@@ -334,7 +330,6 @@ namespace CheeseProtocol
                     if (json.Peek() == -1) return TOKEN.NONE;
 
                     char c = PeekChar;
-                    //Log.Warning("[CheeseProtocol] TEST next character: " + c);
                     switch (c)
                     {
                         case '{': return TOKEN.CURLY_OPEN;

@@ -4,6 +4,7 @@ using System.Reflection;
 using RimWorld;
 using UnityEngine;
 using Verse;
+using static CheeseProtocol.CheeseLog;
 
 namespace CheeseProtocol
 {
@@ -21,14 +22,14 @@ namespace CheeseProtocol
                 );
             meteor.size = Mathf.RoundToInt(baseSize * sizeFactor);
             meteor.scatterRadius = 0;
-            Log.Warning($"[CheeseProtocol] baseSize = {baseSize}, sizeFactor = {sizeFactor}");
+            QMsg($"Meteor baseSize = {baseSize}, sizeFactor = {sizeFactor}", Channel.Debug);
         }
         public static void ApplyMeteorTypeHelper(MeteorRequest meteor, float meteorQuality, List<MeteorCandidate> candidates)
         {
             MeteorCandidate chosenType = default;
             if (candidates == null || candidates.Count == 0)
             {
-                Log.Warning("[CheeseProtocol] ApplyMeteorHelper: candidates empty");
+                QWarn("ApplyMeteorHelper: Meteor candidates empty");
                 return;
             }
             int bucketSize = 3;
@@ -47,7 +48,6 @@ namespace CheeseProtocol
             int n = scoreKeys.Count;
             float q = Mathf.Clamp01(meteorQuality);
             int idx = Mathf.Clamp(Mathf.FloorToInt(q * (n - 1)), 0, n - 1);
-            //float chosenScoreKey = scoreKeys[idx];
             var bucketRange = getBucketRange(scoreKeys.Count, idx, bucketSize);
 
             var result = new List<int>(Math.Max(0, bucketRange.end - bucketRange.start + 1));

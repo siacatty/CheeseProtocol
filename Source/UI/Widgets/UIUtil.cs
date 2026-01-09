@@ -113,7 +113,6 @@ namespace CheeseProtocol
             /// </summary>
             public static bool IsBlocked(Vector2 mousePos)
             {
-                Log.Warning($"[CheeseProtocol] stable count = {_stable.Count}");
                 TickFrame();
                 for (int i = 0; i < _stable.Count; i++)
                 {

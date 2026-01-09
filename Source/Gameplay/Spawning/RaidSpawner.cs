@@ -6,6 +6,7 @@ using Verse;
 using UnityEngine;
 using System.Linq;
 using System.Collections;
+using static CheeseProtocol.CheeseLog;
 
 namespace CheeseProtocol
 {
@@ -27,18 +28,15 @@ namespace CheeseProtocol
             IncidentDef def = DefDatabase<IncidentDef>.GetNamed("RaidEnemy", false);
             if (def == null)
             {
-                Log.Warning("[CheeseProtocol] RaidEnemy def not found.");
+                QWarn("RaidEnemy def not found.", Channel.Verse);
                 return;
             }
             string reason;
             bool ok = TryExecuteRaidWithFallback(IncidentDefOf.RaidEnemy, parms, out reason, trace);
-            if (Prefs.DevMode)
-            {
-                Log.Message($"[CheeseProtocol] ok={ok} points={parms.points:0} reason={reason ?? "n/a"}");
-            }
+            QMsg($"RaidSpawn ok={ok} points={parms.points:0} reason={reason ?? "n/a"}", Channel.Debug);
             if (!ok)
             {
-                Log.Warning("[CheeseProtocol] RaidEnemy failed to execute.");
+                QWarn("RaidEnemy failed to execute.", Channel.Verse);
                 CheeseLetter.AlertFail("!습격", "실행 실패: 로그 확인 필요.");
             }
         }
@@ -92,7 +90,7 @@ namespace CheeseProtocol
             float baseRaidPoints = parms.points;
             float finalRaidPoints = baseRaidPoints * raidScale;
             parms.points = Mathf.Max(0f, finalRaidPoints);
-            Log.Message($"[CheeseProtocol][Raid] base={baseRaidPoints:0} final={finalRaidPoints:0} scale={raidScale:0.00}");
+            QMsg($"Raid base={baseRaidPoints:0} final={finalRaidPoints:0} scale={raidScale:0.00}", Channel.Debug);
         }
         
     }

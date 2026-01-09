@@ -7,19 +7,12 @@ using WebSocket4Net;
 using System.Collections.Concurrent;
 using System.Runtime.InteropServices;
 using UnityEngine;
+using static CheeseProtocol.CheeseLog;
 
 namespace CheeseProtocol
 {
     public class ChzzkChatClient
     {
-        private enum LogLevel
-        {
-            Message,
-            Warning,
-            Error
-        }
-        private readonly Queue<(LogLevel level, string msg)> pendingLogs
-    = new Queue<(LogLevel, string)>();
         private readonly ConcurrentQueue<CheeseEvent> cheeseEvtQueue
     = new ConcurrentQueue<CheeseEvent>();
         private readonly CheeseSettings settings;
@@ -82,7 +75,7 @@ namespace CheeseProtocol
                     s.connectionState = ConnectionState.Disconnected;
                     s.lastError = "Disconnected: Invalid Studio URL";
                 });
-                EnqueueWarning("[CheeseProtocol] Invalid studio URL");
+                QWarn("Invalid studio URL", Channel.Net);
                 return;
             }
             if (!ChzzkEndpoints.TryResolveChatChannelId(channelId, out chatChannelId))
@@ -93,7 +86,7 @@ namespace CheeseProtocol
                     s.connectionState = ConnectionState.Disconnected;
                     s.lastError = "Disconnected: Stream offline";
                 });
-                EnqueueWarning("[CheeseProtocol] Failed to resolve chatChannelId (is stream LIVE?)");
+                QWarn("Failed to resolve chatChannelId (is stream LIVE?)", Channel.Net);
                 StartLiveRetryTimer();
                 return;
             }
@@ -109,7 +102,7 @@ namespace CheeseProtocol
                     s.connectionState = ConnectionState.Disconnected;
                     s.lastError = "Disconnected: ChatAccess token fetch failed";
                 });
-                EnqueueWarning("[CheeseProtocol] Failed to fetch chatAccessToken");
+                QWarn("Failed to fetch chatAccessToken", Channel.Net);
                 return;
             }
 
@@ -131,12 +124,12 @@ namespace CheeseProtocol
                 try { OnMessage(e.Message); }
                 catch (Exception ex)
                 {
-                    EnqueueError("[CheeseProtocol] OnMessage crash: " + ex);
+                    QErr("OnMessage crash: " + ex, Channel.Net);
                 }
             };
             ws.Error += (_, e) =>
             {
-                EnqueueError("[CheeseProtocol] Web socket error: " + e.Exception);
+                QErr("Web socket error: " + e.Exception, Channel.Net);
                 settings.chzzkStatus = "Disconnected: WS error";
                 CheeseGameComponent.Instance?.UpdateUiStatus(s =>
                 {
@@ -149,7 +142,7 @@ namespace CheeseProtocol
             {
                 var sock = sender as WebSocket;
                 var state = sock != null ? sock.State.ToString() : "sender-null";
-                EnqueueWarning("[CheeseProtocol] Web socket closed. State=" + state);
+                QWarn("Web socket closed. State=" + state, Channel.Net);
 
                 settings.chzzkStatus = "Disconnected: WS closed";
                 CheeseGameComponent.Instance?.UpdateUiStatus(s =>
@@ -164,8 +157,6 @@ namespace CheeseProtocol
                     return;
                 }
                 OnDisconnected("ws.closed");
-                //reconnectReason = "ws.closed";
-                //ScheduleReconnect();
             };
 
             ws.Open();
@@ -191,19 +182,9 @@ namespace CheeseProtocol
             extraToken = null;
             sid = null;
             connectSent = false;
-            //ticksSinceHandshake = 0;
-            /*
-            if (settings != null)
-                settings.chzzkStatus = "Disconnected: ";
-            */
         }
         private void ScheduleReconnect()
         {
-            /*if (reconnectScheduled) return;
-            reconnectScheduled = true;
-            reconnectTickAt = Find.TickManager.TicksGame + ReconnectDelayTicks;
-            settings.chzzkStatus = "Chat: reconnect scheduled";
-            */
             lock (reconnectLock)
             {
                 if (reconnectTimerArmed) return;
@@ -235,33 +216,13 @@ namespace CheeseProtocol
 
         public void Tick()
         {
-            lock (pendingLogs)
-            {
-                while (pendingLogs.Count > 0)
-                {
-                    var (level, msg) = pendingLogs.Dequeue();
-                    switch (level)
-                    {
-                        case LogLevel.Warning:
-                            Log.Warning(msg);
-                            break;
-                        case LogLevel.Error:
-                            Log.Error(msg);
-                            break;
-                        default:
-                            Log.Message(msg);
-                            break;
-                    }
-                }
-            }
-
             if (reconnectRequested)
             {
                 reconnectRequested = false;
                 if (!userDisabledReconnect)
                 {
                     RequestConnect("auto");
-                    EnqueueWarning("[CheeseProtocol] ScheduleReconnect reason=" + reconnectReason);
+                    QWarn("ScheduleReconnect reason=" + reconnectReason, Channel.Net);
                 }
             }
             if (watchRequested)
@@ -276,11 +237,11 @@ namespace CheeseProtocol
         private void SendConnect()
         {
             if (ws == null || connectSent) {
-                EnqueueWarning("[CheeseProtocol] SendConnect() null socket or connect already sent");
+                QWarn("SendConnect() null socket or connect already sent", Channel.Net);
                 return;
             }
             if (string.IsNullOrEmpty(chatChannelId) || string.IsNullOrEmpty(chatAccessToken)) {
-                EnqueueWarning("[CheeseProtocol] null chatChannelID/chatAccessToken");
+                QWarn("null chatChannelID/chatAccessToken", Channel.Net);
                 return;
             }
             var payload = new Dictionary<string, object>
@@ -323,9 +284,9 @@ namespace CheeseProtocol
                 if (jsonErrorCount == 1 || jsonErrorCount % 100 == 0)
                 {
                     lastJsonErrorSample = raw;
-                    EnqueueError("[CheeseProtocol] JSON parse error (" + jsonErrorCount + "): " + ex);
-                    EnqueueError("[CheeseProtocol] JSON error sample (first 300): " +
-                        (raw.Length > 300 ? raw.Substring(0, 300) : raw));
+                    QErr("JSON parse error (" + jsonErrorCount + "): " + ex, Channel.Net);
+                    QErr("JSON error sample (first 300): " +
+                        (raw.Length > 300 ? raw.Substring(0, 300) : raw), Channel.Net);
                 }
                 return;
             }
@@ -336,12 +297,9 @@ namespace CheeseProtocol
             if (!obj.TryGetValue("cmd", out var cmdObj)) return;
             var cmd = ParseIntSafe(cmdObj);
 
-            //EnqueueWarning("[CheeseProtocol][RAW-CMD] cmd=" + cmd + " raw=" + raw);
-
-            // server heartbeat ping: {"ver":"2","cmd":0}
             if (cmd == 0)
             {
-                //EnqueueWarning("[CheeseProtocol] Heartbeat ping received");
+                QMsg("Heartbeat ping received", Channel.Debug);
                 SendHeartbeat();
                 return;
             }
@@ -364,7 +322,7 @@ namespace CheeseProtocol
                         {
                             s.connectionState = ConnectionState.Connected;
                         });
-                        EnqueueMessage("[CheeseProtocol] Chat channel connected successfully");
+                        QMsg("Chat channel connected successfully", Channel.Net);
                     }
                 }
                 return;
@@ -384,7 +342,7 @@ namespace CheeseProtocol
                     CheeseEvent evt = CreateCheeseEvent(msgObj, false);
                     if (evt == null)
                     {
-                        EnqueueWarning("[CheeseProtocol] CheeseEvent creation failed from chat");
+                        QWarn("CheeseEvent creation failed from chat", Channel.Net);
                         continue;
                     }
                     else if (!TryEnqueueMessage(evt))
@@ -395,7 +353,6 @@ namespace CheeseProtocol
             // donation batch
             if (cmd == 93102)
             {
-                //EnqueueWarning("[CheeseProtocol][RAW-CMD] cmd=" + cmd + " raw=" + raw);
                 if (!obj.TryGetValue("bdy", out var bdyObj)) return;
 
                 var list = bdyObj as List<object>;
@@ -407,7 +364,7 @@ namespace CheeseProtocol
                     CheeseEvent evt = CreateCheeseEvent(msgObj, true);
                     if (evt == null)
                     {
-                        EnqueueWarning("[CheeseProtocol] CheeseEvent creation failed from donation");
+                        QWarn("CheeseEvent creation failed from donation", Channel.Net);
                         continue;
                     }
                     else if (!TryEnqueueMessage(evt))
@@ -415,9 +372,7 @@ namespace CheeseProtocol
                 }
                 return;
             }
-
-
-            // Heartbeat etc. ignore
+            // etc. ignore
         }
 
         private CheeseEvent CreateCheeseEvent(Dictionary<string, object> msgObj, bool isDonation)
@@ -469,7 +424,7 @@ namespace CheeseProtocol
             {
                 if (droppedEvt++ % 100 == 0)
                 {
-                    EnqueueWarning($"[CheeseProtocol]Queue overflow, dropping. droppedEvt={droppedEvt}");
+                    QWarn($"Queue overflow, dropping. droppedEvt={droppedEvt}");
                     return false;
                 }
             }
@@ -477,7 +432,7 @@ namespace CheeseProtocol
             {
                 cheeseEvtQueue.Enqueue(evt);
             }
-            EnqueueMessage($"[CheeseProtocol][DON] {evt.username} type={evt.donationType} amount={evt.amount} msg={evt.message}");
+            QMsg($"New message: {evt.username} type={evt.donationType} amount={evt.amount} msg={evt.message}", Channel.Debug);
             return true;
         }
 
@@ -517,11 +472,10 @@ namespace CheeseProtocol
 
                 var json = MiniJSON.Serialize(payload);
                 ws.Send(json);
-                // Log.Message("[CheeseProtocol][Chat] HEARTBEAT sent");
             }
             catch (Exception e)
             {
-                EnqueueError("[CheeseProtocol] HEARTBEAT send failed: " + e.Message);
+                QErr("HEARTBEAT send failed: " + e.Message, Channel.Net);
             }
         }
 
@@ -578,7 +532,7 @@ namespace CheeseProtocol
 
         private string ExtractNickname(Dictionary<string, object> msgObj)
         {
-            // In your log, "profile" is a JSON string containing nickname.
+            // "profile" is a JSON string containing nickname.
             if (msgObj.TryGetValue("profile", out var profileObj))
             {
                 var profileJson = profileObj?.ToString();
@@ -688,7 +642,7 @@ namespace CheeseProtocol
 
             if (currentChatCid != lastResolvedChatChannelId)
             {
-                EnqueueWarning($"[CheeseProtocol] chatChannelId changed {lastResolvedChatChannelId} -> {currentChatCid}, reconnecting");
+                QMsg($"chatChannelId changed {lastResolvedChatChannelId} -> {currentChatCid}, reconnecting", Channel.Net);
                 settings.chzzkStatus = "Connecting: Chat channel changed";
                 CheeseGameComponent.Instance?.UpdateUiStatus(s =>
                 {
@@ -703,7 +657,7 @@ namespace CheeseProtocol
             // LIVE인데 ws가 null/닫힘이면 붙기
             if (ws == null || ws.State != WebSocketState.Open || sid == null)
             {
-                EnqueueWarning("[CheeseProtocol][Chat] live but not connected, reconnecting");
+                QMsg("Channel is live but not connected, reconnecting", Channel.Net);
                 settings.chzzkStatus = "Connecting: Chat channel detached";
                 CheeseGameComponent.Instance?.UpdateUiStatus(s =>
                 {
@@ -792,7 +746,6 @@ namespace CheeseProtocol
                         if (string.IsNullOrWhiteSpace(channelId)) return;
 
                         // timer thread: just set a flag; do actual work in Tick
-                        //EnqueueWarning("[CheeseProtocol] startChannelWatch elapsed --> Try reconnecting");
                         watchRequested = true;
                     };
                 }
@@ -837,28 +790,6 @@ namespace CheeseProtocol
         private void StopRescheduleTimer()
         {
             try { reconnectTimer.Stop(); } catch { }
-        }
-
-        private void EnqueueLog(LogLevel level, string msg)
-        {
-            lock (pendingLogs)
-            {
-                pendingLogs.Enqueue((level, msg));
-            }
-        }
-
-        private void EnqueueMessage(string msg)
-        {
-            EnqueueLog(LogLevel.Message, msg);
-        }
-
-        private void EnqueueWarning(string msg)
-        {
-            EnqueueLog(LogLevel.Warning, msg);
-        }
-        private void EnqueueError(string msg)
-        {
-            EnqueueLog(LogLevel.Error, msg);
         }
     }
 }

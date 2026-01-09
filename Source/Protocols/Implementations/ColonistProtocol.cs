@@ -1,5 +1,5 @@
 using Verse;
-
+using static CheeseProtocol.CheeseLog;
 namespace CheeseProtocol.Protocols
 {
     public class ColonistProtocol : IProtocol
@@ -15,9 +15,7 @@ namespace CheeseProtocol.Protocols
         public void Execute(ProtocolContext ctx)
         {
             var evt = ctx.CheeseEvt;
-            Log.Warning($"[CheeseProtocol] Executing protocol={Id} for {evt}");
-
-            // Use your existing spawner
+            QMsg($"Executing protocol={Id} for {evt}", Channel.Debug);
             ColonistSpawner.Spawn(evt.username, evt.amount, evt.message);
         }
     }

@@ -4,6 +4,7 @@ using RimWorld;
 using Verse;
 using System.Linq;
 using UnityEngine;
+using static CheeseProtocol.CheeseLog;
 
 namespace CheeseProtocol
 {
@@ -22,7 +23,6 @@ namespace CheeseProtocol
             CheeseRollTrace trace = new CheeseRollTrace(donorName, CheeseCommand.Supply);
             if(!TryApplySupplyCustomization(supply, quality, settings.randomVar, supplyAdvSetting, trace))
                 return;
-            Log.Message(supply);
             IntVec3 rootCell;
             bool ok = SkyFaller.TrySpawnSupplyDropPod(
                 map,
@@ -32,7 +32,7 @@ namespace CheeseProtocol
             );
             if (!ok)
             {
-                Log.Warning($"[CheeseProtocol] Supply failed (center: {rootCell} | {supply})");
+                QWarn($"Available cell search for Supply failed (center: {rootCell} | {supply})", Channel.Verse);
                 CheeseLetter.AlertFail("!보급", "보급 운송포드 착지 가능한 Cell이 없습니다.");
             }
             else
@@ -48,26 +48,26 @@ namespace CheeseProtocol
                     map,
                     LetterDefOf.PositiveEvent
                 );
-                Log.Message($"[CheeseProtocol] Supply successful (center: {rootCell} | {supply})");
+                QMsg($"Supply successful (center: {rootCell} | {supply})", Channel.Debug);
             }
         }
         public static bool TryApplySupplyCustomization(SupplyRequest supply, float quality, float randomVar, SupplyAdvancedSettings adv, CheeseRollTrace trace)
         {
             if (!TryApplyType(supply, adv))
             {
-                Log.Warning("[CheeseProtocol] No supply is allowed");
+                QWarn("No supply is allowed");
                 CheeseLetter.AlertFail("!보급", "허용된 보급 종류가 없습니다.");
                 return false;
             }
             if (!TryApplyTier(supply, quality, randomVar, supply.type == SupplyType.Weapon ? adv.weaponTierRange : adv.supplyTierRange, trace))
             {
-                Log.Warning("[CheeseProtocol] No available items among allowed supplies");
+                QWarn("No available items among allowed supplies");
                 CheeseLetter.AlertFail("!보급", "허용된 보급 종류 중 유효한 아이템이 없습니다.");
                 return false;
             }
             if (!TryApplyValue(supply, quality, randomVar, adv.supplyValueRange, adv.weaponTechRange, trace))
             {
-                Log.Warning("[CheeseProtocol] No supply meets the market Value");
+                QWarn("No supply meets the market Value");
                 CheeseLetter.AlertFail("!보급", "설정된 보급 시장가치에 충족하는 아이템이 없습니다.");
                 return false;
             }

@@ -1,6 +1,6 @@
 using System;
 using Verse;
-
+using static CheeseProtocol.CheeseLog;
 namespace CheeseProtocol
 {
     public static class ProtocolRouter
@@ -30,18 +30,18 @@ namespace CheeseProtocol
 
             if (protocol == null)
             {
-                Log.Warning("[CheeseProtocol] No protocol matched donation: " + evt);
+                QWarn("No protocol matched donation: " + evt);
                 return;
             }
             if (map == null)
             {
                 CheeseLetter.AlertFail(CheeseCommands.GetCommandText(cmd));
-                Log.Warning("[CheeseProtocol] No map available; skipping donation: " + evt);
+                QWarn("No map available; skipping donation: " + evt);
                 return;
             }
             if (!protocol.CanExecute(ctx))
             {
-                Log.Warning($"[CheeseProtocol] Protocol {protocol.Id} cannot execute right now.");
+                QWarn($"Protocol {protocol.Id} cannot execute right now.");
                 return;
             }
             try
@@ -52,7 +52,7 @@ namespace CheeseProtocol
             }
             catch (Exception ex)
             {
-                Log.Error($"[CheeseProtocol] Protocol {protocol.Id} failed: {ex}");
+                QErr($"Protocol {protocol.Id} failed: {ex}");
             }
         }
 
@@ -62,10 +62,10 @@ namespace CheeseProtocol
             if (cmd != CheeseCommand.None &&
                 CheeseCommandParser.TryGetSpec(cmd, out var spec))
             {
-                Log.Message($"[CheeseProtocol] command found: \"{spec.protocolId}\"");
+                QMsg($"Command found: \"{spec.protocolId}\"", Channel.Debug);
                 return ProtocolRegistry.ById(spec.protocolId);
             }
-            Log.Message($"[CheeseProtocol] Unknown command ignored: \"{msg}\"");
+            QMsg($"Unknown command ignored: \"{msg}\"", Channel.Debug);
 
             return ProtocolRegistry.ById("noop");
         }
@@ -78,7 +78,7 @@ namespace CheeseProtocol
                 if (!evt.isDonation) return false;
                 if (!(evt.amount >= cfg.minDonation))
                 {
-                    Log.Message($"[CheeseProtocol] Command ignored (<min_donation): \"{evt.message}\"");
+                    QMsg($"Command ignored (<min_donation): \"{evt.message}\"", Channel.Debug);
                     return false;
                 }
             }
@@ -86,14 +86,12 @@ namespace CheeseProtocol
             var cdState = CheeseCooldownState.Current;
             if (cdState == null)
             {
-                Log.Warning("[CheeseProtocol] CooldownState missing; allow by default.");
+                QWarn("CooldownState missing; allow by default.", Channel.Debug);
                 return true;
             }
-            //Log.Warning($"[CheeseProtocol] command config cooldown: {cfg.cooldownHours} | last executed: {cdState.GetLastTick(cfg.cmd)} | now:  {nowTick}");
-
             if (!cdState.IsReady(cfg.cmd, cfg.cooldownHours, nowTick))
             {
-                Log.Message($"[CheeseProtocol] Command ignored (on cooldown): \"{evt.message}\"");
+                QMsg($"Command ignored (on cooldown): \"{evt.message}\"", Channel.Debug);
                 return false;
             }
             return true;

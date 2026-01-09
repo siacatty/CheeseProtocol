@@ -1,7 +1,7 @@
 using System;
 using UnityEngine;
 using Verse;
-
+using static CheeseProtocol.CheeseLog;
 namespace CheeseProtocol
 {
     internal static class QualityBetaSampler
@@ -39,16 +39,17 @@ namespace CheeseProtocol
             float value = Mathf.Lerp(min, max, t01);   // min..max
             float expected = Mathf.Lerp(min, max, quality);
             score = LuckScore(LuckDeltaSigned(value, expected, min, max, inverseQ));
-            if (debugLog && Prefs.DevMode)
+            if (debugLog)
             {
-                Log.Message(
-                    "[CheeseProtocol][BetaSample]\n" +
+                QMsg(
+                    "BetaSample:\n" +
                     $" quality={quality:F3}\n" +
                     $" concentration01={concentration01:F2}\n" +
                     $" conc={conc:F2}\n" +
                     $" alpha={alpha:F3} beta={beta:F3}\n" +
                     $" range01=[{range.qMin:F2},{range.qMax:F2}] -> min/max=[{min:F2},{max:F2}]\n" +
-                    $" t01={t01:F3} value={value:F2}"
+                    $" t01={t01:F3} value={value:F2}",
+                    Channel.Debug
                 );
             }
             return value;

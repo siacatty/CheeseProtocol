@@ -5,6 +5,7 @@ using System.Text;
 using RimWorld;
 using UnityEngine;
 using Verse;
+using static CheeseProtocol.CheeseLog;
 
 namespace CheeseProtocol
 {
@@ -21,7 +22,6 @@ namespace CheeseProtocol
         /// </summary>
         public static void AppendToLetterText(ref string letterText, CheeseRollTrace trace)
         {
-            Log.Warning("[CheeseProtocol] AppendToLetterText called");
             if (!AppendEnabled) return;
             if (trace == null) return;
             if (letterText.NullOrEmpty()) return;
@@ -52,7 +52,7 @@ namespace CheeseProtocol
             string reason = "플레이어 정착지가 지정되지 않았습니다."
         )
         {
-            Log.Warning("[CheeseProtocol] AlertFail called");
+            QMsg($"AlertFail called reason={reason}", Channel.Debug);
             Find.LetterStack.ReceiveLetter($"{command} 실패", reason, LetterDefOf.NegativeEvent);
         }
         public static void SendCheeseLetter(
@@ -71,7 +71,6 @@ namespace CheeseProtocol
         public static string BuildTraceBlock(CheeseRollTrace trace)
         {
             trace.CalculateScore();
-            Log.Warning("[CheeseProtocol] BuildTraceBlock called");
             var sb = new StringBuilder();
             sb.AppendLine();
             sb.AppendLine("─────────────────────────────────────────");

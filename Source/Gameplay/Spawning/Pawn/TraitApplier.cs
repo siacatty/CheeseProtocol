@@ -4,6 +4,7 @@ using System.Reflection;
 using RimWorld;
 using UnityEngine;
 using Verse;
+using static CheeseProtocol.CheeseLog;
 
 namespace CheeseProtocol
 {
@@ -293,7 +294,6 @@ namespace CheeseProtocol
         public static void ApplyTraitsHelper(Pawn pawn, float traitQuality)
         {
             var joinAdvSettings = CheeseProtocolMod.Settings.GetAdvSetting<JoinAdvancedSettings>(CheeseCommand.Join);
-            //Log.Warning($"[CheeseProtocol] Beginning traitQuality = {traitQuality}");
             traitQuality = Mathf.Clamp01(traitQuality);
 
             int traitCount = SampleTraitCount(traitQuality); // your function
@@ -335,37 +335,9 @@ namespace CheeseProtocol
                 }
             }
 
-            if (Prefs.DevMode)
-            {
-                Log.Message($"[CheeseProtocol] Traits tq={traitQuality:0.00} count={traitCount}, negcount={negCount}, poscount={posCount} -> chosen={chosen.Count} (posPool={posList.Count}, neuPool={neuList.Count}, negPool={negList.Count})");
-                // If you want: dump keys
-                // for (int i = 0; i < chosen.Count; i++) Log.Message($"  - {chosen[i].key}");
-            }
+            QMsg($"Traits tq={traitQuality:0.00} count={traitCount}, negcount={negCount}, poscount={posCount} -> chosen={chosen.Count} (posPool={posList.Count}, neuPool={neuList.Count}, negPool={negList.Count})", Channel.Debug);
             
         }
-
-        public static void LogTraitCandidates(IEnumerable<TraitCandidate> list, string title = null)
-        {
-            if (!Prefs.DevMode) return;
-
-            if (!string.IsNullOrEmpty(title))
-                Log.Message($"[CheeseProtocol] ==== {title} ====");
-
-            int i = 0;
-            foreach (var c in list)
-            {
-                Log.Message(
-                    $"[{i++}] {c.key} | label='{c.label}' | commonality={c.commonality:0.###} | " +
-                    $"sexual={c.isSexualOrientation} | " +
-                    $"conflictsT={c.conflictTraits?.Length ?? 0} | " +
-                    $"conflictsP={c.conflictPassions?.Length ?? 0} | " +
-                    $"exTags={c.exclusionTags?.Length ?? 0}"
-                );
-            }
-
-            Log.Message($"[CheeseProtocol] ==== total: {i} ====");
-        }
-
         // Placeholder: you already have this.
         private static int SampleTraitCount(float tq)
         {

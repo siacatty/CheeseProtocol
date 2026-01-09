@@ -38,11 +38,8 @@ namespace CheeseProtocol
 
             // 1) 중앙(근처)로 이동
             var travel = new LordToil_Travel(travelDest);
-            Log.Warning($"[CheeseProtocol] travelDest = {travelDest}");
 
             // 2) 도착 후 중앙 주변에서 느슨하게 어슬렁(자유 행동처럼 보이게)
-            // defendRadius: "지키는 범위" (체감 확실)
-            // wanderRadius: 그 안에서 배회 옵션(버전에 따라 체감 차이)
             var loiter = new LordToil_DefendPoint(travelDest, defendRadius: defendRadius, wanderRadius: wanderRadius);
 
             // 3) 시간이 되면 맵 이탈

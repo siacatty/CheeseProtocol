@@ -8,6 +8,7 @@ using System.Xml.Schema;
 using System;
 using Newtonsoft.Json;
 using System.Security.Cryptography;
+using static CheeseProtocol.CheeseLog;
 
 namespace CheeseProtocol
 {
@@ -64,17 +65,16 @@ namespace CheeseProtocol
             var a = GetAdvSetting(cmd);
             if (a is T t) return t;
 
-            Log.Error($"[CheeseProtocol] AdvSetting type mismatch for {cmd}. Got={a?.GetType().Name}, expected={typeof(T).Name}");
+            QErr($"AdvSetting type mismatch for {cmd}. Got={a?.GetType().Name}, expected={typeof(T).Name}");
             return null;
         }
         public CommandAdvancedSettingsBase GetAdvSetting(CheeseCommand cmd)
         {
             var a = advancedSettings.FirstOrDefault(x => x.Command == cmd);
             if (a != null) return a;
-            Log.Warning($"[CheeseProtocol] GetAdvSetting --> Command is null {cmd}");
             if (!AdvFactories.TryGetValue(cmd, out var factory))
             {
-                Log.Error($"[CheeseProtocol] No AdvancedSettings factory for {cmd}");
+                QErr($"No AdvancedSettings factory for {cmd}", Channel.Verse);
                 return null;
             }
 
@@ -170,7 +170,6 @@ namespace CheeseProtocol
         }
         public void EnsureAdvSettingsInitialized()
         {
-            Log.Warning("[CheeseProtocol] EnsureAdvSettingsInitialized");
             advancedSettings ??= new List<CommandAdvancedSettingsBase>();
             EnsureAdv(CheeseCommand.Join, () => new JoinAdvancedSettings());
             EnsureAdv(CheeseCommand.Raid, () => new RaidAdvancedSettings());
@@ -320,7 +319,6 @@ namespace CheeseProtocol
 
                         if (Widgets.ButtonText(resetSettingRect, "모든 설정 초기화"))
                         {
-                            Log.Warning("[CheeseProtocol] Reset Button pressed");
                             LongEventHandler.ExecuteWhenFinished(() =>
                             {
                                 Find.WindowStack.Add(
@@ -465,7 +463,7 @@ namespace CheeseProtocol
                         
                         if (Widgets.ButtonText(simBtn, "시뮬레이션 실행"))
                         {
-                            Log.Message("[CheeseProtocol] Run Simulation");
+                            Msg("Run Simulation", Channel.Debug);
                             long simAtUtcMsNow = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
                             string simUserName = $"SIM{DateTimeOffset.FromUnixTimeMilliseconds(simAtUtcMsNow):HHmmssfff}";
                             string simMessage = selectedConfigSim.label;
@@ -489,7 +487,29 @@ namespace CheeseProtocol
                         cooldownResetRect = UIUtil.ResizeRectAligned(cooldownResetRect, cooldownResetRect.width*0.5f, btnSize*1.5f);
                         if (Widgets.ButtonText(cooldownResetRect, "모든 명령어 쿨타임 리셋"))
                             CheeseProtocolMod.ChzzkChat.ResetCooldown();
-                        
+                        /*
+                        listing.Gap(8);
+                        Rect DebugRect = listing.GetRect(btnSize*2f);
+                        DebugRect = UIUtil.ResizeRectAligned(DebugRect, DebugRect.width*0.5f, btnSize*1.5f);
+                        if (Widgets.ButtonText(DebugRect, "벽 채우기 (전체 맵/생물 파괴)"))
+                        {
+                            Map map = Find.AnyPlayerHomeMap;
+                            ThingDef wallDef = ThingDefOf.Wall;
+                            ThingDef stuff = ThingDefOf.Steel;
+
+                            foreach (IntVec3 c in map.AllCells)
+                            {
+                                var list = c.GetThingList(map);
+                                for (int i = list.Count - 1; i >= 0; i--)
+                                {
+                                    list[i].Destroy(DestroyMode.Vanish);
+                                }
+
+                                Thing wall = ThingMaker.MakeThing(wallDef, stuff);
+                                GenSpawn.Spawn(wall, c, map, WipeMode.Vanish);
+                            }
+                        }
+                        */
                         
                         GUI.enabled = oldGUI;
                     });
@@ -568,8 +588,6 @@ namespace CheeseProtocol
             float contentH = sectionContentHeights.TryGetValue(key, out var h) ? h : 200f;
 
             float sectionH = SectionPad + SectionHeaderH + 10f + contentH + SectionPad;
-
-            //Log.Message($"[CheeseProtocol] Title: {title}, SectionH = {sectionH}");
 
             Rect outer = new Rect(column.x, curY, column.width, sectionH);
             Widgets.DrawMenuSection(outer);

@@ -1,6 +1,6 @@
 using RimWorld;
 using Verse;
-
+using static CheeseProtocol.CheeseLog;
 namespace CheeseProtocol
 {
     public class SupplyProtocol : IProtocol
@@ -16,9 +16,7 @@ namespace CheeseProtocol
         public void Execute(ProtocolContext ctx)
         {
             var evt = ctx.CheeseEvt;
-            Log.Warning($"[CheeseProtocol] Executing protocol={Id} for {evt}");
-
-            // Use your existing spawner
+            QMsg($"Executing protocol={Id} for {evt}", Channel.Debug);
             SupplySpawner.Spawn(evt.username, evt.amount, evt.message);
         }
     }

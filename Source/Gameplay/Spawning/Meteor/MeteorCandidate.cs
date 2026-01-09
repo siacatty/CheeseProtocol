@@ -54,7 +54,7 @@ namespace CheeseProtocol
         public override string ToString()
         {
             return
-                "[CheeseProtocol] MeteorCandidate " +
+                "MeteorCandidate " +
                 $"def={defName}, " +
                 $"key={key}, " +
                 $"label={label}, " +

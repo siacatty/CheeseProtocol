@@ -5,7 +5,7 @@ using System.Text;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using Verse;
-
+using static CheeseProtocol.CheeseLog;
 namespace CheeseProtocol
 {
     internal static class ChzzkEndpoints
@@ -115,13 +115,11 @@ namespace CheeseProtocol
                 extraTkn = content.TryGetValue("extraToken", out var et) ? et?.ToString() : null;
 
                 if (string.IsNullOrWhiteSpace(accTkn)) return false;
-
-                //Log.Message("[CheeseProtocol] chatAccessToken fetched");
                 return true;
             }
             catch (Exception ex)
             {
-                Log.Warning("[CheeseProtocol] TryFetchChatAccessToken error: " + ex);
+                QWarn("TryFetchChatAccessToken error: " + ex, Channel.Net);
                 return false;
             }
         }
@@ -145,7 +143,7 @@ namespace CheeseProtocol
             }
             catch (Exception e)
             {
-                Log.Warning($"[CheeseProtocol] HttpGet failed: {e.Message}");
+                QWarn($"HttpGet failed: {e.Message}", Channel.Net);
                 return null;
             }
         }

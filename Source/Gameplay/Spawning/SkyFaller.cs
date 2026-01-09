@@ -6,6 +6,7 @@ using Verse;
 using UnityEngine;
 using System.Linq;
 using System.Collections;
+using static CheeseProtocol.CheeseLog;
 
 namespace CheeseProtocol
 {
@@ -32,7 +33,7 @@ namespace CheeseProtocol
 
             if (map == null || innerDef == null || skyfallerDef == null)
             {
-                Log.Warning("[CheeseProtocol] TrySpawnMeteorCluster_NoReflection: null args.");
+                QWarn("TrySpawnMeteorCluster_NoReflection: null args.", Channel.Verse);
                 return false;
             }
             //skyfallerDef.size = pieces;
@@ -78,15 +79,15 @@ namespace CheeseProtocol
 
             if (!found)
             {
-                Log.Warning($"[CheeseProtocol] No root cell for skyfaller within nearMaxDist <= {maxNearMaxDist}. Fallback.");
+                QWarn($"No root cell for skyfaller within nearMaxDist <= {maxNearMaxDist}. Fallback.", Channel.Verse);
                 return false;
             }
-            Log.Message($"[CheeseProtocol] skyfaller size = {skyfallerDef.size.x}x{skyfallerDef.size.z}");
+            QMsg($"Skyfaller size = {skyfallerDef.size.x}x{skyfallerDef.size.z}", Channel.Debug);
             // 2) skyfaller 1개 생성 (컨테이너형)
             Skyfaller skyfaller = SkyfallerMaker.MakeSkyfaller(skyfallerDef);
             if (skyfaller == null)
             {
-                Log.Error("[CheeseProtocol] MakeSkyfaller returned null.");
+                QErr("MakeSkyfaller returned null.", Channel.Verse);
                 return false;
             }
 
@@ -94,8 +95,8 @@ namespace CheeseProtocol
             ThingOwner inner = skyfaller.GetDirectlyHeldThings();
             if (inner == null)
             {
-                Log.Error($"[CheeseProtocol] Skyfaller '{skyfallerDef.defName}' has no inner container. " +
-                          $"(Not a container-type skyfallerDef?)");
+                QErr($"Skyfaller '{skyfallerDef.defName}' has no inner container. " +
+                          $"(Not a container-type skyfallerDef?)", Channel.Verse);
                 return false;
             }
 
@@ -109,8 +110,8 @@ namespace CheeseProtocol
             // 4) skyfaller 1개만 Spawn => "한 덩어리"로 떨어짐
             GenSpawn.Spawn(skyfaller, rootCell, map);
             
-            Log.Message($"[CheeseProtocol] Spawned meteor CLUSTER: inner={innerDef.defName} pieces={pieces} " +
-                        $"skyfaller={skyfallerDef.defName}, {skyfallerDef.thingClass} at {rootCell} nearMaxDistUsed={cur}");
+            QMsg($"Spawned meteor CLUSTER: inner={innerDef.defName} pieces={pieces} " +
+                        $"skyfaller={skyfallerDef.defName}, {skyfallerDef.thingClass} at {rootCell} nearMaxDistUsed={cur}", Channel.Debug);
 
             return true;
         }
@@ -124,7 +125,7 @@ namespace CheeseProtocol
             ActiveTransporter transporter = pod as ActiveTransporter;
             if (transporter == null)
             {
-                Log.Error($"[CheeseProtocol] ActiveDropPod is not ActiveTransporter. class={pod?.GetType().Name}");
+                QErr($"ActiveDropPod is not ActiveTransporter. class={pod?.GetType().Name}", Channel.Verse);
                 return null;
             }
             transporter.Contents = info;
@@ -190,7 +191,7 @@ namespace CheeseProtocol
 
             if (map == null || supply == null || supply.def == null)
             {
-                Log.Warning("[CheeseProtocol] TrySpawnSupplyDropPodIncoming: null args.");
+                QWarn("TrySpawnSupplyDropPod: null args.", Channel.Verse);
                 return false;
             }
 
@@ -200,7 +201,7 @@ namespace CheeseProtocol
             List<Thing> contents = BuildContentsFromSupplyRequest(supply);
             if (contents.Count == 0)
             {
-                Log.Warning("[CheeseProtocol] TrySpawnSupplyDropPodIncoming: contents empty.");
+                QWarn("TrySpawnSupplyDropPod: contents empty.", Channel.Verse);
                 return false;
             }
 
@@ -237,7 +238,7 @@ namespace CheeseProtocol
 
             if (!found)
             {
-                Log.Warning($"[CheeseProtocol] No root cell for DropPodIncoming within nearMaxDist <= {maxNearMaxDist}.");
+                QWarn($"No root cell for DropPodIncoming within nearMaxDist <= {maxNearMaxDist}.", Channel.Verse);
                 return false;
             }
 
@@ -250,17 +251,18 @@ namespace CheeseProtocol
             Skyfaller skyfaller = SkyfallerMaker.MakeSkyfaller(skyfallerDef, pod);
             if (skyfaller == null)
             {
-                Log.Error("[CheeseProtocol] MakeSkyfaller returned null.");
+                QErr("MakeSkyfaller returned null.", Channel.Verse);
                 return false;
             }
 
             GenSpawn.Spawn(skyfaller, rootCell, map);
 
-            Log.Message(
-                "[CheeseProtocol] Spawned Supply DropPodIncoming: " +
+            QMsg(
+                "Spawned Supply DropPodIncoming: " +
                 $"type={supply.type}, label={supply.label}, count={supply.count}, " +
                 $"tier={(supply.isWeaponTierSet ? supply.weaponTier.ToString() : "unset")}, " +
-                $"tech={supply.techLevel}, at {rootCell}, nearMaxDistUsed={cur}"
+                $"tech={supply.techLevel}, at {rootCell}, nearMaxDistUsed={cur}",
+                Channel.Debug
             );
 
             return true;
@@ -280,21 +282,6 @@ namespace CheeseProtocol
             }
 
             return ThingMaker.MakeThing(def, stuff);
-        }
-
-        private static List<int> SplitIntoStacks(int total, int stackLimit)
-        {
-            var res = new List<int>();
-            int remaining = Mathf.Max(0, total);
-            int limit = Mathf.Max(1, stackLimit);
-
-            while (remaining > 0)
-            {
-                int take = Mathf.Min(limit, remaining);
-                res.Add(take);
-                remaining -= take;
-            }
-            return res;
         }
     }
 }

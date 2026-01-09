@@ -24,7 +24,6 @@ namespace CheeseProtocol
         public QualityRange weaponTechRange;
         public SupplyAdvancedSettings()
         {
-            Log.Warning("[CheeseProtocol] Supply Initialized");
             ResetToDefaults();
             InitializeAll();
         }

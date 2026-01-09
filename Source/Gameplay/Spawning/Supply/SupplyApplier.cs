@@ -6,6 +6,7 @@ using UnityEngine;
 using System.Linq;
 using Verse;
 using RimWorld.BaseGen;
+using static CheeseProtocol.CheeseLog;
 
 namespace CheeseProtocol
 {
@@ -25,7 +26,7 @@ namespace CheeseProtocol
                         .ToList();
                 if (weaponCandidates.Count == 0) //fallback
                 {
-                    Log.Warning($"[CheeseProtocol] Weapons with TechLevel={techLevel} not found. Forcing TechLevel.Medieval");
+                    QWarn($"Weapons with TechLevel={techLevel} not found. Forcing TechLevel.Medieval", Channel.Verse);
                     supply.techLevel = TechLevel.Medieval;
                     weaponCandidates =
                         CheeseProtocolMod.SupplyWeaponCatalog
@@ -34,7 +35,7 @@ namespace CheeseProtocol
                             .ToList();
                     if (weaponCandidates.Count == 0)
                     {
-                        Log.Warning($"[CheeseProtocol] Weapons with TechLevel={supply.techLevel} not found.");
+                        QWarn($"Weapons with TechLevel={supply.techLevel} not found.", Channel.Verse);
                         return false;
                     }
                 }
@@ -197,12 +198,7 @@ namespace CheeseProtocol
 
             return d.thingCategories.Any(tc => tc.defName == "FoodMeals");
         }
-        private static void DumpCatalog(string name, List<SupplyCandidate> list)
-        {
-            Log.Message($"[CheeseProtocol] --- SupplyCatalog {name} ---");
-            for (int i = 0; i < list.Count; i++)
-                Log.Message(list[i]);
-        }
+
         public static float GetPriceFactor(QualityCategory q)
         {
             switch (q)

@@ -1,5 +1,6 @@
 using RimWorld;
 using Verse;
+using static CheeseProtocol.CheeseLog;
 
 namespace CheeseProtocol
 {
@@ -16,7 +17,7 @@ namespace CheeseProtocol
             }
             catch (System.Exception e)
             {
-                Log.Error($"[CheeseProtocol] Incident threw: {def?.defName}\n{e}");
+                QWarn($"Vanilla Incident threw: {def?.defName}\n{e}");
                 return false;
             }
             finally

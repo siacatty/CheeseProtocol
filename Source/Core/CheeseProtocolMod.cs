@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Verse;
+using static CheeseProtocol.CheeseLog;
 
 namespace CheeseProtocol
 {
@@ -28,8 +29,6 @@ namespace CheeseProtocol
                 MeteorCatalog = MeteorApplier.BuildCatalogMeteorCandidates();
                 TameCatalog = TameApplier.BuildCatalogTameCandidates();
                 SupplyApplier.BuildCatalogSupplyCandidates(out SupplyFoodCatalog, out SupplyMedCatalog, out SupplyDrugCatalog, out SupplyWeaponCatalog);
-                //Log.Message($"[CheeseProtocol] TraitCatalog count = {TraitCatalog.Count}");
-                Log.Message($"[CheeseProtocol] TameCatalog built: count={TameCatalog.Count}");
                 Settings.GetAdvSetting<JoinAdvancedSettings>(CheeseCommand.Join)?.UpdateTraitList();
                 Settings.GetAdvSetting<MeteorAdvancedSettings>(CheeseCommand.Meteor)?.UpdateMeteorList();
             });

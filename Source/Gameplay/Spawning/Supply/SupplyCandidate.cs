@@ -44,7 +44,7 @@ namespace CheeseProtocol
         public override string ToString()
         {
             return
-                "[CheeseProtocol] SupplyCandidate " +
+                "SupplyCandidate " +
                 $"type={type}, " +
                 $"def={defName}, " +
                 $"key={key}, " +

@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Verse;
+using static CheeseProtocol.CheeseLog;
 
 namespace CheeseProtocol
 {
@@ -13,13 +14,13 @@ namespace CheeseProtocol
         public override void StartedNewGame()
         {
             Reset();
-            Log.Message("[CheeseProtocol] Cooldown state reset (new game).");
+            Msg("Cooldown state reset (new game).");
         }
 
         public override void LoadedGame()
         {
             Reset();
-            Log.Message("[CheeseProtocol] Cooldown state reset (loaded game).");
+            Msg("Cooldown state reset (loaded game).");
         }
 
         private void Reset()
@@ -49,8 +50,7 @@ namespace CheeseProtocol
 
             int last = GetLastTick(cmd);
             int cdTicks = cooldownHours * 2500;
-            //Log.Warning($"[CheeseProtocol] [CDState] command config cooldown: {cdTicks} | last executed: {last} | now:  {nowTick}");
-            //Log.Warning($"[CheeseProtocol] [CDState] is cooldown complete?: {nowTick - last >= cdTicks}, nowTick - last =  {nowTick - last}, cdTicks = {cdTicks}");
+            QMsg($"command config cooldown: {cdTicks} | last executed: {last} | now:  {nowTick}", Channel.Debug);
             if (last < 0) //always run on first
                 return true;
             return nowTick - last >= cdTicks;

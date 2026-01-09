@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using RimWorld;
 using Verse;
 using System.Linq;
+using static CheeseProtocol.CheeseLog;
 
 namespace CheeseProtocol
 {
@@ -35,9 +36,9 @@ namespace CheeseProtocol
             if (!VanillaIncidentRunner.TryExecuteWithTrace(def, parms, trace))
             {
                 CheeseLetter.AlertFail("!상단", "실행 실패: 로그 확인 필요.");
-                Log.Warning("[CheeseProtocol] TraderCaravanArrival failed to execute.");
+                QWarn("TraderCaravanArrival failed to execute.");
             }
-            Log.Message($"[CheeseProtocol] Caravan called ==> TraderKind={parms.traderKind.defName}");
+            QMsg($"Caravan called ==> TraderKind={parms.traderKind.defName}", Channel.Debug);
         }
 
         private static bool TryApplyTradeCustomization(Map map, float quality, out IncidentDef def, out IncidentParms parms, CheeseRollTrace trace)
@@ -46,12 +47,12 @@ namespace CheeseProtocol
             def = incidentDef;
             parms = incidentParms;
             if (def == null || parms == null) {
-                Log.Warning("[CheeseProtocol] TraderDef || Trader Parms not found");
+                QWarn("TraderDef || Trader Parms not found", Channel.Verse);
                 return false;
             }
             if (pool.Count <= 0)
             {
-                Log.Warning("[CheeseProtocol] No trader is allowed");
+                QWarn("No trader is allowed");
                 CheeseLetter.AlertFail("!상단", "!상단 실행 실패: 허용된 상단 종류 중 현재 도착 가능한 상단이 없습니다.");
                 return false;
             }
@@ -68,7 +69,7 @@ namespace CheeseProtocol
                     pool.Remove(traderKind);
                 }
             }
-            Log.Warning("[CheeseProtocol] No trader among allowed can be called");
+            QWarn("No trader among allowed can be called");
             CheeseLetter.AlertFail("!상단", "!상단 실행 실패: 허용된 상단 종류 중 현재 도착 가능한 상단이 없습니다.");
             return false;
         }
@@ -131,13 +132,13 @@ namespace CheeseProtocol
                 }
                 else
                 {
-                    Log.Warning("[CheeseProtocol] Unable to fire Orbital Trade incident");
+                    QWarn("Unable to fire Orbital Trade incident", Channel.Verse);
                 }
             }
 
             if (!ground.Worker.CanFireNow(parms))
             {
-                Log.Warning("[CheeseProtocol] Unable to fire Ground Trade incident");
+                QWarn("Unable to fire Ground Trade incident", Channel.Verse);
                 return null;
             }
 
@@ -169,7 +170,7 @@ namespace CheeseProtocol
                             return true;
                         else
                         {
-                            //Log.Warning("[CheeseProtocol] No colonist has permit for Imperial Trading");
+                            QWarn("No colonist has permit for Imperial Trading", Channel.Debug);
                             return false;
                         }
                     }
@@ -200,7 +201,7 @@ namespace CheeseProtocol
             if (ContainsIgnoreCase(tk.defName, "CombatSupplier") ||
                 ContainsIgnoreCase(tk.defName, "WarMerchant"))
                 return adv.allowCombatCaravan;
-            Log.Message($"[CheeseProtocol] TraderKind fell through filters: {tk.defName} (label={tk.label}, category={tk.category ?? "(none)"}, orbital={tk.orbital})");
+            QMsg($"TraderKind fell through filters: {tk.defName} (label={tk.label}, category={tk.category ?? "(none)"}, orbital={tk.orbital})", Channel.Debug);
             return true;
         }
 

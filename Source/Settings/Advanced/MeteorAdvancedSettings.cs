@@ -20,9 +20,13 @@ namespace CheeseProtocol
         private float allowedMeteorListHeight = 400f;
         public QualityRange meteorTypeRange;
         public QualityRange meteorSizeRange;
+        private readonly Color HeaderBg     = new Color(0.20f, 0.32f, 0.40f); // steel blue
+        private readonly Color HeaderBorder = new Color(0.45f, 0.65f, 0.75f);
+
+        private readonly Color BodyBg       = new Color(0.18f, 0.22f, 0.26f); // blue-charcoal
+        private readonly Color BodyBorder   = new Color(0.35f, 0.48f, 0.55f);
         public MeteorAdvancedSettings()
         {
-            Log.Warning("[CheeseProtocol] Meteor Initialized");
             ResetToDefaults();
             InitializeAll();
         }
@@ -99,6 +103,15 @@ namespace CheeseProtocol
             UIUtil.SplitHorizontallyByHeight(allowedMeteorRect, out Rect allowedTopRect, out Rect allowedListRect, topBarH, 0f);
             UIUtil.SplitVerticallyByRatio(allowedTopRect, out Rect allowedTopLabel, out Rect allowedAddBtn, 0.7f, 0f);
 
+            Color oldColor = GUI.color;
+            Widgets.DrawBoxSolid(allowedTopRect, HeaderBg);
+            GUI.color = HeaderBorder;
+            Widgets.DrawBox(allowedTopRect);
+            Widgets.DrawBoxSolid(allowedListRect, BodyBg);
+            GUI.color = BodyBorder;
+            Widgets.DrawBox(allowedListRect);
+            GUI.color= oldColor;
+
             allowedTopLabel = UIUtil.ShrinkRect(allowedTopLabel, 6f);
             UIUtil.DrawCenteredText(allowedTopLabel, "허용 운석 종류", align: TextAlignment.Left);
 
@@ -115,8 +128,6 @@ namespace CheeseProtocol
                     return DrawMeteorList(viewRect, allowedMeteorCandidates);
                 },
                 true);
-            Widgets.DrawBox(allowedTopRect);
-            Widgets.DrawBox(allowedListRect);
             usedH += windowH;
             return usedH;
         }

@@ -5,6 +5,7 @@ using Verse;
 using UnityEngine;
 using RimWorld;
 using System.Reflection;
+using static CheeseProtocol.CheeseLog;
 
 namespace CheeseProtocol
 {
@@ -34,7 +35,7 @@ namespace CheeseProtocol
                     part = PickPartForScarCut(pawn);
                     if (part == null)
                     {
-                        Log.Warning("[CheeseProtocol] ScarCut: no available part");
+                        QWarn("ScarCut: no available part", Channel.Verse);
                         continue;
                     }
                 }
@@ -49,7 +50,7 @@ namespace CheeseProtocol
                     }
                     if (PartIsRequired(def) && part == null)
                     {
-                        Log.Warning($"[CheeseProtocol] Available body part not found (def={def.defName} label={def.label})");
+                        QWarn($"Available body part not found (def={def.defName} label={def.label})", Channel.Verse);
                         continue;
                     }
                 }
@@ -183,8 +184,7 @@ namespace CheeseProtocol
             }
             catch (Exception e)
             {
-                if (Prefs.DevMode)
-                    Log.Warning($"[CheeseProtocol] ClearAllHediffs failed: {e}");
+                QWarn($"ClearAllHediffs failed: {e}", Channel.Verse);
             }
         }
         public static bool IsImplantLike(HediffDef def)
@@ -235,14 +235,14 @@ namespace CheeseProtocol
         public static bool TryForceScar(Hediff_Injury inj)
         {
             if (inj == null) {
-                Log.Warning("[CheeseProtocol] Hediff_Injury is null");
+                QWarn("Hediff_Injury is null", Channel.Verse);
                 return false;
             }
 
             var comp = inj.TryGetComp<HediffComp_GetsPermanent>();
             if (comp == null) 
             {
-                Log.Warning("[CheeseProtocol] HediffComp_GetsPermanent is null");
+                QWarn("HediffComp_GetsPermanent is null", Channel.Verse);
                 return false;
             }
             comp.IsPermanent = true;
@@ -353,7 +353,7 @@ namespace CheeseProtocol
         )
         {
             var sb = new System.Text.StringBuilder();
-            sb.Append("[CheeseProtocol][HealthPlan] ");
+            sb.Append("HealthPlan: ");
 
             if (pawn != null)
             {
@@ -386,7 +386,7 @@ namespace CheeseProtocol
                 sb.Append("]");
             }
 
-            Log.Message(sb.ToString());
+            QMsg(sb.ToString(), Channel.Debug);
         }
     }
 }

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using RimWorld;
 using Verse;
 using System.Linq;
+using static CheeseProtocol.CheeseLog;
 
 namespace CheeseProtocol
 {
@@ -32,7 +33,7 @@ namespace CheeseProtocol
             Pawn tameAnimal = PawnGenerator.GeneratePawn(req);
             if (tameAnimal == null)
             {
-                Log.Warning("[CheeseProtocol] Failed to generate animal to be tamed");
+                QWarn("Failed to generate animal to be tamed", Channel.Verse);
                 CheeseLetter.AlertFail("!조련", "현재 게임 설정에 조련할수있는 동물이 없습니다.");
                 return;
             }
@@ -45,7 +46,7 @@ namespace CheeseProtocol
             );
             if (!found)
             {
-                Log.Warning("[CheeseProtocol] Failed to find a cell for animal to enter");
+                QWarn("Failed to find a cell for animal to enter", Channel.Verse);
                 CheeseLetter.AlertFail("!조련", "동물이 맵에 들어올 경로가 없습니다.");
                 return;
             }
@@ -61,13 +62,13 @@ namespace CheeseProtocol
                 map,
                 LetterDefOf.PositiveEvent
             );
-            Log.Message($"[CheeseProtocol] Tame successful. TameRequest: {tame}");
+            QMsg($"Tame successful. TameRequest: {tame}", Channel.Debug);
         }
         public static bool TryApplyTameCustomization(TameRequest tame, float quality, float randomVar, TameAdvancedSettings adv, CheeseRollTrace trace)
         {
             if(!TryApplyTameValue(tame, quality, randomVar, adv.tameValueRange, trace))
             {
-                Log.Warning("[CheeseProtocol] No animals available");
+                QWarn("No animals available", Channel.Verse);
                 CheeseLetter.AlertFail("!조련", "조련할수있는 동물 목록이 비어있습니다.");
                 return false;
             }

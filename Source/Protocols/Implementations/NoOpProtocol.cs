@@ -1,5 +1,5 @@
 using Verse;
-
+using static CheeseProtocol.CheeseLog;
 namespace CheeseProtocol.Protocols
 {
     public class NoOpProtocol : IProtocol

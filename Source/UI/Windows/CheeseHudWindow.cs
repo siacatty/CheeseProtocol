@@ -23,7 +23,7 @@ namespace CheeseProtocol
 
         private const float widthExpanded = 290f;
         private const float widthMinimized = 290f;
-        private const float colCmd  = 40f;
+        private const float colCmd  = 52f;
         private const float colCd   = 60f;
 
         private const float statusLinesBase = 3f;

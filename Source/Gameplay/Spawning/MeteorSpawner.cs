@@ -6,6 +6,7 @@ using Verse;
 using UnityEngine;
 using System.Linq;
 using System.Collections;
+using static CheeseProtocol.CheeseLog;
 
 namespace CheeseProtocol
 {
@@ -27,7 +28,7 @@ namespace CheeseProtocol
             ThingDef skyfallerDef = ResolveMeteoriteIncomingDef();
             if (skyfallerDef == null)
             {
-                Log.Warning("[CheeseProtocol] MeteoriteIncoming not found. Fallback to vanilla.");
+                QWarn("MeteoriteIncoming not found. Fallback to vanilla.", Channel.Verse);
                 FallbackVanillaMeteor(meteor);
                 return;
             }
@@ -43,7 +44,7 @@ namespace CheeseProtocol
 
             if (!ok)
             {
-                Log.Warning($"[CheeseProtocol] Custom meteor failed (center: {rootCell} | size: {meteor.size}). Fallback.");
+                QWarn($"Custom meteor failed (center: {rootCell} | size: {meteor.size}). Fallback.", Channel.Verse);
                 FallbackVanillaMeteor(meteor);
             }
             else
@@ -59,9 +60,7 @@ namespace CheeseProtocol
                     map,
                     meteor.type.ToLowerInvariant().Contains("mineable") ? LetterDefOf.PositiveEvent : LetterDefOf.NeutralEvent
                 );
-                Log.Message(
-                    $"[CheeseProtocol] Custom meteor success: {meteor.type} x{meteor.size}"
-                );
+                QMsg($"Custom meteor success: {meteor.type} x {meteor.size}", Channel.Debug);
             }
         }
         
@@ -70,14 +69,13 @@ namespace CheeseProtocol
             IncidentDef def = DefDatabase<IncidentDef>.GetNamed("MeteoriteImpact", false);
             if (def == null)
             {
-                Log.Warning("[CheeseProtocol] MeteoriteImpact def not found.");
+                QWarn("MeteoriteImpact def not found.", Channel.Verse);
                 return;
             }
             bool ok = def.Worker.TryExecute(meteor.parms);
             if (!ok)
             {
-                if (Prefs.DevMode)
-                    Log.Warning("[CheeseProtocol] Vanilla MeteorSpawn failed to execute.");
+                QWarn("Vanilla MeteorSpawn failed to execute.", Channel.Verse);
                 CheeseLetter.AlertFail("!운석", "실행 실패: 로그 확인 필요.");
             }
         }
@@ -88,8 +86,7 @@ namespace CheeseProtocol
             float randomVar = settings.randomVar;
             ApplyMeteorType(meteor, quality, randomVar, meteorAdvSettings.meteorTypeRange, meteorAdvSettings.allowedMeteorCandidates, trace);
             ApplyMeteorSize(meteor, quality, randomVar, meteorAdvSettings.meteorSizeRange, trace);
-            Log.Message($"[CheeseProtocol] Meteor pick chosen={meteor.type} score={meteor.score:0.###}, size={meteor.size}");
-            //DebugDumpMineables();
+            QMsg($"Meteor pick chosen={meteor.type} score={meteor.score:0.###}, size={meteor.size}", Channel.Debug);
         }
 
         private static void ApplyMeteorType(MeteorRequest meteor, float quality, float randomVar, QualityRange minMaxRange, List<MeteorCandidate> candidates, CheeseRollTrace trace)
@@ -102,7 +99,7 @@ namespace CheeseProtocol
                     debugLog: false
             );
             trace.steps.Add(new TraceStep("운석 종류", score, minMaxRange.Expected(quality), meteorTypeQuality));
-            MeteorApplier.ApplyMeteorTypeHelper(meteor, meteorTypeQuality, candidates); 
+            MeteorApplier.ApplyMeteorTypeHelper(meteor, meteorTypeQuality, candidates);
         }
         private static void ApplyMeteorSize(MeteorRequest meteor, float quality, float randomVar, QualityRange minMaxRange, CheeseRollTrace trace)
         {
@@ -114,7 +111,7 @@ namespace CheeseProtocol
                     concentration01: 1f-randomVar,
                     out float score
                 );
-            Log.Warning($"[CheeseProtocol] baseMinSize={baseMinSize}, baseMaxSize={baseMaxSize}, rangeMin={minMaxRange.qMin}, rangeMax={minMaxRange.qMax}, sizeF={sizeF}");
+            QMsg($"Meteor baseMinSize={baseMinSize}, baseMaxSize={baseMaxSize}, rangeMin={minMaxRange.qMin}, rangeMax={minMaxRange.qMax}, sizeF={sizeF}", Channel.Debug);
             int meteorBaseSize = Mathf.RoundToInt(Mathf.Clamp(sizeF, baseMinSize, baseMaxSize));
             trace.steps.Add(new TraceStep("운석 크기", score, minMaxRange.Expected(quality), meteorBaseSize));
             MeteorApplier.ApplyMeteorSizeHelper(meteor, meteorBaseSize);

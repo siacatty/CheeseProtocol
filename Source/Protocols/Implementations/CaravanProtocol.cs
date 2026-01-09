@@ -1,6 +1,6 @@
 using Verse;
 using RimWorld;
-
+using static CheeseProtocol.CheeseLog;
 namespace CheeseProtocol.Protocols
 {
     public class CaravanProtocol : IProtocol
@@ -16,7 +16,7 @@ namespace CheeseProtocol.Protocols
         public void Execute(ProtocolContext ctx)
         {
             var evt = ctx.CheeseEvt;
-            Log.Warning($"[CheeseProtocol] Executing protocol={Id} for {evt}");
+            QMsg($"Executing protocol={Id} for {evt}", Channel.Debug);
 
             CaravanSpawner.Spawn(evt.username, evt.amount, evt.message);
         }

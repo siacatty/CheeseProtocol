@@ -1,6 +1,6 @@
 using Verse;
 using RimWorld;
-
+using static CheeseProtocol.CheeseLog;
 namespace CheeseProtocol.Protocols
 {
     public class RaidProtocol : IProtocol
@@ -16,11 +16,8 @@ namespace CheeseProtocol.Protocols
         public void Execute(ProtocolContext ctx)
         {
             var evt = ctx.CheeseEvt;
-            Log.Warning($"[CheeseProtocol] Executing protocol={Id} for {evt}");
-
-            // Use your existing spawner
+            QMsg($"Executing protocol={Id} for {evt}", Channel.Debug);
             RaidSpawner.Spawn(evt.username, evt.amount, evt.message);
-            // Vanilla incident defName: "RaidEnemy"
         }
     }
 }

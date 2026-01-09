@@ -7,6 +7,7 @@ using UnityEngine;
 using System.Linq;
 using System.Collections;
 using Verse.Noise;
+using static CheeseProtocol.CheeseLog;
 
 namespace CheeseProtocol
 {
@@ -31,13 +32,10 @@ namespace CheeseProtocol
             Pawn pawn = PawnGenerator.GeneratePawn(req);
 
             float quality = QualityEvaluator.evaluateQuality(amount, CheeseCommand.Join);
-            if (Prefs.DevMode)
-            {
-                Log.Message($"[CheeseProtocol] Spawn quality={quality:0.00}");
-            }
+            QMsg($"Colonist spawn quality={quality:0.00}", Channel.Debug);
             if (pawn == null || pawn.Destroyed)
             {
-                Log.Error("[CheeseProtocol] Pawn invalid (null or destroyed)");
+                QErr("Pawn invalid (null or destroyed)", Channel.Verse);
                 return;
             }
 
@@ -56,12 +54,17 @@ namespace CheeseProtocol
                 rootCell = DropCellFinder.TradeDropSpot(map);
                 DropPodUtility.DropThingsNear(rootCell, map, new Thing[] { pawn }, 110, canInstaDropDuringInit: false, leaveSlag: false);
             }
-            else
+            if (!joinAdvSetting.useDropPod || !rootCell.IsValid)
             {
                 rootCell = CellFinderLoose.RandomCellWith(
                     c => c.Standable(map) && !c.Fogged(map),
                     map, 200);
-
+                if (!rootCell.IsValid)
+                {
+                    QWarn("Available spawn cell for colonist not found", Channel.Verse);
+                    CheeseLetter.AlertFail("!참여", $"{donorName}님이 맵에 진입할 수 있는 경로를 찾지 못했습니다.");
+                    return;
+                }
                 GenSpawn.Spawn(pawn, rootCell, map);
             }
             string letterText = $"새로운 동료가 합류합니다.\n<color=#d09b61>{donorName}</color>님이 조심스럽게 인사를 건넵니다.";
@@ -197,7 +200,6 @@ namespace CheeseProtocol
             ApplyPassions(pawn, quality, randomVar, joinAdvSetting.passionRange, trace);
             ApplyXenotype(pawn, joinAdvSetting.forceHuman);
             ApplyIdeo(pawn, joinAdvSetting.forcePlayerIdeo);
-            //Log.Warning($"[CheeseProtocol] traitsRange = {joinSettings.traitsRange.qMin} ~ {joinSettings.traitsRange.qMax}");
             ApplyTraits(pawn, quality, randomVar, joinAdvSetting.traitsRange, trace);
             ApplyHealth(pawn, quality, randomVar, joinAdvSetting.healthRange, trace);
             //ApplyApparel(pawn, quality);
@@ -390,244 +392,11 @@ namespace CheeseProtocol
 
             return null;
         }
-        private static BackstoryDef FindBackstoryByTitle(BackstorySlot slot, string contains)
-        {
-            contains = contains.ToLowerInvariant();
-
-            return DefDatabase<BackstoryDef>.AllDefs
-                .Where(b => b.slot == slot)
-                .FirstOrDefault(b =>
-                    (b.title ?? "").ToLowerInvariant().Contains(contains) ||
-                    (b.titleShort ?? "").ToLowerInvariant().Contains(contains) ||
-                    b.defName.ToLowerInvariant().Contains(contains)
-                );
-        }
         private static string TrimName(string s)
         {
             s = s.Trim();
             if (s.Length > 24) s = s.Substring(0, 24);
             return s;
-        }
-        public static void DumpTraitDefMembers(string defName)
-        {
-            TraitDef def = DefDatabase<TraitDef>.GetNamedSilentFail(defName);
-            if (def == null)
-            {
-                Log.Warning($"[CheeseProtocol][TraitDump] TraitDef not found: {defName}");
-                return;
-            }
-
-            Type t = def.GetType();
-
-            var fields = t.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
-                        .OrderBy(f => f.Name)
-                        .Select(f =>
-                        {
-                            object v = null;
-                            try { v = f.GetValue(def); } catch { }
-                            string vs = v == null ? "null" : v.ToString();
-                            return $"{f.FieldType.Name} {f.Name} = {vs}";
-                        });
-
-            var props = t.GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
-                        .Where(p => p.GetIndexParameters().Length == 0)
-                        .OrderBy(p => p.Name)
-                        .Select(p =>
-                        {
-                            object v = null;
-                            try { v = p.GetValue(def); } catch { }
-                            string vs = v == null ? "null" : v.ToString();
-                            return $"{p.PropertyType.Name} {p.Name} = {vs}";
-                        });
-
-            Log.Message("[CheeseProtocol][TraitDump] === Fields ===\n" + string.Join("\n", fields));
-            Log.Message("[CheeseProtocol][TraitDump] === Properties ===\n" + string.Join("\n", props));
-        }
-        public static void LogTraitCandidates(IEnumerable<TraitCandidate> list, string title = null)
-        {
-            if (!Prefs.DevMode) return;
-
-            if (!string.IsNullOrEmpty(title))
-                Log.Message($"[CheeseProtocol] ==== {title} ====");
-
-            int i = 0;
-            foreach (var c in list)
-            {
-                Log.Message(
-                    $"[{i++}] {c.key} | label='{c.label}' | commonality={c.commonality:0.###} | " +
-                    $"sexual={c.isSexualOrientation} | " +
-                    $"conflictsT={c.conflictTraits?.Length ?? 0} | " +
-                    $"conflictsP={c.conflictPassions?.Length ?? 0} | " +
-                    $"exTags={c.exclusionTags?.Length ?? 0}"
-                );
-            }
-
-            Log.Message($"[CheeseProtocol] ==== total: {i} ====");
-        }
-        public static void LogAllTraitsSummary()
-        {
-            foreach (TraitDef def in DefDatabase<TraitDef>.AllDefs)
-            {
-                var degreeList = TryGet(def, "degreeDatas") as IList;
-                if (degreeList == null || degreeList.Count == 0)
-                    continue; // degree 자체가 없는 경우만 제외
-
-                // TraitDef 공통 메타
-                string reqTags = (TryGet(def, "requiredWorkTags") ?? "None").ToString();
-                string disTags = (TryGet(def, "disabledWorkTags") ?? "None").ToString();
-                string conflicts = FormatEnum(TryGet(def, "conflictingTraits"));
-                string exclusion = FormatEnum(TryGet(def, "exclusionTags"));
-
-                // TraitDef.commonality (fallback 용)
-                string defCommonality = (TryGet(def, "commonality") ?? "").ToString();
-
-                for (int i = 0; i < degreeList.Count; i++)
-                {
-                    object d = degreeList[i];
-                    if (d == null) continue;
-
-                    string degree = (TryGet(d, "degree") ?? i).ToString();
-
-                    // 한글 label은 거의 항상 degreeDatas 쪽에 있음
-                    string label =
-                        (TryGet(d, "label")
-                        ?? TryGet(d, "LabelCap")
-                        ?? def.defName).ToString();
-
-                    // degree별 commonality 우선, 없으면 def 쪽
-                    string degreeCommonality =
-                        (TryGet(d, "commonality") ?? defCommonality).ToString();
-
-                    string desc = (TryGet(d, "description") ?? "").ToString();
-
-                    Log.Message(
-                        $"[CheeseProtocol][TraitDegree] " +
-                        $"key={def.defName}({degree}) " +
-                        $"defName={def.defName} degree={degree} label={label} " +
-                        $"def commonality={defCommonality} " +
-                        $"commonality={degreeCommonality} " +
-                        $"requiredWorkTags={reqTags} disabledWorkTags={disTags} " +
-                        $"conflicts=[{conflicts}] exclusionTags=[{exclusion}] " +
-                        $"desc={Short(desc, 120)}"
-                    );
-                }
-            }
-        }
-        private static string Short(string s, int max)
-        {
-            if (string.IsNullOrEmpty(s)) return "";
-            s = s.Replace("\r", " ").Replace("\n", " ");
-            return s.Length <= max ? s : s.Substring(0, max) + "...";
-        }
-        public static void DumpTraitDegree0(string traitDefName)
-        {
-            var def = DefDatabase<TraitDef>.GetNamedSilentFail(traitDefName);
-            if (def == null)
-            {
-                Log.Warning($"[CheeseProtocol][TraitDegreeDump] TraitDef not found: {traitDefName}");
-                return;
-            }
-
-            object defLabel = TryGet(def, "label");
-            object degreeDatasObj = TryGet(def, "degreeDatas");
-
-            int degreeCount = (degreeDatasObj as ICollection)?.Count ?? (degreeDatasObj as IList)?.Count ?? 0;
-
-            Log.Message($"[CheeseProtocol][TraitDegreeDump] defName={def.defName} def.label={defLabel ?? "null"} degreeDatas.Count={degreeCount}");
-
-            var list = degreeDatasObj as IList;
-            if (list == null || list.Count == 0)
-            {
-                Log.Warning($"[CheeseProtocol][TraitDegreeDump] No degreeDatas for {def.defName}");
-                return;
-            }
-
-            var d0 = list[0];
-            if (d0 == null)
-            {
-                Log.Warning($"[CheeseProtocol][TraitDegreeDump] degreeDatas[0] is null for {def.defName}");
-                return;
-            }
-
-            var t = d0.GetType();
-            var fields = t.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
-                        .OrderBy(f => f.Name)
-                        .Select(f =>
-                        {
-                            object v = null;
-                            try { v = f.GetValue(d0); } catch { }
-                            return $"{f.FieldType.Name} {f.Name} = {(v == null ? "null" : v.ToString())}";
-                        });
-
-            var props = t.GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
-                        .Where(p => p.GetIndexParameters().Length == 0)
-                        .OrderBy(p => p.Name)
-                        .Select(p =>
-                        {
-                            object v = null;
-                            try { v = p.GetValue(d0); } catch { }
-                            return $"{p.PropertyType.Name} {p.Name} = {(v == null ? "null" : v.ToString())}";
-                        });
-
-            Log.Message("[CheeseProtocol][TraitDegreeDump] === degreeDatas[0] Fields ===\n" + string.Join("\n", fields));
-            Log.Message("[CheeseProtocol][TraitDegreeDump] === degreeDatas[0] Properties ===\n" + string.Join("\n", props));
-        }
-        private static string FormatEnum(object o)
-        {
-            if (o == null) return "n/a";
-            if (o is System.Collections.IEnumerable e)
-                return "[" + string.Join(",", e.Cast<object>().Select(x => x.ToString())) + "]";
-            return o.ToString();
-        }
-        private static object TryGet(object obj, string name)
-        {
-            if (obj == null) return null;
-            var t = obj.GetType();
-
-            var f = t.GetField(name, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-            if (f != null) return f.GetValue(obj);
-
-            var p = t.GetProperty(name, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-            if (p != null && p.GetIndexParameters().Length == 0)
-            {
-                try { return p.GetValue(obj); } catch { }
-            }
-            return null;
-        }
-
-        private static T Timed<T>(string label, Func<T> fn)
-        {
-            var sw = System.Diagnostics.Stopwatch.StartNew();
-            try
-            {
-                var r = fn();
-                sw.Stop();
-                Log.Message($"[CheeseProtocol][SpawnTiming] {label} OK ({sw.ElapsedMilliseconds} ms)");
-                return r;
-            }
-            catch (Exception e)
-            {
-                sw.Stop();
-                Log.Error($"[CheeseProtocol][SpawnTiming] {label} FAIL ({sw.ElapsedMilliseconds} ms)\n{e}");
-                throw;
-            }
-        }
-
-        private static void Timed(string label, Action fn)
-        {
-            var sw = System.Diagnostics.Stopwatch.StartNew();
-            try
-            {
-                fn();
-                sw.Stop();
-                Log.Message($"[CheeseProtocol][SpawnTiming] {label} OK ({sw.ElapsedMilliseconds} ms)");
-            }
-            catch (Exception e)
-            {
-                sw.Stop();
-                Log.Error($"[CheeseProtocol][SpawnTiming] {label} FAIL ({sw.ElapsedMilliseconds} ms)\n{e}");
-                throw;
-            }
         }
     }
 }

@@ -1,5 +1,6 @@
 using System;
 using Verse;
+using static CheeseProtocol.CheeseLog;
 
 namespace CheeseProtocol
 {
@@ -67,11 +68,22 @@ namespace CheeseProtocol
 
                 if (!string.IsNullOrWhiteSpace(CheeseProtocolMod.Settings.chzzkStudioUrl))
                 {
-                    Log.Message("[CheeseProtocol] Auto-connect on game start");
+                    Msg("Auto-connect on game start");
                     CheeseProtocolMod.ChzzkChat.RequestConnect("auto");
                 }
             }
+            Flush(maxPerFlush: 200);
             CheeseProtocolMod.ChzzkChat.Tick();
+        }
+
+        public override void FinalizeInit()
+        {
+            CheeseLog.Clear();
+
+            CheeseLog.MinLevel = Prefs.DevMode
+                ? CheeseLog.Level.Trace
+                : CheeseLog.Level.Message;
+            CheeseLog.SetChannel(CheeseLog.Channel.Debug, Prefs.DevMode);
         }
     }
 }

@@ -4,6 +4,7 @@ using System.Reflection;
 using HarmonyLib;
 using RimWorld;
 using Verse;
+using static CheeseProtocol.CheeseLog;
 
 namespace CheeseProtocol.HarmonyPatches
 {
@@ -87,8 +88,7 @@ namespace CheeseProtocol.HarmonyPatches
             }
 
             // text 접근 실패여도 Letter를 찾았다는 사실 자체는 true (더 이상 다른 브랜치로 안 내려감)
-            if (Prefs.DevMode)
-                Log.Warning($"[CheeseProtocol] ReceiveLetter got Letter={letter.GetType().FullName} but couldn't access text field/property.");
+            QMsg($"ReceiveLetter got Letter={letter.GetType().FullName} but couldn't access text field/property.", Channel.Debug);
             return true;
         }
 

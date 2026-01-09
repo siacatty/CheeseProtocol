@@ -1,6 +1,6 @@
 using HarmonyLib;
 using Verse;
-
+using static CheeseProtocol.CheeseLog;
 namespace CheeseProtocol
 {
     [StaticConstructorOnStartup]
@@ -8,10 +8,10 @@ namespace CheeseProtocol
     {
         static HarmonyBootstrap()
         {
-            Log.Message("[CheeseProtocol] HarmonyBootstrap start");
+            Msg("HarmonyBootstrap start", Channel.Debug);
             var harmony = new Harmony("CheeseProtocol");
             harmony.PatchAll();
-            Log.Message("[CheeseProtocol] HarmonyBootstrap done");
+            Msg("HarmonyBootstrap done", Channel.Debug);
         }
     }
 }

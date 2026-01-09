@@ -33,9 +33,13 @@ namespace CheeseProtocol
         public override CheeseCommand Command => CheeseCommand.Join;
         public override string Label => "!참여";
         private const float lineH = 26f;
+        private readonly Color HeaderBg     = new Color(0.20f, 0.32f, 0.40f); // steel blue
+        private readonly Color HeaderBorder = new Color(0.45f, 0.65f, 0.75f);
+
+        private readonly Color BodyBg       = new Color(0.18f, 0.22f, 0.26f); // blue-charcoal
+        private readonly Color BodyBorder   = new Color(0.35f, 0.48f, 0.55f);
         public JoinAdvancedSettings()
         {
-            Log.Warning("[CheeseProtocol] JoinAdvancedSettings Initialized");
             ResetToDefaults();
             InitializeAll();
         }
@@ -167,16 +171,44 @@ namespace CheeseProtocol
             float traitWindowH = 220f;
             float topBarH = 34f;
             float btnSize = 24f;
+            //Color headerFont = new Color(0.96f, 0.96f, 0.96f);
+
             Rect traitRect = new Rect(rect.x, rect.y, rect.width, traitWindowH);
             UIUtil.SplitVerticallyByRatio(traitRect, out Rect blackTraitRect, out Rect whiteTraitRect, 0.5f, paddingX);
             UIUtil.SplitHorizontallyByHeight(blackTraitRect, out Rect blackTopRect, out Rect blackListRect, topBarH, 0f);
             UIUtil.SplitHorizontallyByHeight(whiteTraitRect, out Rect whiteTopRect, out Rect whiteListRect, topBarH, 0f);
             UIUtil.SplitVerticallyByRatio(blackTopRect, out Rect blackTopLabel, out Rect blackAddBtn, 0.7f, 0f);
             UIUtil.SplitVerticallyByRatio(whiteTopRect, out Rect whiteTopLabel, out Rect whiteAddBtn, 0.7f, 0f);
+            Color oldColor = GUI.color;
+
+            // ─────────────────────────────
+            // Draw
+            // ─────────────────────────────
+
+            // Header (Top)
+            Widgets.DrawBoxSolid(blackTopRect, HeaderBg);
+            Widgets.DrawBoxSolid(whiteTopRect, HeaderBg);
+
+            GUI.color = HeaderBorder;
+            Widgets.DrawBox(blackTopRect);
+            Widgets.DrawBox(whiteTopRect);
+
+            // Body (List)
+            Widgets.DrawBoxSolid(blackListRect, BodyBg);
+            Widgets.DrawBoxSolid(whiteListRect, BodyBg);
+
+            GUI.color = BodyBorder;
+            Widgets.DrawBox(blackListRect);
+            Widgets.DrawBox(whiteListRect);
+            GUI.color = oldColor;
+
             blackTopLabel = UIUtil.ShrinkRect(blackTopLabel, 6f);
             whiteTopLabel = UIUtil.ShrinkRect(whiteTopLabel, 6f);
+            oldColor = GUI.color;
+            //GUI.color = headerFont;
             UIUtil.DrawCenteredText(blackTopLabel, "비선호 특성", align: TextAlignment.Left);
             UIUtil.DrawCenteredText(whiteTopLabel, "선호 특성", align: TextAlignment.Left);
+            //GUI.color = oldColor;
             blackAddBtn = UIUtil.ResizeRectAligned(blackAddBtn, btnSize, btnSize, TextAlignment.Right);
             whiteAddBtn = UIUtil.ResizeRectAligned(whiteAddBtn, btnSize, btnSize, TextAlignment.Right);
             Widgets.DrawHighlightIfMouseover(blackAddBtn);
@@ -202,10 +234,10 @@ namespace CheeseProtocol
                 },
                 true);
             
-            Widgets.DrawBox(blackTopRect);
-            Widgets.DrawBox(whiteTopRect);
-            Widgets.DrawBox(blackListRect);
-            Widgets.DrawBox(whiteListRect);
+            //Widgets.DrawBox(blackTopRect);
+            //Widgets.DrawBox(whiteTopRect);
+            //Widgets.DrawBox(blackListRect);
+            //Widgets.DrawBox(whiteListRect);
             usedH += traitWindowH;
             return usedH;
         }
@@ -284,7 +316,6 @@ namespace CheeseProtocol
             float margin = 8f;
             var listing = new Listing_Standard();
             float lineH = 26f;
-            //float btnSize = 24f;
 
             listing.maxOneColumn = true;
             listing.Begin(rect.ContractedBy(margin));
@@ -311,7 +342,6 @@ namespace CheeseProtocol
                 UIUtil.DrawCenteredText(xRect, "×", TextAlignment.Center, font: GameFont.Medium, color: xColor);
             }
             listing.End();
-
             return listing.CurHeight + margin*2f;
         }
 

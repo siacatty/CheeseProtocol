@@ -5,6 +5,7 @@ using Verse;
 using System.Linq;
 using Verse.AI.Group;
 using UnityEngine;
+using static CheeseProtocol.CheeseLog;
 
 namespace CheeseProtocol
 {
@@ -24,19 +25,21 @@ namespace CheeseProtocol
             CheeseRollTrace trace = new CheeseRollTrace(donorName, CheeseCommand.Thrumbo);
             if (!TryApplyThrumboCustomization(thrumboRequest, quality, settings.randomVar, thrumboAdvSetting, trace))
             {
-                FallbackVanilla(map);
+                QWarn("Failed find thrumbo information. Fallback to vanilla incident", Channel.Verse);
+                FallbackVanilla(map, false);
                 return;
             }
             if (!TrySpawnThrumboList(thrumboRequest, map, out IntVec3 rootCell))
             {
-                Log.Warning("[CheeseProtocol] Failed to spawn thrumbos.");
-                FallbackVanilla(map);
+                QWarn("Failed to spawn thrumbos.", Channel.Verse);
+                CheeseLetter.AlertFail("!트럼보", "트럼보가 맵에 진입할 수 있는 경로를 찾지 못했습니다.");
+                //FallbackVanilla(map, true);
                 return;
             }
             
             if (!TryMakeLord(thrumboRequest, map, out Lord lord))
             {
-                Log.Warning("[CheeseProtocol] Failed to make lord thrumbo.");
+                QWarn("Failed to make lord thrumbo.", Channel.Verse);
             }
             string letterLabel = (thrumboRequest.alphaCount > 0 ? "알파 " : "희귀 ") + "트럼보";
 
@@ -64,9 +67,9 @@ namespace CheeseProtocol
                 map,
                 LetterDefOf.PositiveEvent
             );
-            Log.Message($"[CheeseProtocol] Thrumbo request successful: {thrumboRequest}");
+            QMsg($"Thrumbo request successful: {thrumboRequest}", Channel.Debug);
         }
-        public static void FallbackVanilla(Map map)
+        public static void FallbackVanilla(Map map, bool isSpawnError)
         {
             IncidentDef def = IncidentDef.Named("ThrumboPasses");
 
@@ -75,7 +78,14 @@ namespace CheeseProtocol
                 map
             );
 
-            def.Worker.TryExecute(parms);
+            bool ok = def.Worker.TryExecute(parms);
+            if (!ok)
+            {
+                if (isSpawnError)
+                    CheeseLetter.AlertFail("!트럼보", "트럼보가 맵에 진입할 수 있는 경로를 찾지 못했습니다.");
+                else
+                    CheeseLetter.AlertFail("!트럼보", "실행 실패: 로그 확인 필요.");
+            }
         }
         public static bool TrySpawnThrumboList(ThrumboRequest req, Map map, out IntVec3 rootCell)
         {
@@ -102,7 +112,7 @@ namespace CheeseProtocol
             {
                 req.alphaThrumbo = SpawnOne(req.alphaDef, map, req.parms, rootCell);
                 if (req.alphaThrumbo == null){
-                    Log.Warning("[CheeseProtocol] Failed to spawn alpha thrumbo. Fallback: replace with normal thrumbo");
+                    QWarn("Failed to spawn alpha thrumbo. Fallback: replace with normal thrumbo", Channel.Verse);
                     req.alphaThrumbo = null;
                     req.alphaCount = 0;
                     req.thrumboCount += 1;
@@ -117,7 +127,7 @@ namespace CheeseProtocol
                 var thrumbo = SpawnOne(req.thrumboDef, map, req.parms, rootCell);
                 if (thrumbo == null) 
                 {
-                    Log.Warning("[CheeseProtocol] Failed to spawn thrumbo. Skipping.");
+                    QWarn("Failed to spawn thrumbo. Skipping.", Channel.Verse);
                     continue;
                 }
                 thrumboList.Add(thrumbo);
@@ -175,7 +185,7 @@ namespace CheeseProtocol
             // fallback
             if (!found)
             {
-                Log.Warning($"[ThrumboSpawn] Failed near-root search up to maxRadius={maxRadius}, falling back.");
+                QWarn($"Failed near-root search up to maxRadius={maxRadius}, falling back.", Channel.Verse);
 
                 if (!CellFinder.TryFindRandomEdgeCellWith(
                         c => c.Standable(map) && c.Walkable(map) && !c.Fogged(map),
@@ -200,7 +210,7 @@ namespace CheeseProtocol
             {
                 if(!TryApplyAlphaProb(request, quality, randomVar, adv.alphaProbRange, trace))
                 {
-                    Log.Warning("[CheeseProtocol] Alpha Thrumbo not available.");
+                    QWarn("Alpha Thrumbo Def not available.", Channel.Verse);
                     Messages.Message(
                         "!트럼보 실행 중: 알파 트럼보 정보를 찾을 수 없습니다. 일반 트럼보로 대체합니다.",
                         MessageTypeDefOf.RejectInput
@@ -209,11 +219,8 @@ namespace CheeseProtocol
             }
             if(!TryApplyThrumboCount(request, quality, randomVar, adv.thrumboCountRange, trace))
             {
-                Log.Warning("[CheeseProtocol] Alpha Thrumbo not available.");
-                Messages.Message(
-                    "!트럼보 실패: 트럼보 정보를 찾을 수 없습니다.",
-                    MessageTypeDefOf.RejectInput
-                );
+                QWarn("Thrumbo Def not available.", Channel.Verse);
+                CheeseLetter.AlertFail("!트럼보", "트럼보 정보를 찾을 수 없습니다.");
                 return false;
             }
             return true;
