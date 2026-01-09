@@ -60,9 +60,11 @@ namespace CheeseProtocol
             float usedH = 0;
             float checkboxPaddingY = 6f;
             float rowH = lineH+checkboxPaddingY;
+            string thrumboCountTip = "설정된 트럼보 개체 수에는 알파 트럼보의 개체 수도 포함됩니다.";
+            string alphaProbTip = "알파 트럼보가 등장할 확률입니다.";
             UIUtil.RowWithHighlight(rect, ref curY, rowH, r =>{Widgets.CheckboxLabeled(r, "알파 트럼보 허용 (최대 한마리)", ref allowAlpha);});
-            UIUtil.RangeSliderWrapper(rect, ref curY, lineH, "트럼보 마리 수", ref thrumboCountRange, baseMin: GameplayConstants.ThrumboMin, baseMax: GameplayConstants.ThrumboMax, roundTo: 1f);
-            UIUtil.RangeSliderWrapper(rect, ref curY, lineH, "알파 트럼보 등장 확률", ref alphaProbRange, isPercentile: true);
+            UIUtil.RangeSliderWrapper(rect, ref curY, lineH, "트럼보 마리 수", ref thrumboCountRange, baseMin: GameplayConstants.ThrumboMin, baseMax: GameplayConstants.ThrumboMax, roundTo: 1f, tooltip:thrumboCountTip);
+            UIUtil.RangeSliderWrapper(rect, ref curY, lineH, "알파 트럼보 등장 확률", ref alphaProbRange, isPercentile: true, tooltip:alphaProbTip);
             usedH = curY - rect.y;
             return usedH;
         }

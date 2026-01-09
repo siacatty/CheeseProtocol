@@ -64,10 +64,11 @@ namespace CheeseProtocol
             float usedH = 0;
             float checkboxPaddingY = 6f;
             float rowH = lineH+checkboxPaddingY;
+            string raidScaleTip = "설정된 수치는 현재 정착지의 습격 포인트에 곱해집니다.\n주의) 값을 지나치게 높게 설정하면 난이도가 급격히 상승할 수 있습니다.";
             //UIUtil.RowWithHighlight(rect, ref curY, rowH, r =>{Widgets.CheckboxLabeled(r, "중앙드랍 허용", ref allowCenterDrop);});
             //UIUtil.RowWithHighlight(rect, ref curY, rowH, r =>{Widgets.CheckboxLabeled(r, "벽파괴 습격 (브리처+새퍼) 허용", ref allowBreacher);});
             //UIUtil.RowWithHighlight(rect, ref curY, rowH, r =>{Widgets.CheckboxLabeled(r, "공성(박격포) 허용", ref allowSiege);});
-            UIUtil.RangeSliderWrapper(rect, ref curY, lineH, "습격 강도 배율", ref raidScaleRange, baseMin: GameplayConstants.RaidScaleMin, baseMax: GameplayConstants.RaidScaleMax, isPercentile: true);
+            UIUtil.RangeSliderWrapper(rect, ref curY, lineH, "습격 강도 배율", ref raidScaleRange, baseMin: GameplayConstants.RaidScaleMin, baseMax: GameplayConstants.RaidScaleMax, isPercentile: true, tooltip:raidScaleTip);
             usedH = curY - rect.y;
             return usedH;
         }

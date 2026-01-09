@@ -86,9 +86,11 @@ namespace CheeseProtocol
             float usedH = 0;
             float checkboxPaddingY = 6f;
             float rowH = lineH+checkboxPaddingY;
+            string typeTip = "값이 높을수록 희귀도와 시장 가치가 높은 운석이 선택될 확률이 증가합니다.\n주의) 아래 허용된 운석이 없으면 이벤트가 발생하지 않습니다.";
+            string sizeTip = "값이 높을수록 운석 크기가 커집니다. 운석 크기는 선택된 운석 종류에 따라 약간의 보정이 적용됩니다.";
             //UIUtil.RowWithHighlight(rect, ref curY, rowH, r =>{Widgets.CheckboxLabeled(r, "결격사항 허용", ref allowWorkDisable);});
-            UIUtil.RangeSliderWrapper(rect, ref curY, lineH, "운석 종류 퀄리티", ref meteorTypeRange, isPercentile: true);
-            UIUtil.RangeSliderWrapper(rect, ref curY, lineH, "운석 크기", ref meteorSizeRange, baseMin: GameplayConstants.MeteorSizeMin, baseMax: GameplayConstants.MeteorSizeMax, roundTo: 1f);
+            UIUtil.RangeSliderWrapper(rect, ref curY, lineH, "운석 종류 퀄리티", ref meteorTypeRange, isPercentile: true, tooltip: typeTip);
+            UIUtil.RangeSliderWrapper(rect, ref curY, lineH, "운석 크기", ref meteorSizeRange, baseMin: GameplayConstants.MeteorSizeMin, baseMax: GameplayConstants.MeteorSizeMax, roundTo: 1f, tooltip:sizeTip);
             usedH = curY - rect.y;
             return usedH;
         }

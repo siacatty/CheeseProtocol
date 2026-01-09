@@ -133,22 +133,36 @@ namespace CheeseProtocol
             );
         }
         
-        public static Rect RowWithHighlight(Rect rect, ref float curY, float height, Action<Rect> draw, float contract = 0f)
+        public static Rect RowWithHighlight(Rect rect, ref float curY, float height, Action<Rect> draw, float contract = 0f, string tooltip="")
         {
             Rect row = new Rect(rect.x, curY, rect.width, height);
             curY+=height;
             Widgets.DrawHighlightIfMouseover(row);
-
+            if (!tooltip.NullOrEmpty())
+            {
+                TooltipHandler.TipRegion(
+                row,
+                () => tooltip,
+                row.GetHashCode()
+                );
+            }
             Rect content = contract > 0f ? row.ContractedBy(contract) : row;
             draw?.Invoke(content);
             return content;
         }
 
-        public static Rect RowWithHighlightListing(Listing_Standard listing, float height, Action<Rect> draw, float contract = 0f)
+        public static Rect RowWithHighlightListing(Listing_Standard listing, float height, Action<Rect> draw, float contract = 0f, string tooltip="")
         {
             Rect row = listing.GetRect(height);
             Widgets.DrawHighlightIfMouseover(row);
-
+            if (!tooltip.NullOrEmpty())
+            {
+                TooltipHandler.TipRegion(
+                row,
+                () => tooltip,
+                row.GetHashCode()
+                );
+            }
             Rect content = contract > 0f ? row.ContractedBy(contract) : row;
             draw?.Invoke(content);
             return content;
@@ -163,7 +177,8 @@ namespace CheeseProtocol
             bool highlightRange = true,
             float roundTo = 0f,
             float handleW = 12f,
-            float barH = 4f
+            float barH = 4f,
+            string tooltip=""
         )
         {
             if (maxLimit <= minLimit) return;
@@ -290,12 +305,20 @@ namespace CheeseProtocol
                 }
             }
         }
-        public static void RangeSliderWrapperThingTier(Rect rect, ref float curY, float height, string label, ref QualityRange range, float baseMin=0f, float baseMax=1f, bool isPercentile=false, bool highlightMouseover = true, bool highlightRange = true, float roundTo = 0.01f)
+        public static void RangeSliderWrapperThingTier(Rect rect, ref float curY, float height, string label, ref QualityRange range, float baseMin=0f, float baseMax=1f, bool isPercentile=false, bool highlightMouseover = true, bool highlightRange = true, float roundTo = 0.01f, string tooltip="")
         {
             float paddingX = 6f;
             float min = range.qMin;
             float max = range.qMax;
             Rect row = new Rect(rect.x, curY, rect.width, height);
+            if (!tooltip.NullOrEmpty())
+            {
+                TooltipHandler.TipRegion(
+                row,
+                () => tooltip,
+                row.GetHashCode()
+                );
+            }
             curY+=height;
 
             if (highlightMouseover)
@@ -337,12 +360,20 @@ namespace CheeseProtocol
             DrawCenteredText(maxRect, maxString);
             range = QualityRange.init(min, max);
         }
-        public static void RangeSliderWrapperTechLevel(Rect rect, ref float curY, float height, string label, ref QualityRange range, float baseMin=0f, float baseMax=1f, bool isPercentile=false, bool highlightMouseover = true, bool highlightRange = true, float roundTo = 0.01f)
+        public static void RangeSliderWrapperTechLevel(Rect rect, ref float curY, float height, string label, ref QualityRange range, float baseMin=0f, float baseMax=1f, bool isPercentile=false, bool highlightMouseover = true, bool highlightRange = true, float roundTo = 0.01f, string tooltip="")
         {
             float paddingX = 6f;
             float min = range.qMin;
             float max = range.qMax;
             Rect row = new Rect(rect.x, curY, rect.width, height);
+            if (!tooltip.NullOrEmpty())
+            {
+                TooltipHandler.TipRegion(
+                row,
+                () => tooltip,
+                row.GetHashCode()
+                );
+            }
             curY+=height;
 
             if (highlightMouseover)
@@ -386,12 +417,20 @@ namespace CheeseProtocol
             DrawCenteredText(maxRect, maxString);
             range = QualityRange.init(min, max);
         }
-        public static void RangeSliderWrapper(Rect rect, ref float curY, float height, string label, ref QualityRange range, float baseMin=0f, float baseMax=1f, bool isPercentile=false, bool highlightMouseover = true, bool highlightRange = true, float roundTo = 0.01f)
+        public static void RangeSliderWrapper(Rect rect, ref float curY, float height, string label, ref QualityRange range, float baseMin=0f, float baseMax=1f, bool isPercentile=false, bool highlightMouseover = true, bool highlightRange = true, float roundTo = 0.01f, string tooltip="")
         {
             float paddingX = 6f;
             float min = range.qMin;
             float max = range.qMax;
             Rect row = new Rect(rect.x, curY, rect.width, height);
+            if (!tooltip.NullOrEmpty())
+            {
+                TooltipHandler.TipRegion(
+                row,
+                () => tooltip,
+                row.GetHashCode()
+                );
+            }
             curY+=height;
 
             if (highlightMouseover)

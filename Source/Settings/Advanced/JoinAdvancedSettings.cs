@@ -150,15 +150,20 @@ namespace CheeseProtocol
             float usedH = 0;
             float checkboxPaddingY = 6f;
             float rowH = lineH+checkboxPaddingY;
+            string skillTip = "평균 스킬 레벨\n최대 값을 과도하게 높이면 게임 밸런스가 무너질 수 있습니다.";
+            string passionTip = "값이 높을수록 높은 열정 개수와 쌍불이 부여될 확률이 증가합니다.";
+            string traitTip = "값이 높을수록 비선호 특성이 부여될 확률은 감소하고,\n선호 특성이 부여될 확률은 증가합니다.\n주의) 선호 특성을 적게 설정하면 특정 특성이 과도하게 선택될 수 있습니다.";
+            string ageTip = "후원금액이 높을수록 젊은 정착민이 합류할 확률이 증가합니다.";
+            string healthTip = "값이 높을수록 흉터나 노화 관련 질환이 생길 가능성이 감소합니다.";
             UIUtil.RowWithHighlight(rect, ref curY, rowH, r =>{Widgets.CheckboxLabeled(r, "결격사항 허용", ref allowWorkDisable);});
             UIUtil.RowWithHighlight(rect, ref curY, rowH, r =>{Widgets.CheckboxLabeled(r, "플레이어 이념 강제", ref forcePlayerIdeo);});
             UIUtil.RowWithHighlight(rect, ref curY, rowH, r =>{Widgets.CheckboxLabeled(r, "인간 종족만 허용", ref forceHuman);});
             UIUtil.RowWithHighlight(rect, ref curY, rowH, r =>{Widgets.CheckboxLabeled(r, "합류 시 수송포드 사용", ref useDropPod);});
-            UIUtil.RangeSliderWrapper(rect, ref curY, lineH, "스킬 레벨", ref skillRange, baseMin: GameplayConstants.SkillLevelMin, baseMax: GameplayConstants.SkillLevelMax, roundTo: 1f);
-            UIUtil.RangeSliderWrapper(rect, ref curY, lineH, "열정 개수", ref passionRange, baseMin: GameplayConstants.PassionMin, baseMax: GameplayConstants.PassionMax, roundTo: 1f);
-            UIUtil.RangeSliderWrapper(rect, ref curY, lineH, "특성 퀄리티", ref traitsRange, isPercentile: true);
-            UIUtil.RangeSliderWrapper(rect, ref curY, lineH, "나이", ref ageRange, baseMin: GameplayConstants.AgeMin, baseMax: GameplayConstants.AgeMax, roundTo: 1f);
-            UIUtil.RangeSliderWrapper(rect, ref curY, lineH, "건강", ref healthRange, isPercentile: true);
+            UIUtil.RangeSliderWrapper(rect, ref curY, lineH, "스킬 레벨", ref skillRange, baseMin: GameplayConstants.SkillLevelMin, baseMax: GameplayConstants.SkillLevelMax, roundTo: 1f, tooltip:skillTip);
+            UIUtil.RangeSliderWrapper(rect, ref curY, lineH, "열정 개수", ref passionRange, baseMin: GameplayConstants.PassionMin, baseMax: GameplayConstants.PassionMax, roundTo: 1f, tooltip:passionTip);
+            UIUtil.RangeSliderWrapper(rect, ref curY, lineH, "특성 퀄리티", ref traitsRange, isPercentile: true, tooltip:traitTip);
+            UIUtil.RangeSliderWrapper(rect, ref curY, lineH, "나이", ref ageRange, baseMin: GameplayConstants.AgeMin, baseMax: GameplayConstants.AgeMax, roundTo: 1f, tooltip:ageTip);
+            UIUtil.RangeSliderWrapper(rect, ref curY, lineH, "건강", ref healthRange, isPercentile: true, tooltip:healthTip);
             //TODO: add apparel and weapon range as well
             //RangeSlider(rect, ref curY, lineH, "의상 퀄리티", ref apparelRange, isPercentile: true);
             //RangeSlider(rect, ref curY, lineH, "무기 퀄리티", ref weaponRange, isPercentile: true);

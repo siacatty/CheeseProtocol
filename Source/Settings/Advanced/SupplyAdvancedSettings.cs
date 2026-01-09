@@ -80,15 +80,21 @@ namespace CheeseProtocol
             float usedH = 0;
             float checkboxPaddingY = 6f;
             float rowH = lineH+checkboxPaddingY;
-            UIUtil.RowWithHighlight(rect, ref curY, rowH, r =>{Widgets.CheckboxLabeled(r, "음식 보급 허용", ref allowFoodSupply);});
-            UIUtil.RowWithHighlight(rect, ref curY, rowH, r =>{Widgets.CheckboxLabeled(r, "의약품 보급 허용", ref allowMedSupply);});
-            UIUtil.RowWithHighlight(rect, ref curY, rowH, r =>{Widgets.CheckboxLabeled(r, "약물 보급 허용", ref allowDrugSupply);});
-            UIUtil.RowWithHighlight(rect, ref curY, rowH, r =>{Widgets.CheckboxLabeled(r, "무기 보급 허용", ref allowWeaponSupply);});
+            string allowSupplyTooltip = "모든 보급 비허용 시 이벤트가 실행되지 않습니다.";
+            string allowWeaponTooltip = "현재 무기 시장 가치 계산이 정확하지 않습니다.\n비활성화를 권장합니다.";
+            string marketValueTip = "설정된 시장 가치에 따라 아래에서 선택된 품질의 보급품 개수가 결정됩니다.";
+            string supplyTierTip = "값이 높을수록 보급품의 품질이 향상됩니다.\n예) 생약 → 약품 → 번화계 약품";
+            string weaponTierTip = "값이 높을수록 무기의 품질이 향상됩니다.";
+            string weaponTechTip = "값이 높을수록 무기에 적용되는 기술 수준이 향상됩니다.\n주의) 해당 기술 수준의 무기가 없을 경우 중세 무기로 고정됩니다. (구현 중)";
+            UIUtil.RowWithHighlight(rect, ref curY, rowH, r =>{Widgets.CheckboxLabeled(r, "음식 보급 허용", ref allowFoodSupply);}, tooltip:allowSupplyTooltip);
+            UIUtil.RowWithHighlight(rect, ref curY, rowH, r =>{Widgets.CheckboxLabeled(r, "의약품 보급 허용", ref allowMedSupply);}, tooltip:allowSupplyTooltip);
+            UIUtil.RowWithHighlight(rect, ref curY, rowH, r =>{Widgets.CheckboxLabeled(r, "약물 보급 허용", ref allowDrugSupply);}, tooltip:allowSupplyTooltip);
+            UIUtil.RowWithHighlight(rect, ref curY, rowH, r =>{Widgets.CheckboxLabeled(r, "무기 보급 허용", ref allowWeaponSupply);}, tooltip:allowWeaponTooltip);
 
-            UIUtil.RangeSliderWrapper(rect, ref curY, lineH, "보급품 총 시장가치", ref supplyValueRange, baseMin: GameplayConstants.SupplyValueMin, baseMax: GameplayConstants.SupplyValueMax, roundTo: 1f);
-            UIUtil.RangeSliderWrapper(rect, ref curY, lineH, "보급품 (무기제외) 품질", ref supplyTierRange, isPercentile: true);
-            UIUtil.RangeSliderWrapperThingTier(rect, ref curY, lineH, "무기 품질", ref weaponTierRange, baseMin: GameplayConstants.ThingTierMin, baseMax: GameplayConstants.ThingTierMax, roundTo: 1f);
-            UIUtil.RangeSliderWrapperTechLevel(rect, ref curY, lineH, "무기 기술수준", ref weaponTechRange, baseMin: GameplayConstants.TechLevelMin, baseMax: GameplayConstants.TechLevelMax, roundTo: 1f);
+            UIUtil.RangeSliderWrapper(rect, ref curY, lineH, "보급품 총 시장가치", ref supplyValueRange, baseMin: GameplayConstants.SupplyValueMin, baseMax: GameplayConstants.SupplyValueMax, roundTo: 1f, tooltip: marketValueTip);
+            UIUtil.RangeSliderWrapper(rect, ref curY, lineH, "보급품 (무기제외) 품질", ref supplyTierRange, isPercentile: true, tooltip: supplyTierTip);
+            UIUtil.RangeSliderWrapperThingTier(rect, ref curY, lineH, "무기 품질", ref weaponTierRange, baseMin: GameplayConstants.ThingTierMin, baseMax: GameplayConstants.ThingTierMax, roundTo: 1f, tooltip:weaponTierTip);
+            UIUtil.RangeSliderWrapperTechLevel(rect, ref curY, lineH, "무기 기술수준", ref weaponTechRange, baseMin: GameplayConstants.TechLevelMin, baseMax: GameplayConstants.TechLevelMax, roundTo: 1f, tooltip:weaponTechTip);
             usedH = curY - rect.y;
             return usedH;
         }

@@ -381,7 +381,7 @@ namespace CheeseProtocol
             // ======================
             string desc = cfg.source == CheeseCommandSource.Chat
                 ? "채팅"
-                : $"₩{cfg.minDonation} ~ ₩{cfg.maxDonation}";
+                : (cfg.minDonation == cfg.maxDonation ? $"₩{cfg.minDonation}" : $"₩{cfg.minDonation} ~ ₩{cfg.maxDonation}");
 
             UIUtil.DrawCenteredText(rDesc, desc);
             //Widgets.Label(rDesc, desc);

@@ -75,14 +75,16 @@ namespace CheeseProtocol
             float usedH = 0;
             float checkboxPaddingY = 6f;
             float rowH = lineH+checkboxPaddingY;
-            UIUtil.RowWithHighlight(rect, ref curY, rowH, r =>{Widgets.CheckboxLabeled(r, "황실 공물 징수인 허용", ref allowRoyalCaravan);});
-            UIUtil.RowWithHighlight(rect, ref curY, rowH, r =>{Widgets.CheckboxLabeled(r, "제국 상인 허용", ref allowImperialCaravan);});
-            UIUtil.RowWithHighlight(rect, ref curY, rowH, r =>{Widgets.CheckboxLabeled(r, "골동품 상인 허용", ref allowShamanCaravan);});
-            UIUtil.RowWithHighlight(rect, ref curY, rowH, r =>{Widgets.CheckboxLabeled(r, "원자재 상인 허용", ref allowBulkCaravan);});
-            UIUtil.RowWithHighlight(rect, ref curY, rowH, r =>{Widgets.CheckboxLabeled(r, "노예 상인 허용", ref allowSlaverCaravan);});
-            UIUtil.RowWithHighlight(rect, ref curY, rowH, r =>{Widgets.CheckboxLabeled(r, "희귀품 상인 허용", ref allowExoticCaravan);});
-            UIUtil.RowWithHighlight(rect, ref curY, rowH, r =>{Widgets.CheckboxLabeled(r, "무기 상인 허용", ref allowCombatCaravan);});
-            UIUtil.RangeSliderWrapper(rect, ref curY, lineH, "궤도상선 확률 보정치", ref orbitalRange, isPercentile: true);
+            string allowTraderTooltip = "모든 상단 비허용 시 이벤트가 실행되지 않습니다.";
+            string orbitTooltip = "현재 맵에 전력이 연결된 통신기가 없을 경우, 지상 상단으로 고정됩니다.";
+            UIUtil.RowWithHighlight(rect, ref curY, rowH, r =>{Widgets.CheckboxLabeled(r, "황실 공물 징수인 허용", ref allowRoyalCaravan);}, tooltip:allowTraderTooltip);
+            UIUtil.RowWithHighlight(rect, ref curY, rowH, r =>{Widgets.CheckboxLabeled(r, "제국 상인 허용", ref allowImperialCaravan);}, tooltip:allowTraderTooltip);
+            UIUtil.RowWithHighlight(rect, ref curY, rowH, r =>{Widgets.CheckboxLabeled(r, "골동품 상인 허용", ref allowShamanCaravan);}, tooltip:allowTraderTooltip);
+            UIUtil.RowWithHighlight(rect, ref curY, rowH, r =>{Widgets.CheckboxLabeled(r, "원자재 상인 허용", ref allowBulkCaravan);}, tooltip:allowTraderTooltip);
+            UIUtil.RowWithHighlight(rect, ref curY, rowH, r =>{Widgets.CheckboxLabeled(r, "노예 상인 허용", ref allowSlaverCaravan);}, tooltip:allowTraderTooltip);
+            UIUtil.RowWithHighlight(rect, ref curY, rowH, r =>{Widgets.CheckboxLabeled(r, "희귀품 상인 허용", ref allowExoticCaravan);}, tooltip:allowTraderTooltip);
+            UIUtil.RowWithHighlight(rect, ref curY, rowH, r =>{Widgets.CheckboxLabeled(r, "무기 상인 허용", ref allowCombatCaravan);}, tooltip:allowTraderTooltip);
+            UIUtil.RangeSliderWrapper(rect, ref curY, lineH, "궤도상선 확률 보정치", ref orbitalRange, isPercentile: true, tooltip: orbitTooltip);
             usedH = curY - rect.y;
             return usedH;
         }

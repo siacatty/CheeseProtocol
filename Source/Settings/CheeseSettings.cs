@@ -298,7 +298,13 @@ namespace CheeseProtocol
                         listing.Label("[WARNING!]\n모드가 많거나 렉이 심하면 비활성화를 권장.\n비활성화 시, 퍼즈 중 명령어는 퍼즈 해제 후 일괄 처리");
                         GUI.color = prev;
                         listing.GapLine();
-                        listing.CheckboxLabeled("알림 메세지에 상세결과 표시", ref appendRollLogToLetters);
+                        Rect allowFeedbackRect = listing.GetRect(lineH);
+                        Widgets.CheckboxLabeled(allowFeedbackRect, "알림 메세지에 상세결과 표시", ref appendRollLogToLetters);
+                        TooltipHandler.TipRegion(
+                            allowFeedbackRect,
+                            () => "시청자의 운을 수치로 표시합니다.\n실제 결과가 아닌 후원 금액 기준의 예상 결과와 비교한 상대 값입니다.\n최소/최대 후원 금액에서는 항상 극단적인 결과로 표시됩니다.",
+                            allowFeedbackRect.GetHashCode()
+                        );
                         listing.GapLine();
                         Rect cooldownResetRect = listing.GetRect(btnSize*2f);
                         cooldownResetRect = UIUtil.ResizeRectAligned(cooldownResetRect, cooldownResetRect.width*0.5f, btnSize*1.5f);
@@ -310,6 +316,11 @@ namespace CheeseProtocol
                         TextAnchor oldAnchor = Text.Anchor;
                         Text.Anchor = TextAnchor.MiddleLeft;
                         Widgets.Label(randomVarLabel, "이벤트 효과 강도 랜덤성:");
+                        TooltipHandler.TipRegion(
+                            randomVarRect,
+                            () => "100%: 완전 랜덤(후원금액 반영 X)\n0%: 금액 정확 반영 (소액 위주 환경 비추천)\n80%: 적당히 섞인 추천 설정",
+                            randomVarRect.GetHashCode()
+                        );
                         Text.Anchor = oldAnchor;
                         randomVarSlider = UIUtil.ResizeRectAligned(randomVarSlider, randomVarSlider.width, lineH);
                         randomVar = Widgets.HorizontalSlider(randomVarSlider, randomVar, 0f, 1f, true, label:$"{Mathf.RoundToInt(randomVar * 100f)}%");
@@ -695,8 +706,10 @@ namespace CheeseProtocol
             var oldFont = Text.Font;
             Text.Font = GameFont.Medium;
             string headerTitle = "고급설정 대상 명령어 :";
-            UIUtil.SplitVerticallyByWidth(headerRect, out Rect headerTitleRect, out Rect headerCommandRect, Text.CalcSize(headerTitle).x + 12f, paddingX);
-            headerCommandRect = UIUtil.ResizeRectAligned(headerCommandRect, headerTitleRect.width, headerCommandRect.height, TextAlignment.Left).ContractedBy(8f);
+            UIUtil.SplitVerticallyByWidth(headerRect, out Rect headerTitleRect, out Rect headerButtonRect, Text.CalcSize(headerTitle).x + 12f, paddingX);
+            UIUtil.SplitVerticallyByWidth(headerButtonRect, out Rect headerCommandRect, out Rect headerResetRect, headerTitleRect.width, paddingX);
+            headerCommandRect = headerCommandRect.ContractedBy(8f);
+            headerResetRect = UIUtil.ResizeRectAligned(headerResetRect, headerTitleRect.width, headerResetRect.height, TextAlignment.Right).ContractedBy(12f);
             UIUtil.DrawCenteredText(headerTitleRect, headerTitle, font: GameFont.Medium);
             bool hasAny = commandConfigs != null && commandConfigs.Count > 0;
             using (new UIUtil.GUIStateScope(hasAny))
@@ -709,6 +722,8 @@ namespace CheeseProtocol
                     selectedConfigAdv != null ? selectedConfigAdv.label : "(No commands)");
             }
             Text.Font = oldFont;
+            if (Widgets.ButtonText(headerResetRect, "선택 명령어 설정 초기화"))
+                GetAdvSetting(selectedConfigAdv.cmd).ResetToDefaults();
             UIUtil.SplitVerticallyByRatio(contentRect, out Rect leftAdv, out Rect rightAdv, 0.5f, paddingX);
             switch(selectedConfigAdv.cmd)
             {
@@ -765,7 +780,7 @@ namespace CheeseProtocol
                 default:
                     break;
             }
-            DrawSectionNoListing(rightAdv, ref yR, "결과", true, rect =>
+            DrawSectionNoListing(rightAdv, ref yR, "예상결과 (추가예정)", true, rect =>
                 {
                     //listing.Label("명령어 대충 설정");
                     return 0f;
@@ -900,7 +915,21 @@ namespace CheeseProtocol
             Rect maxDonRect = cols[4];
             Rect cdRect = cols[5];
             float btnSize = 24f;
-
+            TooltipHandler.TipRegion(
+                srcRadioRect,
+                () => "채팅 선택 시 이벤트 효과가 랜덤하게 결정됩니다.",
+                srcRadioRect.GetHashCode()
+            );
+            TooltipHandler.TipRegion(
+                minDonRect,
+                () => "최소/최대 금액이 동일하면 이벤트 효과가 랜덤하게 결정됩니다.",
+                minDonRect.GetHashCode()
+            );
+            TooltipHandler.TipRegion(
+                maxDonRect,
+                () => "초과되는 금액은 최대 확률로 적용됩니다.",
+                maxDonRect.GetHashCode()
+            );
             //command (e.g. !참여)
             var oldAnchor = Text.Anchor;
             Text.Anchor = TextAnchor.MiddleCenter;
@@ -979,7 +1008,6 @@ namespace CheeseProtocol
             bool oldGui2 = GUI.enabled;
             GUI.enabled = enabled && source == CheeseCommandSource.Donation;
             UIUtil.IntFieldDigitsOnly(minDonField, ref minDonation, ref minDonationBuf, 0, maxDonation);
-
             float sliderDonValue = minDonation;
             int stepDon = 500;
             float newSliderDonValue = Widgets.HorizontalSlider(
