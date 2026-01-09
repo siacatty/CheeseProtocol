@@ -347,6 +347,18 @@ namespace CheeseProtocol
                             });
                         }
                     });
+                    DrawSectionNoListing(left, ref yL, "설명서", false, rect =>
+                    {
+                        float usedH = 0;
+                        Rect manualBtnRect = new Rect(rect.x, rect.y, rect.width, btnSize*2);
+                        usedH += btnSize*2;
+                        manualBtnRect = UIUtil.ResizeRectAligned(manualBtnRect, manualBtnRect.width*0.5f, btnSize*1.5f);
+                        if (Widgets.ButtonText(manualBtnRect, "설명서"))
+                        {
+                            Find.WindowStack.Add(new CheeseManualWindow());
+                        }
+                        return usedH;
+                    });
                     break;
 
                 case CheeseSettingsTab.Command:
