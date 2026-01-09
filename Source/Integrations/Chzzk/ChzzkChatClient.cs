@@ -342,7 +342,7 @@ namespace CheeseProtocol
                     CheeseEvent evt = CreateCheeseEvent(msgObj, false);
                     if (evt == null)
                     {
-                        QWarn("CheeseEvent creation failed from chat", Channel.Net);
+                        //QWarn("CheeseEvent creation failed from chat", Channel.Net);
                         continue;
                     }
                     else if (!TryEnqueueMessage(evt))
@@ -364,7 +364,7 @@ namespace CheeseProtocol
                     CheeseEvent evt = CreateCheeseEvent(msgObj, true);
                     if (evt == null)
                     {
-                        QWarn("CheeseEvent creation failed from donation", Channel.Net);
+                        //QWarn("CheeseEvent creation failed from donation", Channel.Net);
                         continue;
                     }
                     else if (!TryEnqueueMessage(evt))
