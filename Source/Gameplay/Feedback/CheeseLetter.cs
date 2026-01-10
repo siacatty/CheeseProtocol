@@ -65,7 +65,11 @@ namespace CheeseProtocol
             var sb = new StringBuilder();
             sb.AppendLine();
             sb.AppendLine("─────────────────────────────────────────");
-            sb.AppendLine($"평균 행운 점수: {Mathf.RoundToInt(trace.luckScore)}");
+            bool isPositive = trace.luckScore >= 0;
+            int luckScoreAbs = Mathf.Abs(Mathf.RoundToInt(trace.luckScore*100));
+            string color = isPositive ? "#2e8032ff" : "#aa4040ff";
+            string luckScoreText = isPositive? $"상위 {luckScoreAbs}%" : $"하위 {luckScoreAbs}%";
+            sb.AppendLine($"평균 행운 점수: <color={color}>{luckScoreText}</color>");
             const int titleWidth = 20;
             if (trace.steps != null && trace.steps.Count > 0)
             {
@@ -78,11 +82,11 @@ namespace CheeseProtocol
 
                     sb.Append($"- {s.title.PadRight(titleWidth)} : ");
 
-                    float v = s.score;
-                    bool isPositive = v >= 50f;
-                    string color = isPositive ? "#2e8032ff" : "#aa4040ff";
+                    float v = s.score * 100;
+                    isPositive = v >= 0f;
+                    color = isPositive ? "#2e8032ff" : "#aa4040ff";
 
-                    string scoreText = $"{v:0.#}점";
+                    string scoreText = $"{v:0.#}%";
                     sb.Append($"<color={color}>{scoreText}</color>");
 
                     sb.Append($"     (예상값: {s.expected:0.##} | 실제값: {s.value:0.##})");

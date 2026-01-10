@@ -16,7 +16,6 @@ namespace CheeseProtocol
         public float totalValue;
         public int scatterRadius;
         public ThingDef def;
-        public IncidentParms parms;
         public List<SupplyType> allowedTypes;
         public SupplyCandidate chosen;
         public QualityCategory weaponTier;
@@ -28,7 +27,7 @@ namespace CheeseProtocol
             !string.IsNullOrWhiteSpace(label) &&
             type != SupplyType.Undefined &&
             count > 0;
-        public SupplyRequest(IncidentParms parms)
+        public SupplyRequest()
         {
             type = SupplyType.Undefined;
             label = "";
@@ -36,7 +35,6 @@ namespace CheeseProtocol
             marketValue = 0f;
             totalValue = 0f;
             def = null;
-            this.parms = parms;
             allowedTypes = new List<SupplyType>();
             isWeaponTierSet = false;
             stackLimit = 0;
@@ -63,8 +61,7 @@ namespace CheeseProtocol
                 $"totalValue={totalValue:0.##}, " +
                 $"weaponTier={(isWeaponTierSet ? weaponTier.ToString() : "unset")}, " +
                 $"techLevel={techLevel}, " +
-                $"allowedTypes=[{string.Join(",", allowedTypes)}], " +
-                $"parms={(parms != null ? parms.target?.ToString() ?? "null" : "null")}]";
+                $"allowedTypes=[{string.Join(",", allowedTypes)}] ";
         }
     }
 }

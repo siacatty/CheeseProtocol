@@ -16,7 +16,7 @@ namespace CheeseProtocol
         public const float HudX = -1f;   // -1이면 아직 저장된 위치 없음(기본 위치 사용)
         public const float HudY = -1f;
         public const float RandomVar = 0.8f;
-        public const bool AppendRollLogToLetters = false;
+        public const bool AppendRollLogToLetters = true;
         public const CheeseCommandSource SimSource = CheeseCommandSource.Donation;
         public const int SimDonAmount = 1000;
         public const string SimDonAmountBuf = "1000";

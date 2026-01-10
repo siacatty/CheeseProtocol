@@ -794,8 +794,7 @@ namespace CheeseProtocol
             }
             DrawSectionNoListing(rightAdv, ref yR, "예상결과 (추가예정)", true, rect =>
                 {
-                    //listing.Label("명령어 대충 설정");
-                    return 0f;
+                    return GetAdvSetting(selectedConfigAdv.cmd).DrawResults(rect);
                 });
         }
 

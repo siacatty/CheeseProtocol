@@ -17,7 +17,7 @@ namespace CheeseProtocol
             float quality,
             QualityRange range,
             float concentration01,
-            out float score,
+            TraceStep step,
             bool inverseQ = false,
             bool debugLog = false)
         {
@@ -37,8 +37,16 @@ namespace CheeseProtocol
 
             float t01 = SampleBeta01(alpha, beta);     // 0..1
             float value = Mathf.Lerp(min, max, t01);   // min..max
-            float expected = Mathf.Lerp(min, max, quality);
-            score = LuckScore(LuckDeltaSigned(value, expected, min, max, inverseQ));
+
+            float expectedT01 = alpha/(alpha+beta);
+            
+            float expectedValue = Mathf.Lerp(min, max, expectedT01);
+            float score = LuckScore(value, min, max, alpha, beta, inverseQ);
+
+            step.value = value;
+            step.expected = expectedValue;
+            step.score = score;
+
             if (debugLog)
             {
                 QMsg(
@@ -55,25 +63,65 @@ namespace CheeseProtocol
             return value;
         }
 
-        private static float LuckDeltaSigned(float v, float e, float min, float max, bool isInverse)
+
+        static float LuckScore(
+            float value,
+            float min,
+            float max,
+            float alpha,
+            float beta,
+            bool isInverse)
         {
             const float eps = 1e-6f;
 
+            // 1) value -> [0,1]
+            float x = (value - min) / Mathf.Max(eps, (max - min));
+            x = Mathf.Clamp01(x);
+
             if (isInverse)
-            {
-                // 뒤집기: "작을수록 좋음"
-                if (v <= e) return (e - v) / Mathf.Max(eps, (e - min));
-                else        return -(v - e) / Mathf.Max(eps, (max - e));
-            }
-            else
-            {
-                if (v >= e) return (v - e) / Mathf.Max(eps, (max - e));
-                else        return -(e - v) / Mathf.Max(eps, (e - min));
-            }
+                x = 1f - x;
+
+            // 2) Beta 평균 / 분산
+            float s  = alpha + beta;
+            float mu = alpha / Mathf.Max(eps, s);
+
+            // var = αβ / [ (α+β)^2 (α+β+1) ]
+            float var = (alpha * beta) /
+                        (Mathf.Max(eps, s * s) * Mathf.Max(eps, s + 1f));
+            float sigma = Mathf.Sqrt(Mathf.Max(eps, var));
+
+            // 3) z-score
+            float z = (x - mu) / Mathf.Max(eps, sigma);
+
+            // 4) 정규분포 퍼센타일 Φ(z)
+            float phi = NormalCDF(z);
+
+            // 5) [-1, +1] 스케일
+            return Mathf.Clamp(2f * (phi - 0.5f), -1f, 1f);
         }
-        private static float LuckScore(float deltaSigned)
+
+        static float NormalCDF(float z)
         {
-            return Mathf.Clamp(50f * (deltaSigned + 1f), 0, 100);
+            // Φ(z) ≈ 0.5 * (1 + erf(z / sqrt(2)))
+            return 0.5f * (1f + Erf(z * 0.70710678f));
+        }
+
+        private static float Erf(float x)
+        {
+            // 최대 오차 ~1.5e-7
+            float sign = Mathf.Sign(x);
+            x = Mathf.Abs(x);
+
+            //Abramowitz&Stegun constants
+            float t = 1f / (1f + 0.3275911f * x);
+            float y = 1f - (((((1.061405429f * t
+                            - 1.453152027f) * t
+                            + 1.421413741f) * t
+                            - 0.284496736f) * t
+                            + 0.254829592f) * t)
+                            * Mathf.Exp(-x * x);
+
+            return sign * y;
         }
         // ---------- Beta / Gamma helpers ----------
 

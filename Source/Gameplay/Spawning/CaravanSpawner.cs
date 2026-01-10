@@ -4,6 +4,9 @@ using RimWorld;
 using Verse;
 using System.Linq;
 using static CheeseProtocol.CheeseLog;
+using System.Security.Permissions;
+using RimWorld.Planet;
+using System.Configuration;
 
 namespace CheeseProtocol
 {
@@ -17,126 +20,139 @@ namespace CheeseProtocol
                 CheeseLetter.AlertFail("!상단", "설정이 로드되지 않았습니다.");
                 return;
             }
+            float quality = QualityEvaluator.evaluateQuality(amount, CheeseCommand.Caravan);
+            CheeseRollTrace trace = new CheeseRollTrace(donorName, CheeseCommand.Caravan);
+            CaravanRequest request = Generate(quality, trace);
+
             Map map = Find.AnyPlayerHomeMap;
             if (map == null) 
             {
                 CheeseLetter.AlertFail("!상단");
                 return;
             }
+            if (!isValidCaravan(request, map))
+                return;
             if (map.mapPawns.FreeColonistsSpawnedCount == 0)
             {
                 CheeseLetter.AlertFail("!상단", "본진에 정착민이 없어 상단이 도착하지 않습니다.");
                 return;
             }
-            float quality = QualityEvaluator.evaluateQuality(amount, CheeseCommand.Caravan);
-            CheeseRollTrace trace = new CheeseRollTrace(donorName, CheeseCommand.Caravan);
-            if (!TryApplyTradeCustomization(map, quality, out IncidentDef def, out IncidentParms parms, trace))
-                return;
-            
-            if (!VanillaIncidentRunner.TryExecuteWithTrace(def, parms, trace))
+            //QMsg($"IncidentDef is null : {request.incidentDef == null} | Parms is null : {request.parms == null}", Channel.Debug);
+            if (!VanillaIncidentRunner.TryExecuteWithTrace(request.incidentDef, request.parms, trace))
             {
                 CheeseLetter.AlertFail("!상단", "실행 실패: 로그 확인 필요.");
                 QWarn("TraderCaravanArrival failed to execute.");
             }
-            QMsg($"Caravan called ==> TraderKind={parms.traderKind.defName}", Channel.Debug);
+            QMsg($"Caravan called ==> TraderKind={request.parms.traderKind.defName}", Channel.Debug);
         }
-
-        private static bool TryApplyTradeCustomization(Map map, float quality, out IncidentDef def, out IncidentParms parms, CheeseRollTrace trace)
+        public static CaravanRequest Generate(float quality, CheeseRollTrace trace)
         {
-            List<TraderKindDef> pool = BuildAllowedTraderKindPool(map, quality, out IncidentDef incidentDef, out IncidentParms incidentParms, trace);
-            def = incidentDef;
-            parms = incidentParms;
-            if (def == null || parms == null) {
-                QWarn("TraderDef || Trader Parms not found", Channel.Verse);
-                return false;
+            CaravanRequest request = new CaravanRequest();
+            ApplyTradeCustomization(request, quality, trace);
+            return request;
+        }
+        public static bool isValidCaravan(CaravanRequest request, Map map)
+        {
+            return ValidateTradeCustomization(request, map);
+        }
+        private static void ApplyTradeCustomization(CaravanRequest request, float quality, CheeseRollTrace trace)
+        {
+            var setting = CheeseProtocolMod.Settings;
+            CaravanAdvancedSettings adv = setting?.GetAdvSetting<CaravanAdvancedSettings>(CheeseCommand.Caravan);
+            if (adv == null) return;
+            ApplyPOrbital(request, quality, setting.randomVar, adv.orbitalRange, trace);
+
+            request.traderPool = BuildAllowedTraderKindPool();
+            List<TraderKindDef> filtered = request.traderPool.Where(tk => tk != null && tk.orbital == request.isOrbital).ToList();
+            if (filtered.Count > 0)
+            {
+                TraderKindDef traderKind = filtered.RandomElement();
+                request.traderDef = traderKind;
             }
-            if (pool.Count <= 0)
+            return;
+        }
+        private static bool ValidateTradeCustomization(CaravanRequest request, Map map)
+        {
+            request.incidentDef = ValidateIncidentDef(request, map);
+            request.traderDef = ValidateTraderDef(request, map);
+            if (request.traderDef == null)
             {
                 QWarn("No trader is allowed");
                 CheeseLetter.AlertFail("!상단", "!상단 실행 실패: 허용된 상단 종류 중 현재 도착 가능한 상단이 없습니다.");
                 return false;
             }
-            while (pool.Count > 0)
+            request.parms.traderKind = request.traderDef;
+            if (request.incidentDef.Worker.CanFireNow(request.parms))
+                return true;
+            else
             {
-                TraderKindDef traderKind = pool.RandomElement();
-                parms.traderKind = traderKind;
-                if (incidentDef.Worker.CanFireNow(parms))
-                {
-                    return true;
-                }
-                else
-                {
-                    pool.Remove(traderKind);
-                }
+                QWarn($"{request.traderDef.defName} cannot be called.");
+                CheeseLetter.AlertFail("!상단", "!상단 실행 실패: 허용된 상단 종류 중 현재 도착 가능한 상단이 없습니다.");
             }
-            QWarn("No trader among allowed can be called");
-            CheeseLetter.AlertFail("!상단", "!상단 실행 실패: 허용된 상단 종류 중 현재 도착 가능한 상단이 없습니다.");
             return false;
         }
 
-        private static List<TraderKindDef> BuildAllowedTraderKindPool(Map map, float quality, out IncidentDef incidentDef, out IncidentParms incidentParms, CheeseRollTrace trace)
+        private static List<TraderKindDef> BuildAllowedTraderKindPool()
         {
             CaravanAdvancedSettings adv = CheeseProtocolMod.Settings.GetAdvSetting<CaravanAdvancedSettings>(CheeseCommand.Caravan);
-            incidentDef = PickCaravanOrOrbital(map, quality, out IncidentParms parms, trace);
-            incidentParms = parms;
-            if (incidentDef == null)
-                return new List<TraderKindDef>();
-            bool wantOrbital = (incidentDef == IncidentDefOf.OrbitalTraderArrival);
+            //bool wantOrbital = (incidentDef == IncidentDefOf.OrbitalTraderArrival);
             IEnumerable<TraderKindDef> all = DefDatabase<TraderKindDef>.AllDefs;
-            var basePool = all.Where(tk => tk != null && tk.orbital == wantOrbital);
-            
+            //var basePool = all.Where(tk => tk != null && tk.orbital == wantOrbital);
+            var basePool = DefDatabase<TraderKindDef>.AllDefs;
             //filter trade types (e.g. Bulk/exotic)
             var filtered = new List<TraderKindDef>();
 
             foreach (var tk in basePool)
             {
-                if (!IsAllowedCaravan(map, tk, adv)) continue;
+                if (!IsAllowedCaravan(tk, adv)) continue;
                 filtered.Add(tk);
             }
 
             return filtered;
         }
 
-        public static IncidentDef PickCaravanOrOrbital(Map map, float quality, out IncidentParms parms, CheeseRollTrace trace)
+        public static void ApplyPOrbital(CaravanRequest request, float quality, float randomVar, QualityRange orbitalRange, CheeseRollTrace trace)
         {
-            var settings = CheeseProtocolMod.Settings;
-            CaravanAdvancedSettings caravanAdvSettings = settings.GetAdvSetting<CaravanAdvancedSettings>(CheeseCommand.Caravan);
-            QualityRange orbitalRange = caravanAdvSettings.orbitalRange;
-            float randomVar = settings.randomVar;
-
-            IncidentDef ground = IncidentDefOf.TraderCaravanArrival;
-            IncidentDef orbital = IncidentDefOf.OrbitalTraderArrival;
-            parms = StorytellerUtility.DefaultParmsNow(ground.category, map);
-            parms.forced = true;
-            
-            //parms.traderKind = TraderKindDefOf
-
+            TraceStep traceStep = new TraceStep("궤도상선 확률");
             float pOrbital = QualityBetaSampler.SampleQualityWeightedBeta(
                     quality,
                     orbitalRange,
                     concentration01: 1f-randomVar,
-                    out float score,
+                    traceStep,
                     debugLog: false
             );
-            trace.steps.Add(new TraceStep("궤도상선 확률", score, orbitalRange.Expected(quality), pOrbital));
-
+            trace.steps.Add(traceStep);
             if (Rand.Chance(pOrbital))
+                request.isOrbital = true;
+            return;
+        }
+
+        public static IncidentDef ValidateIncidentDef(CaravanRequest request, Map map)
+        {
+            IncidentDef ground = IncidentDefOf.TraderCaravanArrival;
+            IncidentDef orbital = IncidentDefOf.OrbitalTraderArrival;
+            request.parms = StorytellerUtility.DefaultParmsNow(ground.category, map);
+            request.parms.forced = true;
+
+            if (request.isOrbital)
             {
                 var op = StorytellerUtility.DefaultParmsNow(orbital.category, map);
                 op.forced = true;
 
                 if (orbital.Worker.CanFireNow(op) && HasPoweredCommsConsole(map))
                 {
-                    parms = op;
+                    request.parms = op;
                     return orbital;
                 }
                 else
                 {
+                    request.requireRepick = true;
+                    request.isOrbital = false;
                     QWarn("Unable to fire Orbital Trade incident", Channel.Verse);
                 }
             }
 
-            if (!ground.Worker.CanFireNow(parms))
+            if (!ground.Worker.CanFireNow(request.parms))
             {
                 QWarn("Unable to fire Ground Trade incident", Channel.Verse);
                 return null;
@@ -145,8 +161,34 @@ namespace CheeseProtocol
             return ground;
         }
 
+        public static TraderKindDef ValidateTraderDef(CaravanRequest request, Map map)
+        {
+            List<TraderKindDef> pool = request.traderPool.Where(tk => tk != null && tk.orbital == request.isOrbital).ToList();
+            if (pool.Count == 0) return null;
+            if (request.requireRepick)
+            {
+                request.traderDef = pool.RandomElement();
+                request.requireRepick = false;
+            }
+            if (request.traderDef == null) return null;
+            if (request.traderDef.faction != null && EqualsIgnoreCase(request.traderDef.faction.defName, "Empire"))
+            {
+                if (request.traderDef.permitRequiredForTrading != null)
+                {
+                    if (AnyColonistHasPermit(map, request.traderDef.permitRequiredForTrading, Find.FactionManager.FirstFactionOfDef(request.traderDef.faction)))
+                        return request.traderDef;
+                    else
+                    {
+                        QWarn("No colonist has permit for Imperial Trading", Channel.Debug);
+                        var filtered = pool.Where(tk => tk != null && tk.permitRequiredForTrading == null).ToList();
+                        return filtered.Count > 0 ? filtered.RandomElement() : null;
+                    }
+                }
+            }
+            return request.traderDef;
+        }
+
         public static bool IsAllowedCaravan(
-            Map map,
             TraderKindDef tk,
             CaravanAdvancedSettings adv)
         {
@@ -163,18 +205,7 @@ namespace CheeseProtocol
                 if (EqualsIgnoreCase(tk.category, "TributeCollector"))
                     return adv.allowRoyalCaravan;
                 else if (tk.permitRequiredForTrading != null)
-                {
-                    if (adv.allowImperialCaravan)
-                    {
-                        if (AnyColonistHasPermit(map, tk.permitRequiredForTrading, Find.FactionManager.FirstFactionOfDef(tk.faction)))
-                            return true;
-                        else
-                        {
-                            QWarn("No colonist has permit for Imperial Trading", Channel.Debug);
-                            return false;
-                        }
-                    }
-                }
+                    return adv.allowImperialCaravan;
             }
             // permit만 있는 케이스가 Empire 외에도 생길 수 있으니 (모드)
             if (tk.permitRequiredForTrading != null)

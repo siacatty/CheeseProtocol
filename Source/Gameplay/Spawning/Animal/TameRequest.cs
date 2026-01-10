@@ -14,17 +14,15 @@ namespace CheeseProtocol
         public string label;
         public float marketValue;
         public PawnKindDef def;
-        public IncidentParms parms;
         public TameCandidate chosen;
         public bool IsValid =>
             def != null &&
             !string.IsNullOrWhiteSpace(label);
-        public TameRequest(IncidentParms parms)
+        public TameRequest()
         {
             label = "";
             marketValue = 0f;
             def = null;
-            this.parms = parms;
         }
         public void setChosen(TameCandidate chosen)
         {

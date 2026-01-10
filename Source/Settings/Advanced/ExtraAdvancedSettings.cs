@@ -37,6 +37,10 @@ namespace CheeseProtocol
         {
             //ageRange = QualityRange.init(ageRange.qMin, ageRange.qMax);
         }
+        public override float DrawResults(Rect inRect)
+        {
+            return 0f;
+        }
         public override float Draw(Rect rect)
         {
             return 0f;

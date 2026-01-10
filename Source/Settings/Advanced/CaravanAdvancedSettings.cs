@@ -69,6 +69,18 @@ namespace CheeseProtocol
         {
             orbitalRange = QualityRange.init(orbitalRange.qMin, orbitalRange.qMax);
         }
+
+        public override float DrawResults(Rect rect)
+        {
+            float curY = rect.y;
+            float usedH = 0;
+            
+
+
+            usedH = curY - rect.y;
+            return usedH;
+        }
+        
         public override float Draw(Rect rect)
         {
             float curY = rect.y;

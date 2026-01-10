@@ -11,17 +11,14 @@ namespace CheeseProtocol
     {
         public static void Spawn(string donorName, int amount, string message)
         {
-            CheeseSettings settings = CheeseProtocolMod.Settings;
-            TameAdvancedSettings tameAdvSetting = settings?.GetAdvSetting<TameAdvancedSettings>(CheeseCommand.Tame);
-            if (tameAdvSetting == null) return;
+            CheeseRollTrace trace = new CheeseRollTrace(donorName, CheeseCommand.Tame);
+            float quality = QualityEvaluator.evaluateQuality(amount, CheeseCommand.Tame);
+            TameRequest tame = Generate(quality, trace);
+
+            if (tame == null || !tame.IsValid) return;
             Map map = Find.AnyPlayerHomeMap;
             if (map == null) return;
-            float quality = QualityEvaluator.evaluateQuality(amount, CheeseCommand.Tame);
-            var parms = StorytellerUtility.DefaultParmsNow(IncidentCategoryDefOf.Misc, map);
-            TameRequest tame = new TameRequest(parms);
-            CheeseRollTrace trace = new CheeseRollTrace(donorName, CheeseCommand.Tame);
-            TryApplyTameCustomization(tame, quality, settings.randomVar, tameAdvSetting, trace);
-            if (!tame.IsValid) return;
+            //var parms = StorytellerUtility.DefaultParmsNow(IncidentCategoryDefOf.Misc, map);
             var req = new PawnGenerationRequest(
                 tame.def,
                 Faction.OfPlayer,
@@ -64,6 +61,16 @@ namespace CheeseProtocol
             );
             QMsg($"Tame successful. TameRequest: {tame}", Channel.Debug);
         }
+
+        public static TameRequest Generate(float quality, CheeseRollTrace trace)
+        {
+            CheeseSettings settings = CheeseProtocolMod.Settings;
+            TameAdvancedSettings tameAdvSetting = settings?.GetAdvSetting<TameAdvancedSettings>(CheeseCommand.Tame);
+            if (tameAdvSetting == null) return null;
+            TameRequest request = new TameRequest();
+            TryApplyTameCustomization(request, quality, settings.randomVar, tameAdvSetting, trace);
+            return request;
+        }
         public static bool TryApplyTameCustomization(TameRequest tame, float quality, float randomVar, TameAdvancedSettings adv, CheeseRollTrace trace)
         {
             if(!TryApplyTameValue(tame, quality, randomVar, adv.tameValueRange, trace))
@@ -76,13 +83,14 @@ namespace CheeseProtocol
         }
         public static bool TryApplyTameValue(TameRequest tame, float quality, float randomVar, QualityRange tameValueRange, CheeseRollTrace trace)
         {
+            TraceStep traceStep = new TraceStep("시장가치 배율");
             float tameValue01 = QualityBetaSampler.SampleQualityWeightedBeta(
                     quality,
                     tameValueRange,
                     concentration01: 1f-randomVar,
-                    out float score
+                    traceStep
             );
-            trace.steps.Add(new TraceStep("시장가치 배율", score, tameValueRange.Expected(quality), tameValue01));
+            trace.steps.Add(traceStep);
             return TameApplier.TryApplyValueHelper(tame, tameValue01);
         }
     }

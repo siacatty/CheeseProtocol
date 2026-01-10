@@ -13,23 +13,20 @@ namespace CheeseProtocol
     {
         public static void Spawn(string donorName, int amount, string message)
         {
-            CheeseSettings settings = CheeseProtocolMod.Settings;
-            ThrumboAdvancedSettings thrumboAdvSetting = settings?.GetAdvSetting<ThrumboAdvancedSettings>(CheeseCommand.Thrumbo);
-            if (thrumboAdvSetting == null) return;
+            float quality = QualityEvaluator.evaluateQuality(amount, CheeseCommand.Thrumbo);
+            CheeseRollTrace trace = new CheeseRollTrace(donorName, CheeseCommand.Thrumbo);
+            ThrumboRequest thrumboRequest = Generate(quality, trace);
+
             Map map = Find.AnyPlayerHomeMap;
             if (map == null) return;
             
-            float quality = QualityEvaluator.evaluateQuality(amount, CheeseCommand.Thrumbo);
             var parms = StorytellerUtility.DefaultParmsNow(IncidentCategoryDefOf.Misc, map);
-            ThrumboRequest thrumboRequest = new ThrumboRequest(parms);
-            CheeseRollTrace trace = new CheeseRollTrace(donorName, CheeseCommand.Thrumbo);
-            if (!TryApplyThrumboCustomization(thrumboRequest, quality, settings.randomVar, thrumboAdvSetting, trace))
+            if (thrumboRequest == null || !thrumboRequest.IsValid)
             {
-                QWarn("Failed find thrumbo information. Fallback to vanilla incident", Channel.Verse);
                 FallbackVanilla(map, false);
                 return;
             }
-            if (!TrySpawnThrumboList(thrumboRequest, map, out IntVec3 rootCell))
+            if (!TrySpawnThrumboList(thrumboRequest, map, out IntVec3 rootCell, parms))
             {
                 QWarn("Failed to spawn thrumbos.", Channel.Verse);
                 CheeseLetter.AlertFail("!트럼보", "트럼보가 맵에 진입할 수 있는 경로를 찾지 못했습니다.");
@@ -37,7 +34,7 @@ namespace CheeseProtocol
                 return;
             }
             
-            if (!TryMakeLord(thrumboRequest, map, out Lord lord))
+            if (!TryMakeLord(thrumboRequest, map, out Lord lord, parms))
             {
                 QWarn("Failed to make lord thrumbo.", Channel.Verse);
             }
@@ -87,7 +84,7 @@ namespace CheeseProtocol
                     CheeseLetter.AlertFail("!트럼보", "실행 실패: 로그 확인 필요.");
             }
         }
-        public static bool TrySpawnThrumboList(ThrumboRequest req, Map map, out IntVec3 rootCell)
+        public static bool TrySpawnThrumboList(ThrumboRequest req, Map map, out IntVec3 rootCell, IncidentParms parms)
         {
             rootCell = IntVec3.Invalid;
             if (!req.IsValid) return false; //additional safeguard
@@ -110,7 +107,7 @@ namespace CheeseProtocol
             // 1) Spawn alpha first (if any)
             if (req.alphaCount == 1)
             {
-                req.alphaThrumbo = SpawnOne(req.alphaDef, map, req.parms, rootCell);
+                req.alphaThrumbo = SpawnOne(req.alphaDef, map, parms, rootCell);
                 if (req.alphaThrumbo == null){
                     QWarn("Failed to spawn alpha thrumbo. Fallback: replace with normal thrumbo", Channel.Verse);
                     req.alphaThrumbo = null;
@@ -124,7 +121,7 @@ namespace CheeseProtocol
             // 2) Spawn normal thrumbos
             for (int i = 0; i < req.thrumboCount; i++)
             {
-                var thrumbo = SpawnOne(req.thrumboDef, map, req.parms, rootCell);
+                var thrumbo = SpawnOne(req.thrumboDef, map, parms, rootCell);
                 if (thrumbo == null) 
                 {
                     QWarn("Failed to spawn thrumbo. Skipping.", Channel.Verse);
@@ -135,7 +132,7 @@ namespace CheeseProtocol
             if (thrumboList.Count == 0) return false;
             return true;
         }
-        public static bool TryMakeLord(ThrumboRequest req, Map map, out Lord lord)
+        public static bool TryMakeLord(ThrumboRequest req, Map map, out Lord lord, IncidentParms parms)
         {
             lord = null;
             if (!req.IsValid) return false; //additional safeguard
@@ -143,7 +140,7 @@ namespace CheeseProtocol
             req.leader = req.alphaThrumbo ?? req.thrumboList[0];
             LordJob job = MakeThrumboLordJob(req, map, req.leader);
 
-            lord = LordMaker.MakeNewLord(req.parms.faction, job, map, req.thrumboList);
+            lord = LordMaker.MakeNewLord(parms.faction, job, map, req.thrumboList);
 
             return true;
         }
@@ -204,6 +201,20 @@ namespace CheeseProtocol
             GenSpawn.Spawn(pawn, cell, map);
             return pawn;
         }
+        public static ThrumboRequest Generate(float quality, CheeseRollTrace trace)
+        {
+            CheeseSettings settings = CheeseProtocolMod.Settings;
+            ThrumboAdvancedSettings thrumboAdvSetting = settings?.GetAdvSetting<ThrumboAdvancedSettings>(CheeseCommand.Thrumbo);
+            if (thrumboAdvSetting == null) return null;
+            ThrumboRequest request = new ThrumboRequest();
+            if (!TryApplyThrumboCustomization(request, quality, settings.randomVar, thrumboAdvSetting, trace))
+            {
+                QWarn("Failed find thrumbo information.", Channel.Verse);
+                return null;
+            }
+            return request;
+
+        }
         public static bool TryApplyThrumboCustomization(ThrumboRequest request, float quality, float randomVar, ThrumboAdvancedSettings adv, CheeseRollTrace trace)
         {
             if (adv.allowAlpha)
@@ -227,25 +238,27 @@ namespace CheeseProtocol
         }
         public static bool TryApplyAlphaProb(ThrumboRequest request, float quality, float randomVar, QualityRange alphaProbRange, CheeseRollTrace trace)
         {
+            TraceStep traceStep = new TraceStep("알파트럼보 확률");
             float alphaProb01 = QualityBetaSampler.SampleQualityWeightedBeta(
                     quality,
                     alphaProbRange,
                     concentration01: 1f-randomVar,
-                    out float score
+                    traceStep
             );
-            trace.steps.Add(new TraceStep("알파트럼보 확률", score, alphaProbRange.Expected(quality), alphaProb01));
+            trace.steps.Add(traceStep);
             return ThrumboApplier.TryApplyAlphaProbHelper(request, alphaProb01);
         }
 
         public static bool TryApplyThrumboCount(ThrumboRequest request, float quality, float randomVar, QualityRange thrumboCountRange, CheeseRollTrace trace)
         {
+            TraceStep traceStep = new TraceStep("트럼보 수");
             float thrumboCountF = QualityBetaSampler.SampleQualityWeightedBeta(
                     quality,
                     thrumboCountRange,
                     concentration01: 1f-randomVar,
-                    out float score
+                    traceStep
             );
-            trace.steps.Add(new TraceStep("트럼보 수", score, thrumboCountRange.Expected(quality), thrumboCountF));
+            trace.steps.Add(traceStep);
             return ThrumboApplier.TryApplyThrumboCountHelper(request, thrumboCountF);
         }
     }

@@ -16,20 +16,19 @@ namespace CheeseProtocol
         {
             MeteorAdvancedSettings meteorAdvSetting = CheeseProtocolMod.Settings?.GetAdvSetting<MeteorAdvancedSettings>(CheeseCommand.Meteor);
             if (meteorAdvSetting == null) return;
+            CheeseRollTrace trace = new CheeseRollTrace(donorName, CheeseCommand.Meteor);
+            float quality = QualityEvaluator.evaluateQuality(amount, CheeseCommand.Meteor);
+            MeteorRequest meteor = Generate(quality, trace);
+
             Map map = Find.AnyPlayerHomeMap;
             if (map == null) return;
             IntVec3 near = DropCellFinder.TradeDropSpot(map);
-            float quality = QualityEvaluator.evaluateQuality(amount, CheeseCommand.Meteor);
-            var parms = StorytellerUtility.DefaultParmsNow(IncidentCategoryDefOf.Misc, map);
-            MeteorRequest meteor = new MeteorRequest(parms);
-            CheeseRollTrace trace = new CheeseRollTrace(donorName, CheeseCommand.Meteor);
-            ApplyMeteorCustomization(meteor, quality, trace);
 
             ThingDef skyfallerDef = ResolveMeteoriteIncomingDef();
             if (skyfallerDef == null)
             {
                 QWarn("MeteoriteIncoming not found. Fallback to vanilla.", Channel.Verse);
-                FallbackVanillaMeteor(meteor);
+                FallbackVanillaMeteor(meteor, map);
                 return;
             }
             int maxRadius = Mathf.Clamp(Mathf.CeilToInt(Mathf.Sqrt(meteor.size) * 0.9f), 1, 10);
@@ -45,7 +44,7 @@ namespace CheeseProtocol
             if (!ok)
             {
                 QWarn($"Custom meteor failed (center: {rootCell} | size: {meteor.size}). Fallback.", Channel.Verse);
-                FallbackVanillaMeteor(meteor);
+                FallbackVanillaMeteor(meteor, map);
             }
             else
             {
@@ -64,7 +63,7 @@ namespace CheeseProtocol
             }
         }
         
-        private static void FallbackVanillaMeteor(MeteorRequest meteor)
+        private static void FallbackVanillaMeteor(MeteorRequest meteor, Map map)
         {
             IncidentDef def = DefDatabase<IncidentDef>.GetNamed("MeteoriteImpact", false);
             if (def == null)
@@ -72,12 +71,19 @@ namespace CheeseProtocol
                 QWarn("MeteoriteImpact def not found.", Channel.Verse);
                 return;
             }
-            bool ok = def.Worker.TryExecute(meteor.parms);
+            var parms = StorytellerUtility.DefaultParmsNow(IncidentCategoryDefOf.Misc, map);
+            bool ok = def.Worker.TryExecute(parms);
             if (!ok)
             {
                 QWarn("Vanilla MeteorSpawn failed to execute.", Channel.Verse);
                 CheeseLetter.AlertFail("!운석", "실행 실패: 로그 확인 필요.");
             }
+        }
+        public static MeteorRequest Generate(float quality, CheeseRollTrace trace)
+        {
+            MeteorRequest request = new MeteorRequest();
+            ApplyMeteorCustomization(request, quality, trace);
+            return request;
         }
         private static void ApplyMeteorCustomization(MeteorRequest meteor, float quality, CheeseRollTrace trace)
         {
@@ -91,29 +97,32 @@ namespace CheeseProtocol
 
         private static void ApplyMeteorType(MeteorRequest meteor, float quality, float randomVar, QualityRange minMaxRange, List<MeteorCandidate> candidates, CheeseRollTrace trace)
         {
+            TraceStep traceStep = new TraceStep("운석 종류");
             float meteorTypeQuality = QualityBetaSampler.SampleQualityWeightedBeta(
                     quality,
                     minMaxRange,
                     concentration01: 1f-randomVar,
-                    out float score,
+                    traceStep,
                     debugLog: false
             );
-            trace.steps.Add(new TraceStep("운석 종류", score, minMaxRange.Expected(quality), meteorTypeQuality));
+            trace.steps.Add(traceStep);
             MeteorApplier.ApplyMeteorTypeHelper(meteor, meteorTypeQuality, candidates);
         }
         private static void ApplyMeteorSize(MeteorRequest meteor, float quality, float randomVar, QualityRange minMaxRange, CheeseRollTrace trace)
         {
             int baseMinSize = GameplayConstants.MeteorSizeMin;
             int baseMaxSize = GameplayConstants.MeteorSizeMax;
+            TraceStep traceStep = new TraceStep("운석 크기");
             float sizeF = QualityBetaSampler.SampleQualityWeightedBeta(
                     quality,
                     minMaxRange,
                     concentration01: 1f-randomVar,
-                    out float score
+                    traceStep
                 );
             QMsg($"Meteor baseMinSize={baseMinSize}, baseMaxSize={baseMaxSize}, rangeMin={minMaxRange.qMin}, rangeMax={minMaxRange.qMax}, sizeF={sizeF}", Channel.Debug);
             int meteorBaseSize = Mathf.RoundToInt(Mathf.Clamp(sizeF, baseMinSize, baseMaxSize));
-            trace.steps.Add(new TraceStep("운석 크기", score, minMaxRange.Expected(quality), meteorBaseSize));
+            traceStep.value = meteorBaseSize;
+            trace.steps.Add(traceStep);
             MeteorApplier.ApplyMeteorSizeHelper(meteor, meteorBaseSize);
         }
         private static ThingDef ResolveMeteoriteIncomingDef()

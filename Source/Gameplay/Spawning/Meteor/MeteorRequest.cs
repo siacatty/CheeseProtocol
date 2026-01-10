@@ -15,17 +15,15 @@ namespace CheeseProtocol
         public float lumpAvg;
         public float score;
         public ThingDef def;
-        public IncidentParms parms;
         public string label;
 
-        public MeteorRequest(IncidentParms parms)
+        public MeteorRequest()
         {
             type = "";
             size = 0;
             scatterRadius = 0;
             lumpAvg = 0f;
             score = 10f;
-            this.parms = parms;
             def = null;
             label = "";
         }

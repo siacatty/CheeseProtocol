@@ -74,6 +74,16 @@ namespace CheeseProtocol
             weaponTierRange = QualityRange.init(weaponTierRange.qMin, weaponTierRange.qMax);
             weaponTechRange = QualityRange.init(weaponTechRange.qMin, weaponTechRange.qMax);
         }
+        public override float DrawResults(Rect rect)
+        {
+            float curY = rect.y;
+            float usedH = 0;
+            
+
+
+            usedH = curY - rect.y;
+            return usedH;
+        }
         public override float Draw(Rect rect)
         {
             float curY = rect.y;

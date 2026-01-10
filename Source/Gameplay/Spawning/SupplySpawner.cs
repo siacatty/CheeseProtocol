@@ -5,6 +5,7 @@ using Verse;
 using System.Linq;
 using UnityEngine;
 using static CheeseProtocol.CheeseLog;
+using System.Net.Cache;
 
 namespace CheeseProtocol
 {
@@ -12,17 +13,14 @@ namespace CheeseProtocol
     {
         public static void Spawn(string donorName, int amount, string message)
         {
-            CheeseSettings settings = CheeseProtocolMod.Settings;
-            SupplyAdvancedSettings supplyAdvSetting = settings?.GetAdvSetting<SupplyAdvancedSettings>(CheeseCommand.Supply);
-            if (supplyAdvSetting == null) return;
+            CheeseRollTrace trace = new CheeseRollTrace(donorName, CheeseCommand.Supply);
+            float quality = QualityEvaluator.evaluateQuality(amount, CheeseCommand.Supply);
+            SupplyRequest supply = Generate(quality, trace);
+            if (supply == null) return;
             Map map = Find.AnyPlayerHomeMap;
             if (map == null) return;
             var parms = StorytellerUtility.DefaultParmsNow(IncidentCategoryDefOf.Misc, map);
-            SupplyRequest supply = new SupplyRequest(parms);
-            float quality = QualityEvaluator.evaluateQuality(amount, CheeseCommand.Supply);
-            CheeseRollTrace trace = new CheeseRollTrace(donorName, CheeseCommand.Supply);
-            if(!TryApplySupplyCustomization(supply, quality, settings.randomVar, supplyAdvSetting, trace))
-                return;
+
             IntVec3 rootCell;
             bool ok = SkyFaller.TrySpawnSupplyDropPod(
                 map,
@@ -50,6 +48,17 @@ namespace CheeseProtocol
                 );
                 QMsg($"Supply successful (center: {rootCell} | {supply})", Channel.Debug);
             }
+        }
+
+        public static SupplyRequest Generate(float quality, CheeseRollTrace trace)
+        {
+            CheeseSettings settings = CheeseProtocolMod.Settings;
+            SupplyAdvancedSettings supplyAdvSetting = settings?.GetAdvSetting<SupplyAdvancedSettings>(CheeseCommand.Supply);
+            if (supplyAdvSetting == null) return null;
+            SupplyRequest request = new SupplyRequest();
+            if(!TryApplySupplyCustomization(request, quality, settings.randomVar, supplyAdvSetting, trace))
+                return null;
+            return request;
         }
         public static bool TryApplySupplyCustomization(SupplyRequest supply, float quality, float randomVar, SupplyAdvancedSettings adv, CheeseRollTrace trace)
         {
@@ -79,32 +88,35 @@ namespace CheeseProtocol
         }
         public static bool TryApplyTier(SupplyRequest supply, float quality, float randomVar, QualityRange tierRange, CheeseRollTrace trace)
         {
+            TraceStep traceStep = new TraceStep("보급 품질");
             float tier = QualityBetaSampler.SampleQualityWeightedBeta(
                     quality,
                     tierRange,
                     concentration01: 1f-randomVar,
-                    out float score
+                    traceStep
             );
-            trace.steps.Add(new TraceStep("보급 품질", score, tierRange.Expected(quality), tier));
+            trace.steps.Add(traceStep);
             return SupplyApplier.TryApplyTierHelper(supply, tier);
         }
         public static bool TryApplyValue(SupplyRequest supply, float quality, float randomVar, QualityRange supplyValueRange, QualityRange weaponTechRange, CheeseRollTrace trace)
         {
             //int techLevel = (int) TechLevel.Undefined;
+            TraceStep traceStepTech = new TraceStep("무기 적용기술");
+            TraceStep traceStepValue = new TraceStep("총 시장가치");
             int techLevel = Mathf.RoundToInt(QualityBetaSampler.SampleQualityWeightedBeta(
                 quality,
                 weaponTechRange,
                 concentration01: 1f-randomVar,
-                out float techScore
+                traceStepTech
             ));
             float supplyValue = QualityBetaSampler.SampleQualityWeightedBeta(
                     quality,
                     supplyValueRange,
                     concentration01: 1f-randomVar,
-                    out float valueScore
+                    traceStepValue
             );
-            trace.steps.Add(new TraceStep("무기 적용기술", techScore, weaponTechRange.Expected(quality), techLevel));
-            trace.steps.Add(new TraceStep("총 시장가치", valueScore, supplyValueRange.Expected(quality), supplyValue));
+            trace.steps.Add(traceStepTech);
+            trace.steps.Add(traceStepValue);
             return SupplyApplier.TryApplyValueHelper(supply, supplyValue, (TechLevel)techLevel);
         }
     }

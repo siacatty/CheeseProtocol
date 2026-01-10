@@ -7,6 +7,7 @@ using UnityEngine;
 using System.Linq;
 using System.Collections;
 using static CheeseProtocol.CheeseLog;
+using System.Net.Cache;
 
 namespace CheeseProtocol
 {
@@ -16,21 +17,27 @@ namespace CheeseProtocol
         {
             RaidAdvancedSettings raidAdvSetting = CheeseProtocolMod.Settings?.GetAdvSetting<RaidAdvancedSettings>(CheeseCommand.Raid);
             if (raidAdvSetting == null) return;
+
+            float quality = QualityEvaluator.evaluateQuality(amount, CheeseCommand.Raid);
+            CheeseRollTrace trace = new CheeseRollTrace(donorName, CheeseCommand.Raid);
+            RaidRequest raid = Generate(quality, trace);
+
             Map map = Find.AnyPlayerHomeMap;
             if (map == null) return;
-            float quality = QualityEvaluator.evaluateQuality(amount, CheeseCommand.Raid);
             IncidentParms parms = StorytellerUtility.DefaultParmsNow(
                 IncidentCategoryDefOf.ThreatBig,
                 map
             );
-            CheeseRollTrace trace = new CheeseRollTrace(donorName, CheeseCommand.Raid);
-            ApplyRaidCustomization(parms, quality, trace);
             IncidentDef def = DefDatabase<IncidentDef>.GetNamed("RaidEnemy", false);
             if (def == null)
             {
                 QWarn("RaidEnemy def not found.", Channel.Verse);
                 return;
             }
+
+            if(!Validate(raid, parms))
+                return;
+
             string reason;
             bool ok = TryExecuteRaidWithFallback(IncidentDefOf.RaidEnemy, parms, out reason, trace);
             QMsg($"RaidSpawn ok={ok} points={parms.points:0} reason={reason ?? "n/a"}", Channel.Debug);
@@ -39,6 +46,23 @@ namespace CheeseProtocol
                 QWarn("RaidEnemy failed to execute.", Channel.Verse);
                 CheeseLetter.AlertFail("!습격", "실행 실패: 로그 확인 필요.");
             }
+        }
+
+        public static RaidRequest Generate(float quality, CheeseRollTrace trace)
+        {
+            RaidRequest request = new RaidRequest();
+            ApplyRaidCustomization(request, quality, trace);
+            return request;
+        }
+
+
+        public static bool Validate(RaidRequest request, IncidentParms parms)
+        {
+            float baseRaidPoints = parms.points;
+            float finalRaidPoints = baseRaidPoints * request.raidScale;
+            parms.points = Mathf.Max(0f, finalRaidPoints);
+            QMsg($"Raid base={baseRaidPoints:0} final={finalRaidPoints:0} scale={request.raidScale:0.00}", Channel.Debug);
+            return true;
         }
 
         private static bool TryExecuteRaidWithFallback(
@@ -70,27 +94,25 @@ namespace CheeseProtocol
             return false;
         }
 
-        private static void ApplyRaidCustomization(IncidentParms parms, float quality, CheeseRollTrace trace)
+        private static void ApplyRaidCustomization(RaidRequest request, float quality, CheeseRollTrace trace)
         {
             var settings = CheeseProtocolMod.Settings;
             RaidAdvancedSettings raidAdvSetting = settings?.GetAdvSetting<RaidAdvancedSettings>(CheeseCommand.Raid);
             float randomVar = settings.randomVar;
 
-            ApplyRaidScale(parms, quality, randomVar, raidAdvSetting.raidScaleRange, trace);
+            ApplyRaidScale(request, quality, randomVar, raidAdvSetting.raidScaleRange, trace);
         }
-        private static void ApplyRaidScale(IncidentParms parms, float quality, float randomVar, QualityRange minMaxRange, CheeseRollTrace trace)
+        private static void ApplyRaidScale(RaidRequest request, float quality, float randomVar, QualityRange minMaxRange, CheeseRollTrace trace)
         {
+            TraceStep traceStep = new TraceStep("습격 강도 배율");
             float raidScale = QualityBetaSampler.SampleQualityWeightedBeta(
                 quality,
                 minMaxRange,
                 concentration01: 1f-randomVar,
-                out float score
+                traceStep
             );
-            trace.steps.Add(new TraceStep("습격 강도 배율", score, minMaxRange.Expected(quality), raidScale));
-            float baseRaidPoints = parms.points;
-            float finalRaidPoints = baseRaidPoints * raidScale;
-            parms.points = Mathf.Max(0f, finalRaidPoints);
-            QMsg($"Raid base={baseRaidPoints:0} final={finalRaidPoints:0} scale={raidScale:0.00}", Channel.Debug);
+            trace.steps.Add(traceStep);
+            request.raidScale = raidScale;
         }
         
     }

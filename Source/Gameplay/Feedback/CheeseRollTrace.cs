@@ -25,7 +25,7 @@ namespace CheeseProtocol
             float totalRatioScore = 0f;
             foreach(var s in steps)
             {
-                s.ratioScore = (s.value - s.expected)/s.expected;
+                //s.ratioScore = (s.value - s.expected)/s.expected;
                 totalRatioScore += s.score;
             }
             luckScore = steps.Count == 0? 0f : totalRatioScore/steps.Count;
@@ -33,13 +33,13 @@ namespace CheeseProtocol
         }
         private string LuckTier(float score)
         {
-            if (score >= 80) return "대박";
-            if (score >= 70) return "아주 좋음";
-            if (score >= 55) return "좋음";
-            if (score >= 45) return "평범";
-            if (score >= 30) return "나쁨";
-            if (score >= 20) return "아주 나쁨";
-            return "최악";
+            if (score >= 0.85f) return "대박";       // 상위 ~7.5%
+            if (score >= 0.6f)  return "아주 좋음";  // 상위 ~20%
+            if (score >= 0.25f) return "좋음";
+            if (score >= -0.25f) return "평범";
+            if (score >= -0.6f)  return "나쁨";
+            if (score >= -0.85f) return "아주 나쁨";
+            return "최악";                           // 하위 ~7.5%
         }
     }
 
@@ -53,12 +53,12 @@ namespace CheeseProtocol
         public bool isInverse;
 
         public TraceStep() { }
-        public TraceStep(string title, float score, float expected, float value, bool isInverse=false)
+        public TraceStep(string title, bool isInverse=false)
         {
             this.title = title;
-            this.score = score;
-            this.expected = expected;
-            this.value = value;
+            //this.score = score;
+            //this.expected = expected;
+            //this.value = value;
             this.isInverse = isInverse;
         }
     }
