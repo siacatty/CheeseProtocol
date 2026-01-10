@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ModMetaData>
-  <name>치즈 프로토콜 (Cheese Protocol)</name>
+  <name>치즈 프로토콜 (치지직 채팅·후원 연동 이벤트)</name>
   <author>Siacatty</author>
   <packageId>Siacatty.CheeseProtocol</packageId>
   <description>

@@ -18,9 +18,32 @@
       },
       "group": {
         "kind": "build",
-        "isDefault": true
+        "isDefault": false
       },
       "problemMatcher": "$msCompile"
+    },
+
+    {
+      "label": "Publish mod (folders + Readme)",
+      "type": "shell",
+      "command": "${workspaceFolder}\\tools\\publish_mod.cmd",
+      "args": [
+        "${workspaceFolder}"
+      ],
+      "problemMatcher": []
+    },
+
+    {
+      "label": "Build + Publish (Release)",
+      "dependsOn": [
+        "Build Cheese Protocol (Release)",
+        "Publish mod (folders + Readme)"
+      ],
+      "dependsOrder": "sequence",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      }
     }
   ]
 }

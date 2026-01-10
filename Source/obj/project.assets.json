@@ -564,11 +564,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\sypark0614\\Documents\\CheeseProtocol_Developer\\Source\\CheeseProtocol.csproj",
+      "projectUniqueName": "C:\\Users\\sypark0614\\Projects\\RimWorld\\CheeseProtocol\\Source\\CheeseProtocol.csproj",
       "projectName": "CheeseProtocol",
-      "projectPath": "C:\\Users\\sypark0614\\Documents\\CheeseProtocol_Developer\\Source\\CheeseProtocol.csproj",
+      "projectPath": "C:\\Users\\sypark0614\\Projects\\RimWorld\\CheeseProtocol\\Source\\CheeseProtocol.csproj",
       "packagesPath": "C:\\Users\\sypark0614\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\sypark0614\\Documents\\CheeseProtocol_Developer\\Source\\obj\\",
+      "outputPath": "C:\\Users\\sypark0614\\Projects\\RimWorld\\CheeseProtocol\\Source\\obj\\",
       "projectStyle": "PackageReference",
       "configFilePaths": [
         "C:\\Users\\sypark0614\\AppData\\Roaming\\NuGet\\NuGet.Config"

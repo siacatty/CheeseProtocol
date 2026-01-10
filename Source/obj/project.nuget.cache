@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "7qMWNhgKVg0=",
+  "dgSpecHash": "bzHxnfvk7yI=",
   "success": true,
-  "projectFilePath": "C:\\Users\\sypark0614\\Documents\\CheeseProtocol_Developer\\Source\\CheeseProtocol.csproj",
+  "projectFilePath": "C:\\Users\\sypark0614\\Projects\\RimWorld\\CheeseProtocol\\Source\\CheeseProtocol.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\sypark0614\\.nuget\\packages\\engineioclientdotnet\\0.9.22\\engineioclientdotnet.0.9.22.nupkg.sha512",
     "C:\\Users\\sypark0614\\.nuget\\packages\\microsoft.netframework.referenceassemblies\\1.0.3\\microsoft.netframework.referenceassemblies.1.0.3.nupkg.sha512",

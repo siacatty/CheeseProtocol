@@ -15,6 +15,9 @@ obj/
 *.dll
 *.exe
 
+# tools
+/tools/
+
 # Cache / temp
 *.cache
 *.tmp

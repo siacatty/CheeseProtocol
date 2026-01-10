@@ -11,15 +11,9 @@ namespace CheeseProtocol
 {
     public static class CheeseLetter
     {
-
-        // Settings 토글(너의 Settings 접근 방식에 맞게 바꿔)
         private static bool AppendEnabled =>
             CheeseProtocolMod.Settings != null && CheeseProtocolMod.Settings.appendRollLogToLetters;
 
-        /// <summary>
-        /// (1) 바닐라/타 모드가 만든 letterText에 "추가"만 하기 위한 함수.
-        /// Harmony Postfix에서 ref string으로 호출.
-        /// </summary>
         public static void AppendToLetterText(ref string letterText, CheeseRollTrace trace)
         {
             if (!AppendEnabled) return;
@@ -32,9 +26,6 @@ namespace CheeseProtocol
             letterText = letterText.TrimEnd() + "\n\n" + block;
         }
 
-        /// <summary>
-        /// (2) 내가 레터를 만들 때 baseText에 trace 블록을 붙인 텍스트를 얻기.
-        /// </summary>
         public static string BuildWithAppend(string baseText, CheeseRollTrace trace)
         {
             if (!AppendEnabled || trace == null) return baseText ?? "";
