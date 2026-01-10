@@ -61,13 +61,12 @@ namespace CheeseProtocol
             Scribe_Collections.Look(ref negativeTraitKeys, "negativeTraitKeys", LookMode.Value);
             Scribe_Collections.Look(ref positiveTraitKeys, "positiveTraitKeys", LookMode.Value);
 
-            if (negativeTraitKeys == null)
-                negativeTraitKeys = new List<string>(CheeseDefaults.NegativeTraitKeys);
-            if (positiveTraitKeys == null)
-                positiveTraitKeys = new List<string>(CheeseDefaults.PositiveTraitKeys);
-
             if (Scribe.mode == LoadSaveMode.PostLoadInit)
             {
+                if (negativeTraitKeys == null)
+                    negativeTraitKeys = new List<string>(CheeseDefaults.NegativeTraitKeys);
+                if (positiveTraitKeys == null)
+                    positiveTraitKeys = new List<string>(CheeseDefaults.PositiveTraitKeys);
                 InitializeAll();
             }
         }

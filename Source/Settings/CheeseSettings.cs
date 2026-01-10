@@ -33,7 +33,7 @@ namespace CheeseProtocol
         public bool appendRollLogToLetters = CheeseDefaults.AppendRollLogToLetters;
         private enum CheeseSettingsTab { General, Command, Advanced, Simulation, Credits }
         private CheeseSettingsTab activeTab = CheeseSettingsTab.General;
-
+        public float resultDonation01 = 0f;
         private readonly Dictionary<string, float> sectionContentHeights = new Dictionary<string, float>();
         private const float SectionPad = 10f;
         private const float SectionHeaderH = 26f;
@@ -792,9 +792,37 @@ namespace CheeseProtocol
                 default:
                     break;
             }
-            DrawSectionNoListing(rightAdv, ref yR, "예상결과 (추가예정)", true, rect =>
+            DrawSectionNoListing(rightAdv, ref yR, "결과", true, rect =>
                 {
-                    return GetAdvSetting(selectedConfigAdv.cmd).DrawResults(rect);
+                    float gapH = 8f;
+                    float usedH = 0;
+                    float curY = rect.y;
+                    curY += gapH;
+                    float sliderH = 34f;
+                    Rect slidersRect = new Rect(rect.x, curY, rect.width, sliderH);
+                    curY += sliderH;
+                    UIUtil.SplitVerticallyByRatio(slidersRect, out Rect resultDonationRect, out Rect resultRandomRect, 0.5f, 8f);
+                    resultDonationRect = resultDonationRect.ContractedBy(4f);
+                    resultRandomRect = resultRandomRect.ContractedBy(4f);
+                    UIUtil.SplitVerticallyByRatio(resultDonationRect, out Rect resultDonationLabel, out Rect resultDonationSlider, 0.3f, 4f);
+                    UIUtil.SplitVerticallyByRatio(resultRandomRect, out Rect resultRandomLabel, out Rect resultRandomSlider, 0.3f, 4f);
+                    UIUtil.DrawCenteredText(resultDonationLabel, "후원액 :");
+                    resultDonation01 = Widgets.HorizontalSlider(resultDonationSlider, resultDonation01, 0f, 1f, true, label:$"{Mathf.RoundToInt(resultDonation01 * 100f)}%");
+                    UIUtil.DrawCenteredText(resultRandomLabel, "랜덤성 :");
+                    randomVar = Widgets.HorizontalSlider(resultRandomSlider, randomVar, 0f, 1f, true, label:$"{Mathf.RoundToInt(randomVar * 100f)}%");
+                    TooltipHandler.TipRegion(
+                            resultRandomRect,
+                            () => "100%: 완전 랜덤(후원금액 반영 X)\n0%: 금액 정확 반영 (소액 위주 환경 비추천)\n80%: 적당히 섞인 추천 설정",
+                            resultRandomRect.GetHashCode()
+                        );
+                    TooltipHandler.TipRegion(
+                            resultDonationRect,
+                            () => "0%: 최소 금액\n100%: 최대 금액",
+                            resultDonationRect.GetHashCode()
+                        );
+                    usedH = curY - rect.y;
+                    
+                    return usedH + GetAdvSetting(selectedConfigAdv.cmd).DrawResults(rect);
                 });
         }
 

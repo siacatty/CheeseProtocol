@@ -36,10 +36,11 @@ namespace CheeseProtocol
             LookRange(ref meteorSizeRange, "meteorSizeRange", CheeseDefaults.MeteorSizeRange);
 
             Scribe_Collections.Look(ref allowedMeteorKeys, "allowedMeteorKeys", LookMode.Value);
-            if (allowedMeteorKeys == null)
-                allowedMeteorKeys = new List<string>(CheeseDefaults.AllowedMeteorKeys);
+            
             if (Scribe.mode == LoadSaveMode.PostLoadInit)
             {
+                if (allowedMeteorKeys == null)
+                    allowedMeteorKeys = new List<string>(CheeseDefaults.AllowedMeteorKeys);
                 InitializeAll();
             }
         }
