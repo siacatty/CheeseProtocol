@@ -1,6 +1,6 @@
 is_global = true
 build_property.RootNamespace = CheeseProtocol
-build_property.ProjectDir = C:\Program Files (x86)\Steam\steamapps\common\RimWorld\Mods\CheeseProtocol\Source\
+build_property.ProjectDir = C:\Users\sypark0614\Documents\CheeseProtocol_Developer\Source\
 build_property.EnableComHosting = 
 build_property.EnableGeneratedComInterfaceComImportInterop = 
 build_property.CsWinRTUseWindowsUIXamlProjections = false

@@ -1,14 +1,26 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ModMetaData>
-  <name>Cheese Protocol</name>
-  <author>YourName</author>
-  <packageId>yourname.cheeseprotocol</packageId>
+  <name>치즈 프로토콜 (Cheese Protocol)</name>
+  <author>Siacatty</author>
+  <packageId>Siacatty.CheeseProtocol</packageId>
+  <description>
+  치지직 스트리머를 위한 채팅과 후원을 RimWorld 인게임 이벤트로 연결하고,
+  후원 금액과 운에 따라 결과가 달라지는 시청자 참여형 모드입니다.
+
+  Cheese Protocol is a viewer-interaction mod for CHZZK RimWorld streams.
+  </description>
   <supportedVersions>
-    <li>1.5</li>
     <li>1.6</li>
   </supportedVersions>
-  <description>
-Donation-driven protocols for RimWorld.
-Cheese (CHZZK donations) can trigger colonists, gifts, raids, and incidents.
-  </description>
+  <modDependencies>
+    <li>
+      <packageId>brrainz.harmony</packageId>
+      <displayName>Harmony</displayName>
+      <steamWorkshopUrl>steam://url/CommunityFilePage/2009463077</steamWorkshopUrl>
+      <downloadUrl>https://github.com/pardeike/HarmonyRimWorld/releases/latest</downloadUrl>
+    </li>
+  </modDependencies>
+  <loadAfter>
+    <li>brrainz.harmony</li>
+  </loadAfter>
 </ModMetaData>

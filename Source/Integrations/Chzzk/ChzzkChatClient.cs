@@ -405,7 +405,10 @@ namespace CheeseProtocol
                 try { extras = MiniJSON.Deserialize(extrasJson) as Dictionary<string, object>; }
                 catch { extras = null; }
                 if (extras == null) return null;
-                username = extras.TryGetValue("nickname", out var nn) ? nn?.ToString() : null;
+                //username = extras.TryGetValue("nickname", out var nn) ? nn?.ToString() : "Unknown";
+                username = ExtractNickname(msgObj);
+                if (username.NullOrEmpty())
+                    username = "Unknown";
                 if (extras.TryGetValue("payAmount", out var pa))
                     amount = ParseIntSafe(pa);
                 var donationId = extras.TryGetValue("donationId", out var did) ? did?.ToString() : null;
@@ -414,6 +417,8 @@ namespace CheeseProtocol
                 return CheeseEventFactory.MakeDonationEvent(username, msg, msgTimeMs, amount, donationType, donationId);
             }
             username = ExtractNickname(msgObj);
+            if (username.NullOrEmpty())
+                username = "Unknown";
 
             return CheeseEventFactory.MakeChatEvent(username, msg, msgTimeMs);
         }
@@ -550,7 +555,7 @@ namespace CheeseProtocol
 
             // fallback: maybe some payloads have "uid"/"name"
             if (msgObj.TryGetValue("uid", out var uid)) return uid?.ToString();
-            return null;
+            return "Unknown";
         }
 
         private static int ParseIntSafe(object value)

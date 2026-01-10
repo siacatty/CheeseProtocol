@@ -13,3 +13,18 @@ C:\Program Files (x86)\Steam\steamapps\common\RimWorld\Mods\CheeseProtocol\Sourc
 C:\Program Files (x86)\Steam\steamapps\common\RimWorld\Mods\CheeseProtocol\Source\bin\Release\net472\WebSocket4Net.dll
 C:\Program Files (x86)\Steam\steamapps\common\RimWorld\Mods\CheeseProtocol\Source\obj\Release\net472\CheesePr.D9725A87.Up2Date
 C:\Program Files (x86)\Steam\steamapps\common\RimWorld\Mods\CheeseProtocol\Source\obj\Release\net472\CheeseProtocol.sourcelink.json
+C:\Users\sypark0614\Documents\CheeseProtocol_Developer\Source\bin\Release\net472\CheeseProtocol.dll
+C:\Users\sypark0614\Documents\CheeseProtocol_Developer\Source\bin\Release\net472\CheeseProtocol.pdb
+C:\Users\sypark0614\Documents\CheeseProtocol_Developer\Source\bin\Release\net472\EngineIoClientDotNet.dll
+C:\Users\sypark0614\Documents\CheeseProtocol_Developer\Source\bin\Release\net472\Newtonsoft.Json.dll
+C:\Users\sypark0614\Documents\CheeseProtocol_Developer\Source\bin\Release\net472\SocketIoClientDotNet.dll
+C:\Users\sypark0614\Documents\CheeseProtocol_Developer\Source\bin\Release\net472\WebSocket4Net.dll
+C:\Users\sypark0614\Documents\CheeseProtocol_Developer\Source\obj\Release\net472\CheeseProtocol.csproj.AssemblyReference.cache
+C:\Users\sypark0614\Documents\CheeseProtocol_Developer\Source\obj\Release\net472\CheeseProtocol.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\sypark0614\Documents\CheeseProtocol_Developer\Source\obj\Release\net472\CheeseProtocol.AssemblyInfoInputs.cache
+C:\Users\sypark0614\Documents\CheeseProtocol_Developer\Source\obj\Release\net472\CheeseProtocol.AssemblyInfo.cs
+C:\Users\sypark0614\Documents\CheeseProtocol_Developer\Source\obj\Release\net472\CheeseProtocol.csproj.CoreCompileInputs.cache
+C:\Users\sypark0614\Documents\CheeseProtocol_Developer\Source\obj\Release\net472\CheeseProtocol.sourcelink.json
+C:\Users\sypark0614\Documents\CheeseProtocol_Developer\Source\obj\Release\net472\CheesePr.D9725A87.Up2Date
+C:\Users\sypark0614\Documents\CheeseProtocol_Developer\Source\obj\Release\net472\CheeseProtocol.dll
+C:\Users\sypark0614\Documents\CheeseProtocol_Developer\Source\obj\Release\net472\CheeseProtocol.pdb

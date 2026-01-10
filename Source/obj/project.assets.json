@@ -564,11 +564,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\RimWorld\\Mods\\CheeseProtocol\\Source\\CheeseProtocol.csproj",
+      "projectUniqueName": "C:\\Users\\sypark0614\\Documents\\CheeseProtocol_Developer\\Source\\CheeseProtocol.csproj",
       "projectName": "CheeseProtocol",
-      "projectPath": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\RimWorld\\Mods\\CheeseProtocol\\Source\\CheeseProtocol.csproj",
+      "projectPath": "C:\\Users\\sypark0614\\Documents\\CheeseProtocol_Developer\\Source\\CheeseProtocol.csproj",
       "packagesPath": "C:\\Users\\sypark0614\\.nuget\\packages\\",
-      "outputPath": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\RimWorld\\Mods\\CheeseProtocol\\Source\\obj\\",
+      "outputPath": "C:\\Users\\sypark0614\\Documents\\CheeseProtocol_Developer\\Source\\obj\\",
       "projectStyle": "PackageReference",
       "configFilePaths": [
         "C:\\Users\\sypark0614\\AppData\\Roaming\\NuGet\\NuGet.Config"
