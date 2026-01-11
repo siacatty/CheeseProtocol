@@ -64,40 +64,40 @@ namespace CheeseProtocol
         }
 
 
-        static float LuckScore(
-            float value,
-            float min,
-            float max,
-            float alpha,
-            float beta,
-            bool isInverse)
+        static float LuckScore(float value, float min, float max, float alpha, float beta, bool isInverse)
         {
             const float eps = 1e-6f;
 
-            // 1) value -> [0,1]
-            float x = (value - min) / Mathf.Max(eps, (max - min));
-            x = Mathf.Clamp01(x);
+            // 1) Normalize to [0,1]
+            float range = Mathf.Max(eps, (max - min));
+            float x = Mathf.Clamp01((value - min) / range);
 
-            if (isInverse)
-                x = 1f - x;
+            // 2) Beta mean / variance on [0,1]
+            float s = alpha + beta;
+            if (s <= eps)
+                return 0f;
 
-            // 2) Beta 평균 / 분산
-            float s  = alpha + beta;
-            float mu = alpha / Mathf.Max(eps, s);
+            float mu = alpha / s;
 
             // var = αβ / [ (α+β)^2 (α+β+1) ]
             float var = (alpha * beta) /
                         (Mathf.Max(eps, s * s) * Mathf.Max(eps, s + 1f));
             float sigma = Mathf.Sqrt(Mathf.Max(eps, var));
 
-            // 3) z-score
+            // 3) Inverse metric: flip axis consistently
+            //    (equivalent to evaluating luck for Y = 1 - X ~ Beta(beta, alpha))
+            //if (isInverse)
+            //{
+            //    x = 1f - x;
+            //    mu = 1f - mu; // keeps sign aligned with "smaller is better"
+            //}
+
+            // 4) z-score -> Normal CDF -> centered percentile
             float z = (x - mu) / Mathf.Max(eps, sigma);
-
-            // 4) 정규분포 퍼센타일 Φ(z)
             float phi = NormalCDF(z);
+            float sign = isInverse ? -1f : +1f;
 
-            // 5) [-1, +1] 스케일
-            return Mathf.Clamp(2f * (phi - 0.5f), -1f, 1f);
+            return Mathf.Clamp(2f * (phi - 0.5f), -1f, 1f) * sign;
         }
 
         static float NormalCDF(float z)

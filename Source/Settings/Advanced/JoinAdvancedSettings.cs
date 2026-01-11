@@ -3,8 +3,9 @@ using System.Collections.Generic;
 using Verse;
 using UnityEngine;
 using System.Linq;
-
+using static CheeseProtocol.CheeseLog;
 using RimWorld;
+using System.Security.Authentication.ExtendedProtection;
 
 namespace CheeseProtocol
 {
@@ -38,10 +39,40 @@ namespace CheeseProtocol
 
         private readonly Color BodyBg       = new Color(0.18f, 0.22f, 0.26f); // blue-charcoal
         private readonly Color BodyBorder   = new Color(0.35f, 0.48f, 0.55f);
+        private bool isResultDirty = true;
+        private bool isSampledDirty = false;
+        CheeseRollTrace trace = new CheeseRollTrace("", CheeseCommand.Join);
+        CheeseRollTrace sampleTrace = new CheeseRollTrace("", CheeseCommand.Join);
         public JoinAdvancedSettings()
         {
             ResetToDefaults();
             InitializeAll();
+        }
+        public override void UpdateResults()
+        {
+            isResultDirty = true;
+        }
+        public override int GetPreviewDirtyHash()
+        {
+            var dh = new DirtyHash();
+
+            dh.AddRange(ageRange);
+            dh.AddRange(passionRange);
+            dh.AddRange(traitsRange);
+            dh.AddRange(skillRange);
+            dh.AddRange(healthRange);
+            dh.AddRange(apparelRange);
+            dh.AddRange(weaponRange);
+
+            dh.Add(allowWorkDisable);
+            dh.Add(forcePlayerIdeo);
+            dh.Add(forceHuman);
+            dh.Add(useDropPod);
+
+            dh.AddListUnordered(negativeTraitKeys);
+            dh.AddListUnordered(positiveTraitKeys);
+
+            return dh.Value;
         }
         public override void ExposeData()
         {
@@ -146,13 +177,104 @@ namespace CheeseProtocol
 
         public override float DrawResults(Rect rect)
         {
-            float curY = rect.y;
+            CheeseSettings settings = CheeseProtocolMod.Settings;
+            Rect headerRect = new Rect(rect.x, rect.y, rect.width, 32f);
+            float curLY = headerRect.yMax;
+            float curRY = headerRect.yMax;
+            UIUtil.SplitVerticallyByRatio(headerRect, out Rect expectedHeader, out Rect sampledHeader, 0.5f, 0f);
+            UIUtil.DrawCenteredText(expectedHeader, "평균값");
+            UIUtil.SplitVerticallyByRatio(new Rect (rect.x, headerRect.yMax, rect.width, 1f), out Rect expectRect, out Rect sampledRect, 0.5f, 4f);
+            Rect sampledBtn = UIUtil.ResizeRectAligned(sampledHeader, sampledHeader.width* 0.7f, sampledHeader.height *0.8f);
+            if (Widgets.ButtonText(sampledBtn, "미리 뽑아보기"))
+            {
+                sampleTrace.steps.Clear();
+                sampleTrace.hediffs.Clear();
+                sampleTrace.traits.Clear();
+                ColonistSpawner.Generate(settings.resultDonation01, sampleTrace);
+                sampleTrace.CalculateScore();
+                isSampledDirty = true;
+            }
             float usedH = 0;
-            
-
-
-            usedH = curY - rect.y;
+            //settings.resultDonation01;
+            //settings.randomVar;
+            if (isSampledDirty)
+            {
+                if (sampleTrace.IsValid())
+                {
+                    foreach(var t in sampleTrace.steps)
+                    {
+                        DrawSampledRow(sampledRect, t, ref curRY);
+                    }
+                    if (sampleTrace.traits.Count > 0)
+                    {
+                        DrawSampledTraits(sampledRect, sampleTrace.traits, ref curRY);
+                    }
+                    if (sampleTrace.hediffs.Count > 0)
+                    {
+                        Rect hediffrow = new Rect(sampledRect.x, curRY, sampledRect.width, 24f);
+                        curRY += 24f;
+                        UIUtil.SplitVerticallyByRatio(hediffrow, out Rect hediffLabel, out Rect hediffCount, 0.4f, 8f);
+                        UIUtil.DrawCenteredText(hediffLabel, "질병/흉터 수 : ", TextAlignment.Left);
+                        UIUtil.DrawCenteredText(hediffCount, $"{sampleTrace.hediffs.Count}", TextAlignment.Left);
+                    }
+                    Rect row = new Rect(sampledRect.x, curRY, sampledRect.width, 24f);
+                    curRY += 24f;
+                    UIUtil.SplitVerticallyByRatio(row, out Rect summaryLabel, out Rect summaryContent, 0.4f, 8f);
+                    UIUtil.DrawCenteredText(summaryLabel, "총평 : ", TextAlignment.Left);
+                    if (sampleTrace.luckScore >= 0)
+                        UIUtil.DrawCenteredText(summaryContent, $"+{sampleTrace.luckScore*100:#0.#}% ({sampleTrace.outcome})", TextAlignment.Left, color:Color.green);
+                    else
+                        UIUtil.DrawCenteredText(summaryContent, $"{sampleTrace.luckScore*100:#0.#}% ({sampleTrace.outcome})", TextAlignment.Left, color:Color.red);
+                }
+            }
+            if (isResultDirty)
+            {
+                trace.steps.Clear();
+                ColonistSpawner.Generate(settings.resultDonation01, trace);
+                trace.CalculateScore();
+                isResultDirty = false;
+            }
+            if (trace.IsValid())
+            {
+                foreach(var t in trace.steps)
+                {
+                    DrawExpectedRow(expectRect, t, ref curLY);
+                }
+            }
+            usedH = curRY > curLY ? curRY - rect.y : curLY - rect.y;
             return usedH;
+        }
+
+        private void DrawExpectedRow(Rect rect, TraceStep step, ref float curY)
+        {
+            Rect row = new Rect(rect.x, curY, rect.width, 24f);
+            curY += 24f;
+            UIUtil.SplitVerticallyByRatio(row, out Rect labelRect, out Rect expectedRect, 0.6f, 8f);
+            UIUtil.DrawCenteredText(labelRect, step.title, TextAlignment.Left);
+            UIUtil.DrawCenteredText(expectedRect, $"{step.expected:0.##}", TextAlignment.Left);
+        }
+        private void DrawSampledRow(Rect rect, TraceStep step, ref float curY)
+        {
+            Rect row = new Rect(rect.x, curY, rect.width, 24f);
+            curY += 24f;
+            UIUtil.SplitVerticallyByRatio(row, out Rect valueRect, out Rect scoreRect, 0.5f, 8f);
+            UIUtil.DrawCenteredText(valueRect, $"{step.value:0.##}", TextAlignment.Left);
+            if (step.score >= 0)
+                UIUtil.DrawCenteredText(scoreRect, $"+{step.score*100:0.##}%", TextAlignment.Left, color: Color.green);
+            else
+                UIUtil.DrawCenteredText(scoreRect, $"{step.score*100:0.##}%", TextAlignment.Left, color: Color.red);
+        }
+        private void DrawSampledTraits(Rect rect, List<string> traits, ref float curY)
+        {
+            UIUtil.SplitVerticallyByRatio(rect, out Rect labelRect, out Rect traitListRect, 0.4f, 8f);
+            Rect labelRow = new Rect(labelRect.x, curY, labelRect.width, 24f);
+            UIUtil.DrawCenteredText(labelRow, "특성 :", TextAlignment.Left);
+            foreach(string t in traits)
+            {
+                Rect row = new Rect(traitListRect.x, curY, traitListRect.width, 24f);
+                curY += 24f;
+                UIUtil.DrawCenteredText(row, t, TextAlignment.Left);
+            }
         }
         public override float Draw(Rect rect)
         {

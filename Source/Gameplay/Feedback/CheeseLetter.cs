@@ -68,7 +68,7 @@ namespace CheeseProtocol
             bool isPositive = trace.luckScore >= 0;
             int luckScoreAbs = Mathf.Abs(Mathf.RoundToInt(trace.luckScore*100));
             string color = isPositive ? "#2e8032ff" : "#aa4040ff";
-            string luckScoreText = isPositive? $"상위 {luckScoreAbs}%" : $"하위 {luckScoreAbs}%";
+            string luckScoreText = isPositive? $"+ {luckScoreAbs}%" : $"- {luckScoreAbs}%";
             sb.AppendLine($"평균 행운 점수: <color={color}>{luckScoreText}</color>");
             const int titleWidth = 20;
             if (trace.steps != null && trace.steps.Count > 0)

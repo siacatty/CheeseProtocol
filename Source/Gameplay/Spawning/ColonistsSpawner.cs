@@ -250,7 +250,10 @@ namespace CheeseProtocol
             );
             //Mathf.Lerp(minMaxRange.qMin, minMaxRange.qMax, quality)
             trace.steps.Add(traceStep);
-            TraitApplier.ApplyTraitsHelper(pawn, traitQuality);    
+            TraitApplier.ApplyTraitsHelper(pawn, traitQuality);
+            trace.traits = pawn.story?.traits?.allTraits
+                                ?.Select(t => t.LabelCap)
+                                .ToList() ?? new List<string>();    
         }
 
         private static void ApplySkills(Pawn pawn, float quality, float randomVar, QualityRange minMaxRange, CheeseRollTrace trace)
@@ -292,6 +295,9 @@ namespace CheeseProtocol
             );
             trace.steps.Add(traceStep);
             HealthApplier.ApplyHealthHelper(pawn, healthQuality);
+            trace.hediffs = pawn.health?.hediffSet?.hediffs
+                            ?.Select(h => h.LabelCap)
+                            .ToList() ?? new List<string>();
         }
 
         private static void ApplyPassions(Pawn pawn, float quality, float randomVar, QualityRange minMaxRange, CheeseRollTrace trace)

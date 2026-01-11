@@ -25,10 +25,30 @@ namespace CheeseProtocol
 
         private readonly Color BodyBg       = new Color(0.18f, 0.22f, 0.26f); // blue-charcoal
         private readonly Color BodyBorder   = new Color(0.35f, 0.48f, 0.55f);
+        private bool isResultDirty = true;
+        private bool isSampledDirty = false;
+        CheeseRollTrace trace = new CheeseRollTrace("", CheeseCommand.Meteor);
+        CheeseRollTrace sampleTrace = new CheeseRollTrace("", CheeseCommand.Meteor);
         public MeteorAdvancedSettings()
         {
             ResetToDefaults();
             InitializeAll();
+        }
+        public override void UpdateResults()
+        {
+            isResultDirty = true;
+        }
+        public override int GetPreviewDirtyHash()
+        {
+            var dh = new DirtyHash();
+
+            dh.AddRange(meteorTypeRange);
+            dh.AddRange(meteorSizeRange);
+
+            // allowedMeteorKeys는 보통 "선택된 집합" 의미라 순서 무관 처리 추천
+            dh.AddListUnordered(allowedMeteorKeys);
+
+            return dh.Value;
         }
         public override void ExposeData()
         {
@@ -83,13 +103,77 @@ namespace CheeseProtocol
         }
         public override float DrawResults(Rect rect)
         {
-            float curY = rect.y;
+            CheeseSettings settings = CheeseProtocolMod.Settings;
+            Rect headerRect = new Rect(rect.x, rect.y, rect.width, 32f);
+            float curLY = headerRect.yMax;
+            float curRY = headerRect.yMax;
+            UIUtil.SplitVerticallyByRatio(headerRect, out Rect expectedHeader, out Rect sampledHeader, 0.5f, 0f);
+            UIUtil.DrawCenteredText(expectedHeader, "평균값");
+            UIUtil.SplitVerticallyByRatio(new Rect (rect.x, headerRect.yMax, rect.width, 1f), out Rect expectRect, out Rect sampledRect, 0.5f, 4f);
+            Rect sampledBtn = UIUtil.ResizeRectAligned(sampledHeader, sampledHeader.width* 0.7f, sampledHeader.height *0.8f);
+            if (Widgets.ButtonText(sampledBtn, "미리 뽑아보기"))
+            {
+                sampleTrace.steps.Clear();
+                MeteorSpawner.Generate(settings.resultDonation01, sampleTrace);
+                sampleTrace.CalculateScore();
+                isSampledDirty = true;
+            }
             float usedH = 0;
-            
-
-
-            usedH = curY - rect.y;
+            //settings.resultDonation01;
+            //settings.randomVar;
+            if (isSampledDirty)
+            {
+                if (sampleTrace.IsValid())
+                {
+                    foreach(var t in sampleTrace.steps)
+                    {
+                        DrawSampledRow(sampledRect, t, ref curRY);
+                    }
+                    Rect row = new Rect(sampledRect.x, curRY, sampledRect.width, 24f);
+                    curRY += 24f;
+                    UIUtil.SplitVerticallyByRatio(row, out Rect summaryLabel, out Rect summaryContent, 0.4f, 8f);
+                    UIUtil.DrawCenteredText(summaryLabel, "총평 : ", TextAlignment.Left);
+                    if (sampleTrace.luckScore >= 0)
+                        UIUtil.DrawCenteredText(summaryContent, $"+{sampleTrace.luckScore*100:#0.#}% ({sampleTrace.outcome})", TextAlignment.Left, color:Color.green);
+                    else
+                        UIUtil.DrawCenteredText(summaryContent, $"{sampleTrace.luckScore*100:#0.#}% ({sampleTrace.outcome})", TextAlignment.Left, color:Color.red);
+                }
+            }
+            if (isResultDirty)
+            {
+                trace.steps.Clear();
+                MeteorSpawner.Generate(settings.resultDonation01, trace);
+                trace.CalculateScore();
+                isResultDirty = false;
+            }
+            if (trace.IsValid())
+            {
+                foreach(var t in trace.steps)
+                {
+                    DrawExpectedRow(expectRect, t, ref curLY);
+                }
+            }
+            usedH = curRY > curLY ? curRY - rect.y : curLY - rect.y;
             return usedH;
+        }
+        private void DrawExpectedRow(Rect rect, TraceStep step, ref float curY)
+        {
+            Rect row = new Rect(rect.x, curY, rect.width, 24f);
+            curY += 24f;
+            UIUtil.SplitVerticallyByRatio(row, out Rect labelRect, out Rect expectedRect, 0.6f, 8f);
+            UIUtil.DrawCenteredText(labelRect, step.title, TextAlignment.Left);
+            UIUtil.DrawCenteredText(expectedRect, $"{step.expected:0.##}", TextAlignment.Left);
+        }
+        private void DrawSampledRow(Rect rect, TraceStep step, ref float curY)
+        {
+            Rect row = new Rect(rect.x, curY, rect.width, 24f);
+            curY += 24f;
+            UIUtil.SplitVerticallyByRatio(row, out Rect valueRect, out Rect scoreRect, 0.5f, 8f);
+            UIUtil.DrawCenteredText(valueRect, $"{step.value:0.##}", TextAlignment.Left);
+            if (step.score >= 0)
+                UIUtil.DrawCenteredText(scoreRect, $"+{step.score*100:0.##}%", TextAlignment.Left, color: Color.green);
+            else
+                UIUtil.DrawCenteredText(scoreRect, $"{step.score*100:0.##}%", TextAlignment.Left, color: Color.red);
         }
         public override float Draw(Rect rect)
         {

@@ -11,5 +11,7 @@ namespace CheeseProtocol
         public abstract float Draw(Rect inRect);
         public abstract float DrawResults(Rect inRect);
         public abstract void ResetToDefaults();
+        public abstract int GetPreviewDirtyHash();
+        public abstract void UpdateResults();
     }
 }

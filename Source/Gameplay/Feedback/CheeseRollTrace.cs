@@ -11,8 +11,13 @@ namespace CheeseProtocol
         public string username;
         public float luckScore;             // "평균 행운 점수:"
         public List<TraceStep> steps = new();
+        public List<string> traits = new();
+        public List<string> hediffs = new();
         public string outcome;             // 최악/대박
-
+        public bool IsValid()
+        {
+            return steps.Count > 0;
+        }
         public CheeseRollTrace(String username, CheeseCommand command)
         {
             this.username = username.NullOrEmpty() ? "Unknown" : username;

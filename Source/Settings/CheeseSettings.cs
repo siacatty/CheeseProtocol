@@ -46,6 +46,8 @@ namespace CheeseProtocol
         public CheeseCommandConfig selectedConfigAdv;
         private const int maxAllowedDonation = 1000000;
         private const int minAllowedDonation = 1000;
+        private readonly PreviewDirtyDebouncer _previewDebounce = new PreviewDirtyDebouncer();
+
 
         //Advanced settings
         public List<CommandAdvancedSettingsBase> advancedSettings;
@@ -820,10 +822,20 @@ namespace CheeseProtocol
                             () => "0%: 최소 금액\n100%: 최대 금액",
                             resultDonationRect.GetHashCode()
                         );
+                    curY += 4f;
+                    Widgets.DrawLineHorizontal(rect.x, curY, rect.width);
+                    curY += 4f;
                     usedH = curY - rect.y;
-                    
-                    return usedH + GetAdvSetting(selectedConfigAdv.cmd).DrawResults(rect);
+                    float resultH = Current.ProgramState == ProgramState.Playing ? GetAdvSetting(selectedConfigAdv.cmd).DrawResults(new Rect(rect.x, curY, rect.width, 1f)) : 0f;
+                    return usedH + resultH;
                 });
+
+            int hash = Combine(GetAdvSetting(selectedConfigAdv.cmd).GetPreviewDirtyHash(), Quantize(resultDonation01), Quantize(randomVar), (int)selectedConfigAdv.cmd);
+
+            _previewDebounce.Tick(hash, () =>
+            {
+                GetAdvSetting(selectedConfigAdv.cmd).UpdateResults(); // or GeneratePreview(); or whatever
+            });
         }
 
         private void DrawCommandSection(Rect rect, float lineH, float paddingX, float paddingY)
@@ -1157,7 +1169,20 @@ namespace CheeseProtocol
 
             curY += rowH;
         }
-
+        private static int Quantize(float v, int scale = 1000)
+        {
+            return Mathf.RoundToInt(v * scale);
+        }
+        private static int Combine(params int[] values)
+        {
+            unchecked
+            {
+                int h = 17;
+                for (int i = 0; i < values.Length; i++)
+                    h = h * 31 + values[i];
+                return h;
+            }
+        }
         public bool TryGetCommandConfig(CheeseCommand cmd, out CheeseCommandConfig cfg)
         {
             EnsureCommandConfigs();

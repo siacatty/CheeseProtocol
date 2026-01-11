@@ -45,5 +45,12 @@ namespace CheeseProtocol
         {
             return 0f;
         }
+        public override void UpdateResults()
+        {
+        }
+        public override int GetPreviewDirtyHash()
+        {
+            throw new NotImplementedException();
+        }
     }
 }
