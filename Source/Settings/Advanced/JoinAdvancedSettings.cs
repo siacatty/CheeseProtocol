@@ -41,6 +41,7 @@ namespace CheeseProtocol
         private readonly Color BodyBorder   = new Color(0.35f, 0.48f, 0.55f);
         private bool isResultDirty = true;
         private bool isSampledDirty = false;
+        private Pawn sampledPawn = null;
         CheeseRollTrace trace = new CheeseRollTrace("", CheeseCommand.Join);
         CheeseRollTrace sampleTrace = new CheeseRollTrace("", CheeseCommand.Join);
         public JoinAdvancedSettings()
@@ -190,7 +191,7 @@ namespace CheeseProtocol
                 sampleTrace.steps.Clear();
                 sampleTrace.hediffs.Clear();
                 sampleTrace.traits.Clear();
-                ColonistSpawner.Generate(settings.resultDonation01, sampleTrace);
+                sampledPawn = ColonistSpawner.Generate(settings.resultDonation01, sampleTrace);
                 sampleTrace.CalculateScore();
                 isSampledDirty = true;
             }
@@ -205,18 +206,14 @@ namespace CheeseProtocol
                     {
                         DrawSampledRow(sampledRect, t, ref curRY);
                     }
-                    if (sampleTrace.traits.Count > 0)
-                    {
-                        DrawSampledTraits(sampledRect, sampleTrace.traits, ref curRY);
-                    }
+                    Rect hediffrow = new Rect(sampledRect.x, curRY, sampledRect.width, 24f);
+                    curRY += 24f;
+                    UIUtil.SplitVerticallyByRatio(hediffrow, out Rect hediffLabel, out Rect hediffCount, 0.4f, 8f);
+                    UIUtil.DrawCenteredText(hediffLabel, "질병/흉터 수 : ", TextAlignment.Left);
                     if (sampleTrace.hediffs.Count > 0)
-                    {
-                        Rect hediffrow = new Rect(sampledRect.x, curRY, sampledRect.width, 24f);
-                        curRY += 24f;
-                        UIUtil.SplitVerticallyByRatio(hediffrow, out Rect hediffLabel, out Rect hediffCount, 0.4f, 8f);
-                        UIUtil.DrawCenteredText(hediffLabel, "질병/흉터 수 : ", TextAlignment.Left);
-                        UIUtil.DrawCenteredText(hediffCount, $"{sampleTrace.hediffs.Count}", TextAlignment.Left);
-                    }
+                        UIUtil.DrawCenteredText(hediffCount, $"{sampleTrace.hediffs.Count}", color: Color.red);
+                    else
+                        UIUtil.DrawCenteredText(hediffCount, $"{sampleTrace.hediffs.Count}", color: Color.green);
                     Rect row = new Rect(sampledRect.x, curRY, sampledRect.width, 24f);
                     curRY += 24f;
                     UIUtil.SplitVerticallyByRatio(row, out Rect summaryLabel, out Rect summaryContent, 0.4f, 8f);
@@ -241,7 +238,30 @@ namespace CheeseProtocol
                     DrawExpectedRow(expectRect, t, ref curLY);
                 }
             }
-            usedH = curRY > curLY ? curRY - rect.y : curLY - rect.y;
+            float curY = curRY > curLY ? curRY : curLY;
+            curY += 8f;
+
+            if (isSampledDirty)
+            {
+                float pawnCardH = rect.width *1.1f;
+                Rect pawnCard = new Rect(rect.x, curY, rect.width, pawnCardH);
+                pawnCard = pawnCard.ContractedBy(12f);
+                CharacterCardUtility.DrawCharacterCard(pawnCard, sampledPawn, showName:false);
+                Rect rerollRect = new Rect(sampledBtn.x, pawnCard.yMax, sampledBtn.width, sampledBtn.height);
+                if (Widgets.ButtonText(rerollRect, "미리 뽑아보기"))
+                {
+                    sampleTrace.steps.Clear();
+                    sampleTrace.hediffs.Clear();
+                    sampleTrace.traits.Clear();
+                    sampledPawn = ColonistSpawner.Generate(settings.resultDonation01, sampleTrace);
+                    sampleTrace.CalculateScore();
+                    isSampledDirty = true;
+                }
+                curY += pawnCardH+sampledBtn.height;
+            }
+
+
+            usedH = curY - rect.y;
             return usedH;
         }
 

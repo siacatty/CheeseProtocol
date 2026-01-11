@@ -73,11 +73,13 @@ namespace CheeseProtocol
                 PawnKindDefOf.Colonist,
                 context: PawnGenerationContext.PlayerStarter,
                 forceGenerateNewPawn: true,
-                canGeneratePawnRelations: false
+                canGeneratePawnRelations: false,
+                forcedXenotype: XenotypeDefOf.Baseliner
             );
             Pawn pawn = PawnGenerator.GeneratePawn(req);
             cleanPawn(pawn, joinAdvSetting.allowWorkDisable);
             ApplyPawnCustomization(pawn, quality, trace);
+            pawn.skills?.DirtyAptitudes();
             pawn.skills?.Notify_SkillDisablesChanged();
             pawn.Notify_DisabledWorkTypesChanged();
             pawn.workSettings?.Notify_DisabledWorkTypesChanged();
