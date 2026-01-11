@@ -380,17 +380,9 @@ namespace CheeseProtocol
             if (msgObj == null) return null;
 
             var msg = msgObj.TryGetValue("msg", out var m) ? m?.ToString() : null;
+            if (string.IsNullOrWhiteSpace(msg)) return null;
 
-            if (!string.IsNullOrWhiteSpace(msg))
-            {
-                var trimmed = msg.TrimStart();
-                if (!trimmed.StartsWith("!"))
-                    return null;
-            }
-            else
-            {
-                return null;
-            }
+            if (msg.IndexOf('!') < 0) return null;
 
             // extras is a JSON string
             Dictionary<string, object> extras = null;

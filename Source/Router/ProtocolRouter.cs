@@ -12,13 +12,14 @@ namespace CheeseProtocol
             Map map = Find.AnyPlayerHomeMap;
 
             var ctx = new ProtocolContext(evt, map);
-
-            string msg = (evt.message ?? "").Trim();
+            string msg = (evt.message ?? "");
             CheeseCommand cmd = CheeseCommand.None;
+
+            //string msg = (evt.message ?? "").Trim();
+            //CheeseCommand cmd = CheeseCommand.None;
             string args = string.Empty;
 
-            if (msg.StartsWith("!"))
-                cmd = CheeseCommandParser.Parse(msg, out args);
+            cmd = CheeseCommandParser.Parse(msg, out args);
 
             var protocol = FindProtocolForDonation(evt, cmd);
 
