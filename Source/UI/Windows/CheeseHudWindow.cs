@@ -21,20 +21,29 @@ namespace CheeseProtocol
         private const float slideBarH = 40f;
         private const float lineH = 22f;
 
-        private const float widthExpanded = 290f;
-        private const float widthMinimized = 290f;
+        private const float widthInitial = 290f;
         private const float colCmd  = 52f;
         private const float colCd   = 60f;
+        private const float colRatioCmd  = 0.2f;
+        private const float colRatioCd   = 0.2f;
+        private const float colRatioDesc   = 0.60f;
 
         private const float statusLinesBase = 3f;
         private const float separatorH = 6f;
         private const float rowH = 22f;
         private float lastSavedX = -9999f;
         private float lastSavedY = -9999f;
+        private float lastSavedW = -9999f;
+        private float lockedHeight = -1f;
+        private float prevH = -1f;
+        private int lastHeightChangeFrame = -999999;
+        private bool pendingHeightSnap;
+        private const int HeightSnapDebounceFrames = 60;
         private int lastRowsCount = -1;
         private Vector2 lastRectPos;
         private bool lastPosInit;
-        public override Vector2 InitialSize => new Vector2(widthExpanded, 220f);
+        private bool skipNextSave = false;
+        public override Vector2 InitialSize => new Vector2(widthInitial, 220f);
         private List<CheeseCommandConfig> commandRows;
 
         public CheeseHudWindow()
@@ -46,7 +55,7 @@ namespace CheeseProtocol
             closeOnCancel = false;
             preventCameraMotion = false;
             absorbInputAroundWindow = false; // HUD처럼 입력 덜 잡아먹게
-            resizeable = false;
+            resizeable = true;
             layer = WindowLayer.GameUI;
             doWindowBackground = false;
             drawShadow = false;
@@ -63,6 +72,34 @@ namespace CheeseProtocol
                 new Color(1f, 1f, 1f, 0.25f * opacity)
             );
             DrawHUDWindowContents(inRect.ContractedBy(DefaultWindowMargin));
+        }
+
+
+        public void ResetToDefaults()
+        {
+            var s = CheeseProtocolMod.Settings;
+            if (s == null) return;
+
+            // 1) HUD 자체를 기본 위치/폭으로 즉시 되돌림
+            windowRect.width = widthInitial;
+            windowRect.x = UI.screenWidth - windowRect.width - 20f;
+            windowRect.y = 80f;
+
+            // 2) 높이는 컨텐츠 기반으로 다시 계산되게
+            sizeDirty = true;
+
+            // 3) 캐시 갱신 (바로 '변경됨'으로 감지되는 것 방지)
+            lastSavedX = windowRect.x;
+            lastSavedY = windowRect.y;
+            lastSavedW = windowRect.width;
+
+            lastRectPos = new Vector2(windowRect.x, windowRect.y);
+            lastPosInit = true;
+
+            ClampToScreen();
+            // 4) 플래그 끄기 + 다음 저장 1회만 스킵
+            //s.hudResetRequested = false;
+            skipNextSave = true;
         }
 
         private void DrawHUDWindowContents(Rect inRect)
@@ -111,6 +148,7 @@ namespace CheeseProtocol
                 Rect body = new Rect(inRect.x, y, inRect.width, inRect.height - y);
                 DrawBody(body, snap);
             }
+            HandleHeightResize();
             EnforceHudLock();
             SavePositionIfChanged();
         }
@@ -140,6 +178,35 @@ namespace CheeseProtocol
                 windowRect.y = lastRectPos.y;
             }
         }
+        private void HandleHeightResize()
+        {
+            if (lockedHeight <= 0f)
+                lockedHeight = windowRect.height;
+
+            // height가 바뀌면(유저 리사이즈 시도 포함) "끝나면 스냅" 예약
+            if (prevH > 0f && Mathf.Abs(windowRect.height - prevH) > 0.01f)
+            {
+                pendingHeightSnap = true;
+                lastHeightChangeFrame = UnityEngine.Time.frameCount;
+            }
+
+            // 최근 N프레임 동안 height 변화가 없으면 => 드래그가 끝난 걸로 보고 1번만 스냅
+            if (pendingHeightSnap)
+            {
+                int df = UnityEngine.Time.frameCount - lastHeightChangeFrame;
+                if (df >= HeightSnapDebounceFrames)
+                {
+                    if (Mathf.Abs(windowRect.height - lockedHeight) > 0.01f)
+                    {
+                        windowRect.height = lockedHeight;
+                        ClampToScreen();
+                    }
+                    pendingHeightSnap = false;
+                }
+            }
+
+            prevH = windowRect.height;
+        }
         public override void PostOpen()
         {
             base.PostOpen();
@@ -158,6 +225,15 @@ namespace CheeseProtocol
             }
             sizeDirty = true;
             EnsureSizeForContent(CheeseGameComponent.Instance?.GetUiStatusSnapshot());
+
+            if (settings != null && settings.hudW >= 0f)
+            {
+                windowRect.width = settings.hudW;
+            }
+            else
+            {
+                windowRect.width = widthInitial;
+            }
 
             if (settings != null && settings.hudX >= 0f && settings.hudY >= 0f)
             {
@@ -195,19 +271,22 @@ namespace CheeseProtocol
         }
         private void SavePositionIfChanged()
         {
+            if (skipNextSave) {skipNextSave = false; return;}
             var settings = CheeseProtocolMod.Settings;
             if (settings == null) return;
 
-            if (Mathf.Abs(windowRect.x - lastSavedX) > 0.1f || Mathf.Abs(windowRect.y - lastSavedY) > 0.1f)
+            if (Mathf.Abs(windowRect.x - lastSavedX) > 0.1f || Mathf.Abs(windowRect.y - lastSavedY) > 0.1f || Mathf.Abs(windowRect.width - lastSavedW) > 0.1f)
             {
                 settings.hudX = windowRect.x;
                 settings.hudY = windowRect.y;
+                settings.hudW = windowRect.width;
                 settings.hudMinimized = minimized;
                 settings.hudSlideHidden = slideHidden;
 
                 lastSavedX = windowRect.x;
                 lastSavedY = windowRect.y;
-
+                lastSavedW = windowRect.width;
+                //sizeDirty = true;
                 settings.Write(); // 즉시 저장
             }
         }
@@ -306,11 +385,16 @@ namespace CheeseProtocol
             y += 6f;
             */
             Rect row = new Rect(rect.x, y, rect.width, rowH);
-            float colDesc = row.width - colCmd - colCd - paddingX * 2f;
+            //float colDesc = row.width - colCmd - colCd - paddingX * 2f;
             // 컬럼 폭
-            Rect rCmd  = new Rect(row.x, row.y, colCmd, rowH);
-            Rect rCd   = new Rect(rCmd.xMax + paddingX, row.y, colCd, rowH);
-            Rect rDesc = new Rect(rCd.xMax + paddingX, row.y, colDesc, rowH);
+            //Rect rCmd  = new Rect(row.x, row.y, colCmd, rowH);
+            //Rect rCd   = new Rect(rCmd.xMax + paddingX, row.y, colCd, rowH);
+            //Rect rDesc = new Rect(rCd.xMax + paddingX, row.y, colDesc, rowH);
+            List<Rect> rects = new List<Rect>(3);
+            UIUtil.SplitVerticallyByRatios(row, new float[] {colRatioCmd, colRatioCd, colRatioDesc}, 0f, rects);
+            Rect rCmd  = rects[0];
+            Rect rCd   = rects[1];
+            Rect rDesc = rects[2];
             Color prev = GUI.color;
             GUI.color = new Color(0.75f, 0.78f, 0.82f);
             UIUtil.DrawCenteredText(rCmd, "명령어");
@@ -357,10 +441,15 @@ namespace CheeseProtocol
             Rect row = new Rect(rect.x, y, rect.width, rowH);
 
             // 컬럼 폭
-            float colDesc = row.width - colCmd - colCd - paddingX * 2f;
-            Rect rCmd  = new Rect(row.x, row.y, colCmd, rowH);
-            Rect rCd   = new Rect(rCmd.xMax + paddingX, row.y, colCd, rowH);
-            Rect rDesc = new Rect(rCd.xMax + paddingX, row.y, colDesc, rowH);
+            //float colDesc = row.width - colCmd - colCd - paddingX * 2f;
+            //Rect rCmd  = new Rect(row.x, row.y, colCmd, rowH);
+            //Rect rCd   = new Rect(rCmd.xMax + paddingX, row.y, colCd, rowH);
+            //Rect rDesc = new Rect(rCd.xMax + paddingX, row.y, colDesc, rowH);
+            List<Rect> rects = new List<Rect>(3);
+            UIUtil.SplitVerticallyByRatios(row, new float[] {colRatioCmd, colRatioCd, colRatioDesc}, 0f, rects);
+            Rect rCmd  = rects[0];
+            Rect rCd   = rects[1];
+            Rect rDesc = rects[2];
             // 비활성 명령어는 회색
             Color oldColor = GUI.color;
             if (!cfg.enabled)
@@ -392,26 +481,61 @@ namespace CheeseProtocol
             Rect rect,
             CheeseCommandConfig cfg)
         {
+            var participantRegistry = CheeseParticipantRegistry.Get();
+            var join = CheeseProtocolMod.Settings?.GetAdvSetting<JoinAdvancedSettings>(CheeseCommand.Join);
+
+            bool restrictParticipants = join?.restrictParticipants ?? CheeseDefaults.RestrictParticipants;
+            int  maxParticipants      = join?.maxParticipants      ?? CheeseDefaults.MaxParticipants;
             var cdState = CheeseCooldownState.Current;
             int nowTick = Find.TickManager.TicksGame;
             float cdTicks = cfg.cooldownHours * 2500f;
-            // 안전장치
+            
             Color prev = GUI.color;
             GUI.color = Color.green;
-            if (cdState == null || cfg.cooldownHours <= 0 || cdState.GetLastTick(cfg.cmd) < 0)
+
+            bool noCooldown =
+                cdState == null ||
+                cfg.cooldownHours <= 0 ||
+                cdState.GetLastTick(cfg.cmd) < 0;
+
+            bool isJoinCap = cfg.cmd == CheeseCommand.Join && restrictParticipants;
+            int count = participantRegistry.Count;
+            int remain = cdState.RemainingTicks(cfg.cmd, cfg.cooldownHours, nowTick);
+            if (noCooldown || remain <= 0)
             {
-                UIUtil.DrawCenteredText(rect, "준비됨");
+                if (isJoinCap)
+                {
+                    Color prev2 = GUI.color;
+                    GUI.color = count < maxParticipants ? Color.green : Color.red;
+                    UIUtil.DrawCenteredText(rect, $"{count}/{maxParticipants}");
+                    GUI.color = prev2;
+                }
+                else
+                {
+                    UIUtil.DrawCenteredText(rect, "준비됨");
+                }
+
                 GUI.color = prev;
                 return;
             }
 
-            int remain = cdState.RemainingTicks(cfg.cmd, cfg.cooldownHours, nowTick);
-
-            if (remain <= 0)
+            if (isJoinCap && count >= maxParticipants)
             {
-                // 준비됨
-                UIUtil.DrawCenteredText(rect, "준비됨");
-                GUI.color = prev;
+                Color prev2 = GUI.color;
+                GUI.color = Color.red;
+                UIUtil.DrawCenteredText(rect, $"{count}/{maxParticipants}");
+                GUI.color = prev2;
+                return;
+            }
+
+            GUI.color = prev;
+
+            if (cfg.cmd == CheeseCommand.Join && restrictParticipants && participantRegistry.Count >= maxParticipants)
+            {
+                Color prev2 = GUI.color;
+                GUI.color = Color.red;
+                UIUtil.DrawCenteredText(rect, $"{participantRegistry.Count}/{maxParticipants}");
+                GUI.color = prev2;
                 return;
             }
             GUI.color = prev;
@@ -439,7 +563,7 @@ namespace CheeseProtocol
         {
             if (!sizeDirty) return;
 
-            float w = minimized ? widthMinimized : widthExpanded;
+            //float w = minimized ? widthMinimized : widthExpanded;
 
             int rows = (!minimized && commandRows != null) ? commandRows.Count : 0;
             rows += 1; // + header
@@ -465,8 +589,9 @@ namespace CheeseProtocol
             }
             h += paddingY; //extra space
 
-            windowRect.width = w;
+            //windowRect.width = w;
             windowRect.height = h;
+            lockedHeight = h;
 
             sizeDirty = false;
             ClampToScreen();

@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using Verse;
 using static CheeseProtocol.CheeseLog;
 namespace CheeseProtocol
@@ -8,22 +10,50 @@ namespace CheeseProtocol
         public static void RouteAndExecute(CheeseEvent evt)
         {
             if (evt == null) return;
-
-            Map map = Find.AnyPlayerHomeMap;
-
-            var ctx = new ProtocolContext(evt, map);
-            string msg = (evt.message ?? "");
             CheeseCommand cmd = CheeseCommand.None;
 
             //string msg = (evt.message ?? "").Trim();
             //CheeseCommand cmd = CheeseCommand.None;
-            string args = string.Empty;
 
-            cmd = CheeseCommandParser.Parse(msg, out args);
+            cmd = evt.cmd;
 
-            var protocol = FindProtocolForDonation(evt, cmd);
+            if (cmd == CheeseCommand.None && (CheeseProtocolMod.Settings?.allowSpeechBubble ?? false)) //SpeechBubble only
+            {
+                string username = evt.username;
+                string message = evt.message ?? "";
+                List<ParticipantRecord> records;
+                if (!CheeseParticipantRegistry.Get().TryGetRecords(username, out records))
+                    return;
 
-            if (cmd == CheeseCommand.None || CheeseProtocolMod.Settings == null || !CheeseProtocolMod.Settings.TryGetCommandConfig(cmd, out var cfg))
+                var candidates = records
+                    .Select(r => r.pawn)
+                    .Where(p => p != null && p.Name != null)
+                    .Where(p => p.Name.ToStringShort == username)
+                    .ToList();
+
+                Pawn pawn;
+                if (candidates.Count > 0)
+                    pawn = candidates.RandomElement();
+                else
+                    pawn = records.Select(r => r.pawn).Where(p => p != null).RandomElement();
+                if (pawn == null)
+                {
+                    QMsg("No matching pawn is found");
+                    return;
+                }
+                var registry = CheeseParticipantRegistry.Get();
+                if (registry == null) return;
+
+                if (registry.GetPawnStatus(pawn) != ParticipantPawnStatus.OkOnMap) return;
+
+                SpeechBubbleManager.Get(pawn.Map)?.AddChat(username, message, pawn);
+                return;
+            }
+            Map homeMap = Find.AnyPlayerHomeMap;
+            var ctx = new ProtocolContext(evt, homeMap);
+            var protocol = FindProtocol(evt, cmd);
+
+            if (CheeseProtocolMod.Settings == null || !CheeseProtocolMod.Settings.TryGetCommandConfig(cmd, out var cfg))
                 return;
 
             if (!IsProtocolAllowedBySettings(CheeseProtocolMod.Settings, cfg, evt))
@@ -34,7 +64,7 @@ namespace CheeseProtocol
                 QWarn("No protocol matched donation: " + evt);
                 return;
             }
-            if (map == null)
+            if (homeMap == null)
             {
                 CheeseLetter.AlertFail(CheeseCommands.GetCommandText(cmd));
                 QWarn("No map available; skipping donation: " + evt);
@@ -57,7 +87,7 @@ namespace CheeseProtocol
             }
         }
 
-        private static IProtocol FindProtocolForDonation(CheeseEvent evt, CheeseCommand cmd)
+        private static IProtocol FindProtocol(CheeseEvent evt, CheeseCommand cmd)
         {
             string msg = (evt.message ?? "").Trim();
             if (cmd != CheeseCommand.None &&
@@ -66,7 +96,7 @@ namespace CheeseProtocol
                 QMsg($"Command found: \"{spec.protocolId}\"", Channel.Debug);
                 return ProtocolRegistry.ById(spec.protocolId);
             }
-            QMsg($"Unknown command ignored: \"{msg}\"", Channel.Debug);
+            QMsg($"Unknown command - Redirect to SpeechBubble: \"{msg}\"", Channel.Debug);
 
             return ProtocolRegistry.ById("noop");
         }

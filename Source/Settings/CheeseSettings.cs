@@ -24,12 +24,17 @@ namespace CheeseProtocol
         public bool drainQueue = CheeseDefaults.DrainQueue;
         public float hudX = CheeseDefaults.HudX;   // -1이면 아직 저장된 위치 없음(기본 위치 사용)
         public float hudY = CheeseDefaults.HudY;
+        public float hudW = CheeseDefaults.HudW;
+        public float hudH = CheeseDefaults.HudH;
         public CheeseCommandSource simSource = CheeseDefaults.SimSource;
         public int simDonAmount = CheeseDefaults.SimDonAmount;
         public string simDonAmountBuf = CheeseDefaults.SimDonAmountBuf;
         public bool hudMinimized = CheeseDefaults.HudMinimized;
         public bool hudSlideHidden = CheeseDefaults.HudSlideHidden;
         public float randomVar = CheeseDefaults.RandomVar;
+        public bool allowSpeechBubble = CheeseDefaults.AllowSpeechBubble;
+        public int speechBubbleCD = CheeseDefaults.SpeechBubbleCD;
+        public string speechBubbleCDBuf;
         public bool appendRollLogToLetters = CheeseDefaults.AppendRollLogToLetters;
         private enum CheeseSettingsTab { General, Command, Advanced, Simulation, Credits }
         private CheeseSettingsTab activeTab = CheeseSettingsTab.General;
@@ -93,12 +98,19 @@ namespace CheeseProtocol
             hudOpacity = CheeseDefaults.HudOpacity;
             hudX = CheeseDefaults.HudX;
             hudY = CheeseDefaults.HudY;
+            hudW = CheeseDefaults.HudW;
+            hudH = CheeseDefaults.HudH;
             randomVar = CheeseDefaults.RandomVar;
             simSource = CheeseDefaults.SimSource;
             simDonAmount = CheeseDefaults.SimDonAmount;
             simDonAmountBuf = CheeseDefaults.SimDonAmountBuf;
             drainQueue = CheeseDefaults.DrainQueue;
             appendRollLogToLetters = CheeseDefaults.AppendRollLogToLetters;
+            allowSpeechBubble = CheeseDefaults.AllowSpeechBubble;
+            speechBubbleCD = CheeseDefaults.SpeechBubbleCD;
+            speechBubbleCDBuf = CheeseDefaults.SpeechBubbleCDBuf;
+            if (CheeseGameComponent.Instance != null && CheeseGameComponent.Instance.hudWindow != null)
+                CheeseGameComponent.Instance.hudWindow.ResetToDefaults();
             EnsureCommandConfigs();
             for (int i = 0; i < commandConfigs.Count; i++)
             {
@@ -128,12 +140,17 @@ namespace CheeseProtocol
             Scribe_Values.Look(ref hudSlideHidden, "hudSlideHidden", CheeseDefaults.HudSlideHidden);
             Scribe_Values.Look(ref hudX, "hudX", CheeseDefaults.HudX);
             Scribe_Values.Look(ref hudY, "hudY", CheeseDefaults.HudY);
+            Scribe_Values.Look(ref hudW, "hudW", CheeseDefaults.HudW);
+            Scribe_Values.Look(ref hudH, "hudH", CheeseDefaults.HudH);
             Scribe_Values.Look(ref randomVar, "randomVar", CheeseDefaults.RandomVar);
             Scribe_Values.Look(ref simSource, "simSource", CheeseDefaults.SimSource);
             Scribe_Values.Look(ref simDonAmount, "simDonAmount", CheeseDefaults.SimDonAmount);
             Scribe_Values.Look(ref simDonAmountBuf, "simDonAmountBuf", CheeseDefaults.SimDonAmountBuf);
             Scribe_Values.Look(ref drainQueue, "drainQueue", CheeseDefaults.DrainQueue);
             Scribe_Values.Look(ref appendRollLogToLetters, "appendRollLogToLetters", CheeseDefaults.AppendRollLogToLetters);
+            Scribe_Values.Look(ref allowSpeechBubble, "allowSpeechBubble", CheeseDefaults.AllowSpeechBubble);
+            Scribe_Values.Look(ref speechBubbleCD, "speechBubbleCD", CheeseDefaults.SpeechBubbleCD);
+
 
             //Advanced settings
             Scribe_Collections.Look(ref advancedSettings, "advancedSettings", LookMode.Deep);
@@ -300,19 +317,34 @@ namespace CheeseProtocol
                         listing.Label("[WARNING!]\n모드가 많거나 렉이 심하면 비활성화를 권장.\n비활성화 시, 퍼즈 중 명령어는 퍼즈 해제 후 일괄 처리");
                         GUI.color = prev;
                         listing.GapLine();
+                        listing.Gap(4);
                         Rect allowFeedbackRect = listing.GetRect(lineH);
                         Widgets.CheckboxLabeled(allowFeedbackRect, "알림 메세지에 상세결과 표시", ref appendRollLogToLetters);
                         TooltipHandler.TipRegion(
                             allowFeedbackRect,
-                            () => "시청자의 운을 수치로 표시합니다.\n실제 결과가 아닌 후원 금액 기준의 예상 결과와 비교한 상대 값입니다.\n최소/최대 후원 금액에서는 항상 극단적인 결과로 표시됩니다.",
+                            () => "시청자의 운을 수치로 표시합니다.",
                             allowFeedbackRect.GetHashCode()
                         );
+
+
+                        listing.Gap(4);
                         listing.GapLine();
-                        Rect cooldownResetRect = listing.GetRect(btnSize*2f);
-                        cooldownResetRect = UIUtil.ResizeRectAligned(cooldownResetRect, cooldownResetRect.width*0.5f, btnSize*1.5f);
-                        if (Widgets.ButtonText(cooldownResetRect, "모든 명령어 쿨타임 리셋"))
-                            CheeseProtocolMod.ChzzkChat.ResetCooldown();
-                        listing.Gap(16);
+                        listing.Gap(4);
+                        Rect allowSpeechRect = listing.GetRect(lineH);
+                        Widgets.CheckboxLabeled(allowSpeechRect, "참여자 채팅 말풍선 허용", ref allowSpeechBubble);
+                        Rect speechCDRect = listing.GetRect(lineH);
+                        UIUtil.SplitVerticallyByRatio(speechCDRect, out Rect speechCDLabel, out Rect speechCDField, 0.3f, 0f);
+                        UIUtil.DrawCenteredText(speechCDLabel, "채팅 주기 (초) : ", TextAlignment.Left);
+                        speechCDField = UIUtil.ResizeRectAligned(speechCDField, 60f, lineH, TextAlignment.Left);
+                        bool oldGUI = GUI.enabled;
+                        GUI.enabled = allowSpeechBubble;
+                        UIUtil.IntFieldDigitsOnly(speechCDField, ref speechBubbleCD, ref speechBubbleCDBuf, 0, 1000);
+                        GUI.enabled = oldGUI;
+                        listing.Gap(4);
+                        listing.GapLine();
+                        listing.Gap(4);
+                        
+
                         Rect randomVarRect = listing.GetRect(lineH*3);
                         UIUtil.SplitVerticallyByRatio(randomVarRect, out Rect randomVarLabel, out Rect randomVarSlider, 0.4f, paddingX);
                         TextAnchor oldAnchor = Text.Anchor;
@@ -326,7 +358,16 @@ namespace CheeseProtocol
                         Text.Anchor = oldAnchor;
                         randomVarSlider = UIUtil.ResizeRectAligned(randomVarSlider, randomVarSlider.width, lineH);
                         randomVar = Widgets.HorizontalSlider(randomVarSlider, randomVar, 0f, 1f, true, label:$"{Mathf.RoundToInt(randomVar * 100f)}%");
-                        listing.Gap(8);
+                        listing.Gap(4);
+                        listing.GapLine();
+                        listing.Gap(4);
+
+
+                        Rect cooldownResetRect = listing.GetRect(btnSize*2f);
+                        cooldownResetRect = UIUtil.ResizeRectAligned(cooldownResetRect, cooldownResetRect.width*0.5f, btnSize*1.5f);
+                        if (Widgets.ButtonText(cooldownResetRect, "모든 명령어 쿨타임 리셋"))
+                            CheeseProtocolMod.ChzzkChat.ResetCooldown();
+                        listing.Gap(4);
                         Rect resetSettingRect = listing.GetRect(btnSize*2f);
                         resetSettingRect = UIUtil.ResizeRectAligned(resetSettingRect, resetSettingRect.width*0.5f, btnSize*1.5f);
 
@@ -501,6 +542,7 @@ namespace CheeseProtocol
                                 simMessage,
                                 simAtUtcMsNow,
                                 simIsDonation,
+                                selectedConfigSim.cmd,
                                 simAmount,
                                 simDonationType,
                                 simDonationId

@@ -15,6 +15,8 @@ namespace CheeseProtocol
         public const bool DrainQueue = true;
         public const float HudX = -1f;   // -1이면 아직 저장된 위치 없음(기본 위치 사용)
         public const float HudY = -1f;
+        public const float HudW = -1f;
+        public const float HudH = -1f;
         public const float RandomVar = 0.8f;
         public const bool AppendRollLogToLetters = true;
         public const CheeseCommandSource SimSource = CheeseCommandSource.Donation;
@@ -27,6 +29,9 @@ namespace CheeseProtocol
         public const int CmdMinDonation = 1000;
         public const int CmdMaxDonation = 10000;
         public const int CmdCooldownHours = 0;
+        public const bool AllowSpeechBubble = true;
+        public const int SpeechBubbleCD = 5;
+        public const string SpeechBubbleCDBuf = "5";
         
 
         //Advanced Setting
@@ -38,6 +43,8 @@ namespace CheeseProtocol
         public static readonly QualityRange HealthRange  = QualityRange.init(0.8f, 1f);
         public static readonly QualityRange ApparelRange = QualityRange.init();
         public static readonly QualityRange WeaponRange  = QualityRange.init();
+        public const bool RestrictParticipants = true;
+        public const int MaxParticipants = 20;
         public const bool ForcePlayerIdeo = true;
         public const bool ForceHuman = true;
         public const bool AllowWorkDisable = true;

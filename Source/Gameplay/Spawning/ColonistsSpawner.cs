@@ -34,6 +34,13 @@ namespace CheeseProtocol
             if (!string.IsNullOrWhiteSpace(donorName))
                 pawn.Name = new NameSingle(TrimName(donorName));
 
+            if (!CheeseParticipantRegistry.Get().TryRegister(donorName, pawn, out string reason))
+            {
+                QWarn($"CheeseParticipant register failed. reason={reason}");
+                CheeseLetter.AlertFail("!참여", $"최대 합류인원을 초과해 {donorName}님이 합류하지 못했습니다.");
+                return;
+            }
+
             IntVec3 rootCell = IntVec3.Invalid;
             if (joinAdvSetting.useDropPod)
             {
@@ -122,29 +129,17 @@ namespace CheeseProtocol
                 return;
             }
 
-            XenotypeDef xeno = TryPickRandomXenotypeDef_NoReflection();
+            XenotypeDef xeno = TryPickRandomXenotypeDef();
             if (xeno == null) return;
             genes.SetXenotype(xeno);
         }
 
-        private static XenotypeDef TryPickRandomXenotypeDef_NoReflection()
+        private static XenotypeDef TryPickRandomXenotypeDef()
         {
             if (!ModsConfig.BiotechActive) return null;
             return DefDatabase<XenotypeDef>.AllDefsListForReading
                 .Where(x => x != null)
                 .RandomElementWithFallback();
-        }
-
-        private static Def TryPickRandomXenotypeDef()
-        {
-            if (!ModsConfig.BiotechActive) return null;
-            var allXenos = DefDatabase<Def>.AllDefs
-                .Where(d => d != null && d.GetType().Name == "XenotypeDef")
-                .ToList();
-
-            if (allXenos.Count == 0) return null;
-
-            return allXenos.RandomElement();
         }
 
         private static void cleanPawn(Pawn pawn, bool allowWorkDisable)
@@ -155,11 +150,42 @@ namespace CheeseProtocol
                 skill.Level = 0;
                 skill.passion = Passion.None;
             }
+            ClearGenes(pawn);
             pawn.story.traits.allTraits.Clear();
             if (!allowWorkDisable)
                 SetNoDisableBackstories(pawn);
             HealthApplier.ClearAllHediffs(pawn);
             pawn.Notify_DisabledWorkTypesChanged();
+        }
+
+        static void ClearGenes(Pawn pawn)
+        {
+            var genes = pawn?.genes;
+            if (genes == null) return;
+
+            // 복사본으로 순회 (cachedGenes 이슈 방지)
+            var all = genes.GenesListForReading.ToList();
+
+            foreach (var g in all)
+            {
+                var cat = g.def.endogeneCategory;
+
+                // ✅ 기본 외형 유전자는 유지
+                if (cat == EndogeneCategory.Melanin ||
+                    cat == EndogeneCategory.HairColor)
+                    continue;
+
+                genes.RemoveGene(g);
+            }
+        }
+        public static void ClearAllGenes(Pawn pawn)
+        {
+            var genes = pawn?.genes;
+            if (genes == null) return;
+
+            var all = genes.GenesListForReading.ToList();
+            for (int i = 0; i < all.Count; i++)
+                genes.RemoveGene(all[i]);
         }
         private static BackstoryDef PickNoDisableBackstory(BackstorySlot slot)
         {

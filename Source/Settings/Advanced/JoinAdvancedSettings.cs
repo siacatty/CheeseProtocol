@@ -18,6 +18,9 @@ namespace CheeseProtocol
         public QualityRange healthRange;
         public QualityRange apparelRange;
         public QualityRange weaponRange;
+        public bool restrictParticipants;
+        public int maxParticipants;
+        public string maxParticipantsBuf;
         public bool forcePlayerIdeo;
         public bool forceHuman;
         public bool allowWorkDisable;
@@ -68,7 +71,7 @@ namespace CheeseProtocol
             dh.Add(allowWorkDisable);
             dh.Add(forcePlayerIdeo);
             dh.Add(forceHuman);
-            dh.Add(useDropPod);
+            //dh.Add(useDropPod);
 
             dh.AddListUnordered(negativeTraitKeys);
             dh.AddListUnordered(positiveTraitKeys);
@@ -86,6 +89,8 @@ namespace CheeseProtocol
             LookRange(ref apparelRange, "apparelQualityRange", CheeseDefaults.ApparelRange);
             LookRange(ref weaponRange, "weaponQualityRange", CheeseDefaults.WeaponRange);
             
+            Scribe_Values.Look(ref restrictParticipants, "restrictParticipants", CheeseDefaults.RestrictParticipants);
+            Scribe_Values.Look(ref maxParticipants, "maxParticipants", CheeseDefaults.MaxParticipants);
             Scribe_Values.Look(ref allowWorkDisable, "allowWorkDisable", CheeseDefaults.AllowWorkDisable);
             Scribe_Values.Look(ref forcePlayerIdeo, "forcePlayerIdeo", CheeseDefaults.ForcePlayerIdeo);
             Scribe_Values.Look(ref forceHuman, "forceHuman", CheeseDefaults.ForceHuman);
@@ -116,6 +121,8 @@ namespace CheeseProtocol
             blackTraitScrollPos = Vector2.zero;
             whiteTraitScrollPos = Vector2.zero;
 
+            restrictParticipants = CheeseDefaults.RestrictParticipants;
+            maxParticipants = CheeseDefaults.MaxParticipants;
             forcePlayerIdeo = CheeseDefaults.ForcePlayerIdeo;
             forceHuman = CheeseDefaults.ForceHuman;
             allowWorkDisable = CheeseDefaults.AllowWorkDisable;
@@ -307,6 +314,17 @@ namespace CheeseProtocol
             string traitTip = "값이 높을수록 비선호 특성이 부여될 확률은 감소하고,\n선호 특성이 부여될 확률은 증가합니다.\n주의) 선호 특성을 적게 설정하면 특정 특성이 과도하게 선택될 수 있습니다.";
             string ageTip = "후원금액이 높을수록 젊은 정착민이 합류할 확률이 증가합니다.";
             string healthTip = "값이 높을수록 흉터나 노화 관련 질환이 생길 가능성이 감소합니다.";
+            UIUtil.RowWithHighlight(rect, ref curY, rowH, r =>{Widgets.CheckboxLabeled(r, "참여자 수 제한", ref restrictParticipants);});
+            bool oldGUI = GUI.enabled;
+            GUI.enabled = restrictParticipants;
+            UIUtil.RowWithHighlight(rect, ref curY, rowH, r =>
+            {
+                UIUtil.SplitVerticallyByRatio(r, out Rect labelRect, out Rect fieldRect, 0.3f, 0f);
+                UIUtil.DrawCenteredText(labelRect, "최대 참여자 수 :", TextAlignment.Left);
+                fieldRect = UIUtil.ResizeRectAligned(fieldRect, 80f, 24f, TextAlignment.Left);
+                UIUtil.IntFieldDigitsOnly(fieldRect, ref maxParticipants, ref maxParticipantsBuf, 0, 1000);
+            });
+            GUI.enabled = oldGUI;
             UIUtil.RowWithHighlight(rect, ref curY, rowH, r =>{Widgets.CheckboxLabeled(r, "결격사항 허용", ref allowWorkDisable);});
             UIUtil.RowWithHighlight(rect, ref curY, rowH, r =>{Widgets.CheckboxLabeled(r, "플레이어 이념 강제", ref forcePlayerIdeo);});
             UIUtil.RowWithHighlight(rect, ref curY, rowH, r =>{Widgets.CheckboxLabeled(r, "인간 종족만 허용", ref forceHuman);});

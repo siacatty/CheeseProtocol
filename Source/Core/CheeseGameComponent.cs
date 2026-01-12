@@ -9,7 +9,7 @@ namespace CheeseProtocol
         private bool autoConnectTried = false;
 
         private readonly object uiLock = new object();
-        private CheeseHudWindow hudWindow;
+        public CheeseHudWindow hudWindow;
         private CheeseUiStatusSnapshot uiStatus = new CheeseUiStatusSnapshot();
 
         public CheeseGameComponent(Game game) { }

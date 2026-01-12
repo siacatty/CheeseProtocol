@@ -14,6 +14,7 @@ namespace CheeseProtocol
         public string username;
         public int amount;
         public string message;
+        public CheeseCommand cmd;
 
         // If the platform provides a unique donation id, store it here (best dedupe key)
         public string donationId;
