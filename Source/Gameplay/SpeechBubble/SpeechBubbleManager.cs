@@ -11,6 +11,7 @@ namespace CheeseProtocol
     {
         // --- Tunables ---
         private const float DefaultDurationSec = 5f;
+        private const float DefaultNPCDurationSec = 8f;
         private const float FadeSec = 0.18f;
         private const float Pad = 6f;
         private const float YOffsetPx = 32f;
@@ -25,6 +26,8 @@ namespace CheeseProtocol
 
         private static readonly Color BoxColor     = new Color(0.08f, 0.12f, 0.17f, 0.85f);
         private static readonly Color OutlineColor = new Color(0.38f, 0.55f, 0.70f, 0.95f);
+        private static readonly Color NPCBoxColor     = new Color(0.18f, 0.05f, 0.05f, 0.85f);
+        private static readonly Color NPCOutlineColor = new Color(0.80f, 0.22f, 0.22f, 0.95f);
 
         private readonly List<SpeechBubble> bubbles = new List<SpeechBubble>(16);
         private readonly Dictionary<string, float> lastChatTimeByUser = new Dictionary<string, float>(256);
@@ -84,6 +87,27 @@ namespace CheeseProtocol
             return true;
         }
 
+        public bool AddNPCChat(string text, Pawn pawn, float durationSec = DefaultNPCDurationSec)
+        {
+            if (map == null) 
+            {
+                return false;
+            }
+            if (pawn == null)
+            {
+                return false;
+            }
+            if (string.IsNullOrWhiteSpace(text)) return false;
+
+            float now = Time.realtimeSinceStartup;
+
+            float dur = Mathf.Max(0.05f, durationSec);
+
+            ReplaceBubbleForPawn(pawn, text, now, now + dur, isNPC: true);
+
+            return true;
+        }
+
         public void ClearAll()
         {
             bubbles.Clear();
@@ -132,12 +156,22 @@ namespace CheeseProtocol
                 rect = ClampToScreen(rect, 6f);
 
                 GUI.color = new Color(1f, 1f, 1f, alpha);
-
-                Widgets.DrawBoxSolidWithOutline(
-                    rect,
-                    new Color(BoxColor.r, BoxColor.g, BoxColor.b, BoxColor.a * alpha),
-                    new Color(OutlineColor.r, OutlineColor.g, OutlineColor.b, OutlineColor.a * alpha)
-                );
+                if (b.isNPC)
+                {
+                    Widgets.DrawBoxSolidWithOutline(
+                        rect,
+                        new Color(NPCBoxColor.r, NPCBoxColor.g, NPCBoxColor.b, NPCBoxColor.a * alpha),
+                        new Color(NPCOutlineColor.r, NPCOutlineColor.g, NPCOutlineColor.b, NPCOutlineColor.a * alpha)
+                    );
+                }
+                else
+                {
+                    Widgets.DrawBoxSolidWithOutline(
+                        rect,
+                        new Color(BoxColor.r, BoxColor.g, BoxColor.b, BoxColor.a * alpha),
+                        new Color(OutlineColor.r, OutlineColor.g, OutlineColor.b, OutlineColor.a * alpha)
+                    );
+                }
                 Widgets.Label(rect, b.text);
             }
 
@@ -154,7 +188,7 @@ namespace CheeseProtocol
         /// Enforces one-bubble-per-pawn. If a bubble for this pawn exists, remove it first.
         /// Also enforces a global cap (drop oldest) as a safety net.
         /// </summary>
-        private void ReplaceBubbleForPawn(Pawn pawn, string text, float start, float expire)
+        private void ReplaceBubbleForPawn(Pawn pawn, string text, float start, float expire, bool isNPC=false)
         {
             // Rule #2: replace existing bubble for same pawn
             for (int i = 0; i < bubbles.Count; i++)
@@ -168,7 +202,7 @@ namespace CheeseProtocol
                     return;
                 }
             }
-            bubbles.Add(new SpeechBubble(text, pawn, start, expire));
+            bubbles.Add(new SpeechBubble(text, pawn, start, expire, isNPC));
         }
 
         private void CleanupExpired(float now)

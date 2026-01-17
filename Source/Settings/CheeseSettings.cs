@@ -61,6 +61,7 @@ namespace CheeseProtocol
         {
             { CheeseCommand.Join,    () => new JoinAdvancedSettings() },
             { CheeseCommand.Raid,    () => new RaidAdvancedSettings() },
+            { CheeseCommand.Bully,    () => new BullyAdvancedSettings() },
             { CheeseCommand.Caravan, () => new CaravanAdvancedSettings() },
             { CheeseCommand.Meteor,  () => new MeteorAdvancedSettings() },
             { CheeseCommand.Supply,  () => new SupplyAdvancedSettings() },
@@ -192,6 +193,7 @@ namespace CheeseProtocol
             advancedSettings ??= new List<CommandAdvancedSettingsBase>();
             EnsureAdv(CheeseCommand.Join, () => new JoinAdvancedSettings());
             EnsureAdv(CheeseCommand.Raid, () => new RaidAdvancedSettings());
+            EnsureAdv(CheeseCommand.Bully, () => new BullyAdvancedSettings());
             EnsureAdv(CheeseCommand.Caravan, () => new CaravanAdvancedSettings());
             EnsureAdv(CheeseCommand.Meteor, () => new MeteorAdvancedSettings());
             EnsureAdv(CheeseCommand.Supply, () => new SupplyAdvancedSettings());
@@ -636,6 +638,7 @@ namespace CheeseProtocol
             {
                 new CheeseCommandConfig { cmd = CheeseCommand.Join,   label = "!참여" },
                 new CheeseCommandConfig { cmd = CheeseCommand.Raid,   label = "!습격" },
+                new CheeseCommandConfig { cmd = CheeseCommand.Bully,    label = "!일진" },
                 new CheeseCommandConfig { cmd = CheeseCommand.Caravan,    label = "!상단" },
                 new CheeseCommandConfig { cmd = CheeseCommand.Meteor, label = "!운석" },
                 new CheeseCommandConfig { cmd = CheeseCommand.Supply, label = "!보급" },
@@ -797,6 +800,12 @@ namespace CheeseProtocol
                     DrawSectionNoListing(leftAdv, ref yL, "!습격", false, rect =>
                     {
                         return GetAdvSetting(CheeseCommand.Raid).Draw(rect);
+                    });
+                    break;
+                case CheeseCommand.Bully:
+                    DrawSectionNoListing(leftAdv, ref yL, "!일진", false, rect =>
+                    {
+                        return GetAdvSetting(CheeseCommand.Bully).Draw(rect);
                     });
                     break;
                 case CheeseCommand.Meteor:

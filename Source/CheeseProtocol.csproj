@@ -5,7 +5,6 @@
     <Nullable>disable</Nullable>
     <AppendTargetFrameworkToOutputPath>true</AppendTargetFrameworkToOutputPath>
 
-    <!-- Set this to your RimWorld install directory -->
     <RIMWORLD_DIR Condition="'$(RIMWORLD_DIR)'==''">C:\Program Files (x86)\Steam\steamapps\common\RimWorld</RIMWORLD_DIR>
   </PropertyGroup>
 
@@ -40,9 +39,21 @@
     <PackageReference Include="SocketIoClientDotNet" Version="0.9.13" />
   </ItemGroup>
 
-  <!-- Copy built DLL into mod Assemblies folder (works in VS Code / dotnet build) -->
   <Target Name="PostBuildCopy" AfterTargets="Build">
-    <MakeDir Directories="$(MSBuildProjectDirectory)\..\Assemblies" />
-    <Copy SourceFiles="$(TargetPath)" DestinationFiles="$(MSBuildProjectDirectory)\..\Assemblies\CheeseProtocol.dll" />
+    <PropertyGroup>
+      <ModAssembliesDir>$(MSBuildProjectDirectory)\..\Assemblies</ModAssembliesDir>
+    </PropertyGroup>
+
+    <MakeDir Directories="$(ModAssembliesDir)" />
+
+    <ItemGroup>
+      <FilesToCopy Include="$(TargetDir)*.dll" />
+      <FilesToCopy Include="$(TargetDir)*.pdb" Condition="'$(Configuration)'=='Debug'" />
+    </ItemGroup>
+
+    <Copy
+      SourceFiles="@(FilesToCopy)"
+      DestinationFolder="$(ModAssembliesDir)"
+      SkipUnchangedFiles="true" />
   </Target>
 </Project>

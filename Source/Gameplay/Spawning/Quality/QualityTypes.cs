@@ -35,5 +35,9 @@ namespace CheeseProtocol
         {
             return Mathf.Lerp(qMin, qMax, v);
         }
+        public override string ToString()
+        {
+            return $"{qMin} ~ {qMax}";
+        }
     }
 } 

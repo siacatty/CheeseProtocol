@@ -15,6 +15,7 @@ namespace CheeseProtocol
         public string[] exclusionTags;
         public bool isSexualOrientation;
         public bool isCommonalityZero;
+        public bool IsValid => !string.IsNullOrEmpty(key);
 
         public TraitCandidate(
             TraitDef def,

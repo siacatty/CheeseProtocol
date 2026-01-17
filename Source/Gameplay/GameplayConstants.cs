@@ -27,6 +27,10 @@ namespace CheeseProtocol
         public const int RaidScaleMin = 1;
         public const int RaidScaleMax = 10;
 
+        //!일진
+        public const int BullyCountMin = 1;
+        public const int BullyCountMax = 20;
+
         //!운석
         public const int MeteorSizeMin = 1;
         public const int MeteorSizeMax = 200;

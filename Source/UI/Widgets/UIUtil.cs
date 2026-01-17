@@ -39,7 +39,6 @@ namespace CheeseProtocol
             if (registerAsInner && Event.current.type == EventType.Layout)
                 ScrollWheelBlocker.Register(outerRect);
 
-            // 휠 처리 (inner 위면 outer는 먹지 않게)
             Event e = Event.current;
             if (e.type == EventType.ScrollWheel && outerRect.Contains(e.mousePosition))
             {
@@ -52,7 +51,6 @@ namespace CheeseProtocol
                 }
             }
 
-            // viewRect는 "content 좌표(0,0)" 기준이 정석
             float contentH = Mathf.Max(cachedHeight, outerRect.height);
             Rect viewRect = new Rect(0f, 0f, outerRect.width - 16f, contentH);
 
@@ -62,11 +60,9 @@ namespace CheeseProtocol
             if (drawContentAndReturnUsedHeight != null)
                 usedH = drawContentAndReturnUsedHeight(viewRect);
 
-            // Layout에서만 캐시 갱신
             if (Event.current.type == EventType.Layout)
                 cachedHeight = usedH;
 
-            // 컨텐츠가 줄어든 경우 스크롤 위치 clamp
             float maxScrollNow = Mathf.Max(0f, cachedHeight - outerRect.height);
             if (scrollPos.y > maxScrollNow) scrollPos.y = maxScrollNow;
 
@@ -493,12 +489,8 @@ namespace CheeseProtocol
         {
             outRects.Clear();
             if (ratios == null || ratios.Count == 0) return;
-
-            // margin 때문에 실제 사용 가능한 폭
             float totalMargin = margin * (ratios.Count - 1);
             float usableW = Mathf.Max(0f, rect.width - totalMargin);
-
-            // ratios 합으로 정규화(합이 1이 아니어도 동작)
             float sum = 0f;
             for (int i = 0; i < ratios.Count; i++)
                 sum += Mathf.Max(0f, ratios[i]);
@@ -625,8 +617,6 @@ namespace CheeseProtocol
                     x = rect.x + (rect.width - newWidth) * 0.5f;
                     break;
             }
-
-            // 세로 가운데는 유지
             float y = rect.y + (rect.height - newHeight) * 0.5f;
 
             return new Rect(x, y, newWidth, newHeight);

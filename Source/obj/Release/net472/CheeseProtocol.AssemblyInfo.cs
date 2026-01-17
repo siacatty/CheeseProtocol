@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("CheeseProtocol")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Release")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+492f51c28bb35f4d62cdd113c9d694c2559731fa")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+1383cc4b1ec15abeca9c0e75d1aea12c9b7dd67d")]
 [assembly: System.Reflection.AssemblyProductAttribute("CheeseProtocol")]
 [assembly: System.Reflection.AssemblyTitleAttribute("CheeseProtocol")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

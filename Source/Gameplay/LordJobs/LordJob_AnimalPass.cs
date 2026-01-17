@@ -36,13 +36,10 @@ namespace CheeseProtocol
         {
             var graph = new StateGraph();
 
-            // 1) 중앙(근처)로 이동
             var travel = new LordToil_Travel(travelDest);
 
-            // 2) 도착 후 중앙 주변에서 느슨하게 어슬렁(자유 행동처럼 보이게)
             var loiter = new LordToil_DefendPoint(travelDest, defendRadius: defendRadius, wanderRadius: wanderRadius);
 
-            // 3) 시간이 되면 맵 이탈
             var exit = new LordToil_ExitMap();
 
             graph.StartingToil = travel;

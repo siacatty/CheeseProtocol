@@ -77,6 +77,9 @@ namespace CheeseProtocol
         public const bool AllowCenterDrop = true;
         public const bool AllowBreacher = true;
         public const bool AllowSiege = true;
+        //!일진
+        public static readonly QualityRange BullyCountRange = QualityRange.init(GameplayConstants.BullyCountMin, 10f);
+        public static readonly QualityRange StealValueRange = QualityRange.init();
         //!운석
         public static readonly QualityRange MeteorTypeRange = QualityRange.init();
         public static readonly QualityRange MeteorSizeRange = QualityRange.init(20, 100);
