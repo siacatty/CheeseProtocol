@@ -14,6 +14,7 @@ namespace CheeseProtocol
         // Target (colonist) tracking
         public string targetPawnUid = "";
         public string stealTargetUid = "";
+        public string stealContainerUid = "";
         public string wanderTargetUid = "";
 
         // Timeline (all tick-based)
@@ -41,6 +42,7 @@ namespace CheeseProtocol
         public float loRatio = 0.5f;
         public IntVec3 wanderAnchor = IntVec3.Invalid;
         public IntVec3 lastScanPos = IntVec3.Invalid;
+        public IntVec3 targetStorage = IntVec3.Invalid;
         
         [Unsaved]
         public Thing stolenThing = null;
@@ -67,6 +69,7 @@ namespace CheeseProtocol
         public void ResetWanderTarget()
         {
             wanderTargetUid = null;
+            targetStorage = IntVec3.Invalid;
             wanderRetargetTick = 0;
         }
 
@@ -81,6 +84,7 @@ namespace CheeseProtocol
             Scribe_Values.Look(ref bullyPawnUid, "bullyPawnUid");
             Scribe_Values.Look(ref targetPawnUid, "targetPawnUid");
             Scribe_Values.Look(ref stealTargetUid, "stealTargetUid");
+            Scribe_Values.Look(ref stealContainerUid, "stealContainerUid");
             Scribe_Values.Look(ref wanderTargetUid, "wanderTargetUid");
 
             Scribe_Values.Look(ref harassTick, "harassTick", 0);
@@ -106,6 +110,7 @@ namespace CheeseProtocol
             Scribe_Values.Look(ref loRatio, "loRatio", 0.5f);
             Scribe_Values.Look(ref wanderAnchor, "wanderAnchor", IntVec3.Invalid);
             Scribe_Values.Look(ref lastScanPos, "lastScanPos", IntVec3.Invalid);
+            Scribe_Values.Look(ref targetStorage, "targetStorage", IntVec3.Invalid);
 
 
         }

@@ -50,7 +50,7 @@ namespace CheeseProtocol
                 $"<color=#d09b61>{donorName}</color> 일진이 나타났습니다!\n\n" +
                 $"총 {bully.bullyCount}명의 무리를 이끌고 정착치를 눈여겨봅니다." +
                 "\n\n일진은 정착민을 공격하지는 않지만 괴롭히고 훔쳐갈 물건을 찾습니다." +
-                "일진들은 10~16시간정도 머무른 뒤 이곳을 떠날 것입니다.";
+                "일진들은 6~12시간정도 머무른 뒤 이곳을 떠날 것입니다.";
 
             CheeseLetter.SendCheeseLetter(
                 CheeseCommand.Bully,
@@ -66,9 +66,17 @@ namespace CheeseProtocol
 
         public static bool TryMakeLord(BullyRequest req, Map map)
         {
+            if (map == null) return false;
             req.initialTargets = MatchBulliesToColonists(map, req.bullyList);
             var reg = map.GetComponent<BullyRegistry_MapComponent>();
-            reg.AddBullies(req, Rand.RangeInclusive(10*2500, 16*2500), req.stealValue * (map?.wealthWatcher?.WealthItems ?? 0f));
+            // Warn($"WealthTotal={map.wealthWatcher?.WealthTotal ?? 0f}, " +
+            //     $"WealthItems={map.wealthWatcher?.WealthItems ?? 0f}" +
+            //     $"WealthPawns={map.wealthWatcher?.WealthPawns ?? 0f}" +
+            //     $"WealthBuildings={map.wealthWatcher?.WealthBuildings ?? 0f}" +
+            //     $"WealthFloorsOnly={map.wealthWatcher?.WealthFloorsOnly ?? 0f}"
+            //     );
+            reg.AddBullies(req, Rand.RangeInclusive(6*2500, 10*2500), req.stealValue * (map.wealthWatcher?.WealthItems ?? 0f));
+            //reg.AddBullies(req, 3*2500, req.stealValue * (map.wealthWatcher?.WealthItems ?? 0f));
             //reg.AddBullies(req, Rand.RangeInclusive(1*2500, 1*2500));
 
             if (!req.IsValid || req.leader == null || req.bullyList.Count < 1) return false; //additional safeguard

@@ -27,13 +27,18 @@ namespace CheeseProtocol
         public bool useDropPod;
         public List<string> negativeTraitKeys;
         public List<string> positiveTraitKeys;
+        public List<string> allowedRaceKeys;
         private Vector2 blackTraitScrollPos;
         private Vector2 whiteTraitScrollPos;
+        private Vector2 allowedRaceScrollPos;
         private float blackListHeight = 400f;
+        private float allowedRaceListHeight = 400f;
         private float whiteListHeight = 400f;
         public List<TraitCandidate> positiveCandidates;
         public List<TraitCandidate> neutralCandidates;
         public List<TraitCandidate> negativeCandidates;
+        public List<PawnKindDef> allowedRaces;
+        public List<PawnKindDef> disallowedRaces;
         public override CheeseCommand Command => CheeseCommand.Join;
         public override string Label => "!참여";
         private const float lineH = 26f;
@@ -97,6 +102,7 @@ namespace CheeseProtocol
             Scribe_Values.Look(ref useDropPod, "useDropPod", CheeseDefaults.UseDropPod);
             Scribe_Collections.Look(ref negativeTraitKeys, "negativeTraitKeys", LookMode.Value);
             Scribe_Collections.Look(ref positiveTraitKeys, "positiveTraitKeys", LookMode.Value);
+            Scribe_Collections.Look(ref allowedRaceKeys, "allowedRaceKeys", LookMode.Value);
 
             if (Scribe.mode == LoadSaveMode.PostLoadInit)
             {
@@ -104,6 +110,8 @@ namespace CheeseProtocol
                     negativeTraitKeys = new List<string>(CheeseDefaults.NegativeTraitKeys);
                 if (positiveTraitKeys == null)
                     positiveTraitKeys = new List<string>(CheeseDefaults.PositiveTraitKeys);
+                if (allowedRaceKeys == null)
+                    allowedRaceKeys = new List<string>(CheeseDefaults.AllowedRaceKeys);
                 InitializeAll();
             }
         }
@@ -120,6 +128,7 @@ namespace CheeseProtocol
         {
             blackTraitScrollPos = Vector2.zero;
             whiteTraitScrollPos = Vector2.zero;
+            allowedRaceScrollPos = Vector2.zero;
 
             restrictParticipants = CheeseDefaults.RestrictParticipants;
             maxParticipants = CheeseDefaults.MaxParticipants;
@@ -129,6 +138,7 @@ namespace CheeseProtocol
             useDropPod = CheeseDefaults.UseDropPod;
             negativeTraitKeys = new List<string>(CheeseDefaults.NegativeTraitKeys);
             positiveTraitKeys = new List<string>(CheeseDefaults.PositiveTraitKeys);
+            allowedRaceKeys = new List<string>(CheeseDefaults.AllowedRaceKeys);
             if (CheeseProtocolMod.TraitCatalog != null)
             {
                 UpdateTraitList();
@@ -136,6 +146,14 @@ namespace CheeseProtocol
             else
             {
                 LongEventHandler.ExecuteWhenFinished(UpdateTraitList);
+            }
+            if (CheeseProtocolMod.RaceCatalog != null)
+            {
+                UpdateRaceList();
+            }
+            else
+            {
+                LongEventHandler.ExecuteWhenFinished(UpdateRaceList);
             }
             ResetLeverRangesToDefaults();
         }
@@ -155,6 +173,21 @@ namespace CheeseProtocol
                 positiveCandidates = pos;
                 neutralCandidates = neu;
                 negativeCandidates = neg;
+            }
+        }
+
+        public void UpdateRaceList()
+        {
+            if (CheeseProtocolMod.RaceCatalog != null)
+            {
+                RaceApplier.BuildPools(
+                    CheeseProtocolMod.RaceCatalog,
+                    allowedRaceKeys,
+                    out List<PawnKindDef> allowed,
+                    out List<PawnKindDef> disallowed
+                );
+                allowedRaces = allowed;
+                disallowedRaces = disallowed;
             }
         }
 
@@ -180,7 +213,9 @@ namespace CheeseProtocol
             weaponRange = QualityRange.init(weaponRange.qMin, weaponRange.qMax);
             negativeTraitKeys = negativeTraitKeys.Distinct().ToList();
             positiveTraitKeys = positiveTraitKeys.Distinct().ToList();
+            allowedRaceKeys = allowedRaceKeys.Distinct().ToList();
             UpdateTraitList();
+            UpdateRaceList();
         }
 
         public override float DrawResults(Rect rect)
@@ -340,6 +375,59 @@ namespace CheeseProtocol
             usedH = curY - rect.y;
             return usedH;
         }
+        public float DrawEditableRaceList(Rect rect)
+        {
+            float usedH = 0f;
+            float raceWindowH = 120f;
+            float topBarH = 34f;
+            float btnSize = 24f;
+            const float paddingX = 6f;
+            //Color headerFont = new Color(0.96f, 0.96f, 0.96f);
+
+            Rect raceRect = new Rect(rect.x, rect.y, rect.width, raceWindowH);
+            UIUtil.SplitVerticallyByRatio(raceRect, out Rect allowedRaceRect, out Rect allowedRaceLabel, 0.5f, paddingX);
+            UIUtil.SplitHorizontallyByHeight(allowedRaceRect, out Rect allowedRaceTopRect, out Rect allowedRaceListRect, topBarH, 0f);
+            UIUtil.SplitVerticallyByRatio(allowedRaceTopRect, out Rect allowedRaceTopLabel, out Rect allowedRaceAddBtn, 0.7f, 0f);
+
+            UIUtil.DrawCenteredText(allowedRaceLabel, "종족 모드 사용시에만\n설정 변경.\n비어있을 시\n기본 정착민 적용", color: Color.red);
+
+            Color oldColor = GUI.color;
+
+            // Header (Top)
+            Widgets.DrawBoxSolid(allowedRaceTopRect, HeaderBg);
+
+            GUI.color = HeaderBorder;
+            Widgets.DrawBox(allowedRaceTopRect);
+
+            // Body (List)
+            Widgets.DrawBoxSolid(allowedRaceListRect, BodyBg);
+
+            GUI.color = BodyBorder;
+            Widgets.DrawBox(allowedRaceListRect);
+            GUI.color = oldColor;
+
+            allowedRaceTopLabel = UIUtil.ShrinkRect(allowedRaceTopLabel, 6f);
+            oldColor = GUI.color;
+            //GUI.color = headerFont;
+            UIUtil.DrawCenteredText(allowedRaceTopLabel, "허용 종족", align: TextAlignment.Left);
+            //GUI.color = oldColor;
+            allowedRaceAddBtn = UIUtil.ResizeRectAligned(allowedRaceAddBtn, btnSize, btnSize, TextAlignment.Right);
+            Widgets.DrawHighlightIfMouseover(allowedRaceAddBtn);
+            DrawAddRaceDropdownButton(allowedRaceAddBtn, allowedRaces);
+            UIUtil.AutoScrollView(
+                allowedRaceListRect,
+                ref allowedRaceScrollPos,
+                ref allowedRaceListHeight,
+                viewRect =>
+                {
+                    return DrawRaceList(viewRect, allowedRaces);
+                },
+                true);
+            
+            //curY += raceWindowH;
+            usedH += raceWindowH;
+            return usedH;
+        }
         public float DrawEditableList(Rect rect, string title, float lineH, float paddingX, float paddingY)
         {
             float usedH = 0f;
@@ -416,7 +504,32 @@ namespace CheeseProtocol
             usedH += traitWindowH;
             return usedH;
         }
+        private void DrawAddRaceDropdownButton(
+            Rect plusRect, 
+            List<PawnKindDef> allowedRaces)
+        {
+            plusRect.x -= 4f; //additional padding for + button
+            bool hasAny = allowedRaces != null && allowedRaces.Count > 0;
+            using (new UIUtil.GUIStateScope(hasAny))
+            {
+                Widgets.Dropdown(
+                    plusRect,
+                    hasAny ? (object)allowedRaces : null,
+                    _ => 0, // dummy payload
+                    _ => BuildRaceDropdown(allowedRaces),
+                    "");
+            }
+            Rect contentRect = plusRect.ContractedBy(4f);
+            contentRect.y -= 1f;
+            contentRect.x += 1f;
 
+            UIUtil.DrawCenteredText(
+                contentRect,
+                "＋",
+                TextAlignment.Center,
+                font: GameFont.Medium
+            );
+        }
         private void DrawAddTraitDropdownButton(
             Rect plusRect,
             List<TraitCandidate> targetCandidates,
@@ -444,6 +557,44 @@ namespace CheeseProtocol
                 font: GameFont.Medium
             );
             //UIUtil.DrawCenteredText(plusRect, "＋", font: GameFont.Medium);
+        }
+
+        private List<Widgets.DropdownMenuElement<int>> BuildRaceDropdown(List<PawnKindDef> targetCandidates)
+        {
+            var oldFont = Text.Font;
+            Text.Font = GameFont.Small;
+            var menu = new List<Widgets.DropdownMenuElement<int>>();
+
+            if (disallowedRaces == null || disallowedRaces.Count == 0)
+            {
+                menu.Add(new Widgets.DropdownMenuElement<int>
+                {
+                    option = new FloatMenuOption("(none)", null),
+                    payload = 0
+                });
+                return menu;
+            }
+
+            // Snapshot to avoid issues if we modify neutralCandidates after selection.
+            // We store the key in a local var for the closure.
+            foreach (var k in disallowedRaces.ToList())
+            {
+                var captured = k;
+                string key = captured.defName;
+                string label = captured.LabelCap;
+
+                menu.Add(new Widgets.DropdownMenuElement<int>
+                {
+                    option = new FloatMenuOption(label, () =>
+                    {
+                        TryAddRace(captured);
+                    }),
+                    payload = 0
+                });
+            }
+            Text.Font = oldFont;
+
+            return menu;
         }
 
         private List<Widgets.DropdownMenuElement<int>> BuildTraitDropdown(List<TraitCandidate> targetCandidates, TraitPolarity traitPolarity)
@@ -520,11 +671,64 @@ namespace CheeseProtocol
             return listing.CurHeight + margin*2f;
         }
 
+        private float DrawRaceList(Rect rect, List<PawnKindDef> allowed)
+        {
+            if (allowed == null)
+                return 0f;
+            float margin = 8f;
+            var listing = new Listing_Standard();
+            float lineH = 26f;
+
+            listing.maxOneColumn = true;
+            listing.Begin(rect.ContractedBy(margin));
+
+            foreach (var race in allowed.ToList()) //mutate list for safety
+            {
+                var captured = race;
+                Rect row = listing.GetRect(lineH);
+                Widgets.DrawHighlightIfMouseover(row);
+                UIUtil.SplitVerticallyByRatio(row, out Rect raceLabel, out Rect deleteBtn, 0.5f, 0f);
+                raceLabel = UIUtil.ShrinkRect(raceLabel, 4f);
+                UIUtil.DrawCenteredText(raceLabel, captured.LabelCap, TextAlignment.Left);
+                Rect xRect = deleteBtn;
+                xRect = UIUtil.ResizeRectAligned(xRect, lineH, lineH, TextAlignment.Right); // uses the aligned version we made
+                xRect.x -= 4f; //additional padding for X button
+
+                // Use an invisible button to render "×" ourselves (font/color control)
+                if (Widgets.ButtonInvisible(xRect))
+                {
+                    TryRemoveRace(captured);
+                    break;
+                }
+                Color xColor = Mouse.IsOver(xRect) ? Color.red : new Color(0.7f,0.7f,0.7f);
+                UIUtil.DrawCenteredText(xRect, "×", TextAlignment.Center, font: GameFont.Medium, color: xColor);
+            }
+            listing.End();
+            return listing.CurHeight + margin*2f;
+        }
+
         public enum TraitPolarity
         {
             Positive,
             Negative
         }
+
+        private bool TryAddRace(PawnKindDef race)
+        {
+            if (string.IsNullOrEmpty(race?.defName)) return false;
+
+            // already selected?
+            if (allowedRaceKeys.Contains(race.defName))
+                return false;
+
+            RemoveByKey(disallowedRaces, race.defName);
+
+            AddUniqueByKey(allowedRaces, race);
+            allowedRaceKeys.Add(race.defName);
+
+            return true;
+        }
+
         private bool TryAddTrait(TraitPolarity polarity, TraitCandidate cand)
         {
             if (string.IsNullOrEmpty(cand.key)) return false;
@@ -570,6 +774,33 @@ namespace CheeseProtocol
             AddUniqueByKey(neutralCandidates, cand);
             return true;
         }
+
+        private bool TryRemoveRace(PawnKindDef race)
+        {
+            if (string.IsNullOrEmpty(race?.defName)) return false;
+
+            bool removed = RemoveByKey(allowedRaces, race.defName);
+            if (!removed) return false;
+            allowedRaceKeys.Remove(race.defName);
+            AddUniqueByKey(disallowedRaces, race);
+            return true;
+        }
+
+
+        private static bool RemoveByKey(List<PawnKindDef> list, string key)
+        {
+            int idx = list.FindIndex(t => t.defName == key);
+            if (idx < 0) return false;
+            list.RemoveAt(idx);
+            return true;
+        }
+
+        private static void AddUniqueByKey(List<PawnKindDef> list, PawnKindDef race)
+        {
+            if (list.Any(t => t.defName == race.defName)) return;
+            list.Add(race);
+        }
+
         private static bool RemoveByKey(List<TraitCandidate> list, string key)
         {
             int idx = list.FindIndex(t => t.key == key);

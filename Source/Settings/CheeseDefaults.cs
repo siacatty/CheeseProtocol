@@ -49,6 +49,10 @@ namespace CheeseProtocol
         public const bool ForceHuman = true;
         public const bool AllowWorkDisable = true;
         public const bool UseDropPod = true;
+        public static readonly string[] AllowedRaceKeys =
+        {
+            "Colonist",
+        };
         public static readonly string[] NegativeTraitKeys =
         {
             "Nudist(0)",
@@ -78,7 +82,7 @@ namespace CheeseProtocol
         public const bool AllowBreacher = true;
         public const bool AllowSiege = true;
         //!일진
-        public static readonly QualityRange BullyCountRange = QualityRange.init(GameplayConstants.BullyCountMin, 10f);
+        public static readonly QualityRange BullyCountRange = QualityRange.init(GameplayConstants.BullyCountMin, GameplayConstants.BullyCountMax);
         public static readonly QualityRange StealValueRange = QualityRange.init();
         //!운석
         public static readonly QualityRange MeteorTypeRange = QualityRange.init();

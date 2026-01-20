@@ -791,6 +791,10 @@ namespace CheeseProtocol
                     {
                         return GetAdvSetting(CheeseCommand.Join).Draw(rect);
                     });
+                    DrawSectionNoListing(leftAdv, ref yL, "허용 종족", false, rect =>
+                    {
+                        return GetAdvSetting<JoinAdvancedSettings>(CheeseCommand.Join).DrawEditableRaceList(rect);
+                    });
                     DrawSectionNoListing(leftAdv, ref yL, "선호/비선호 특성", false, rect =>
                     {
                         return GetAdvSetting<JoinAdvancedSettings>(CheeseCommand.Join).DrawEditableList(rect, "선호/비선호 특성", lineH, paddingX, paddingY);

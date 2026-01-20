@@ -32,10 +32,8 @@ namespace CheeseProtocol
             bool registerAsInner = false
         )
         {
-            // 프레임 틱
             ScrollWheelBlocker.TickFrame();
 
-            // inner scrollview면 자기 영역을 등록(스크린 좌표)
             if (registerAsInner && Event.current.type == EventType.Layout)
                 ScrollWheelBlocker.Register(outerRect);
 
@@ -71,22 +69,14 @@ namespace CheeseProtocol
         public static class ScrollWheelBlocker
         {
             private static int _lastFrame = -1;
-
-            // 이번 프레임에 수집된 inner rect들 (스크린 좌표)
             private static readonly List<Rect> _current = new List<Rect>(32);
 
-            // 바깥이 참고할 "마지막으로 확정된" rect들
             private static readonly List<Rect> _stable = new List<Rect>(32);
 
-            /// <summary>
-            /// 프레임 전환 감지해서 rect 버퍼를 안정화.
-            /// (각 GUI 호출에서 자동으로 불리게 하면 됨)
-            /// </summary>
             public static void TickFrame()
             {
                 int f = Time.frameCount;
                 if (f == _lastFrame) return;
-
                 _lastFrame = f;
 
                 _stable.Clear();
@@ -94,19 +84,12 @@ namespace CheeseProtocol
                 _current.Clear();
             }
 
-            /// <summary>
-            /// inner ScrollView 영역(스크린 좌표)을 등록.
-            /// </summary>
             public static void Register(Rect screenRect)
             {
                 TickFrame();
                 _current.Add(screenRect);
             }
 
-            /// <summary>
-            /// 현재 마우스가 inner 영역 위에 있다고 "판정"되면 true.
-            /// (바깥 ScrollView는 이때 휠을 먹지 않도록)
-            /// </summary>
             public static bool IsBlocked(Vector2 mousePos)
             {
                 TickFrame();

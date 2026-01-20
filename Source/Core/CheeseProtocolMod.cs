@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using RimWorld;
 using Verse;
 using static CheeseProtocol.CheeseLog;
 
@@ -9,6 +10,7 @@ namespace CheeseProtocol
         public static CheeseProtocolMod Instance;
         public static ChzzkChatClient ChzzkChat;
         public static CheeseSettings Settings;
+        public static List<PawnKindDef> RaceCatalog;
         public static List<TraitCandidate> TraitCatalog;
         public static List<MeteorCandidate> MeteorCatalog;
         public static List<TameCandidate> TameCatalog;
@@ -19,18 +21,20 @@ namespace CheeseProtocol
 
         public CheeseProtocolMod(ModContentPack content) : base(content)
         {
-            Log.Message("[CheeseProtocol] Loaded.");
             LongEventHandler.ExecuteWhenFinished(() =>
             {
                 Settings = GetSettings<CheeseSettings>();
                 Settings.EnsureAdvSettingsInitialized();
                 ChzzkChat = new ChzzkChatClient(Settings);
+                RaceCatalog = RaceApplier.BuildRaceCatalog();
                 TraitCatalog = TraitApplier.BuildCatalogTraitCandidates();
                 MeteorCatalog = MeteorApplier.BuildCatalogMeteorCandidates();
                 TameCatalog = TameApplier.BuildCatalogTameCandidates();
                 SupplyApplier.BuildCatalogSupplyCandidates(out SupplyFoodCatalog, out SupplyMedCatalog, out SupplyDrugCatalog, out SupplyWeaponCatalog);
                 Settings.GetAdvSetting<JoinAdvancedSettings>(CheeseCommand.Join)?.UpdateTraitList();
                 Settings.GetAdvSetting<MeteorAdvancedSettings>(CheeseCommand.Meteor)?.UpdateMeteorList();
+                Log.Message("[CheeseProtocol] Loaded.");
+                //RaceCatalog.LogDump();
             });
             Instance = this;
         }

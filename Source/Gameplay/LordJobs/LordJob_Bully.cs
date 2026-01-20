@@ -188,6 +188,7 @@ namespace CheeseProtocol
             protected const int ResetMoveDistSq = 650;
             protected readonly IntVec3 anchor;
             private int nextTick;
+            protected List<IntVec3> storageAnchors;
             protected LordJob_Bully BullyJob
             {
                 get => lord?.LordJob as LordJob_Bully;
@@ -201,6 +202,8 @@ namespace CheeseProtocol
             {
                 base.Init();
                 nextTick = 0;
+                storageAnchors = StealAnchorClusterUtil.BuildClusterAnchors(lord?.Map);
+                StealAnchorClusterUtil.AddPassengerShuttleAnchors(lord?.Map, storageAnchors);
             }
 
             public override void UpdateAllDuties()
@@ -320,34 +323,53 @@ namespace CheeseProtocol
                     return st.wanderAnchor;
 
                 IntVec3 chosen = bully.Position;
-                Pawn target = null;
-
+                IntVec3 target = IntVec3.Invalid;
+                Pawn targetPawn = null;
                 var reg = GetRegistry();
-                bool hasTarget =
+                bool hasPawnTarget =
                     reg != null &&
-                    reg.TryResolveWanderTargetPawn(st, out target) &&
-                    IsValidTarget(bully, target);
+                    reg.TryResolveWanderTargetPawn(st, out targetPawn) &&
+                    IsValidTarget(bully, targetPawn);
 
-                if (!hasTarget)
+                // Goto Storage
+                if (!st.targetStorage.IsValid && !hasPawnTarget)
                 {
-                    Pawn newTarget = TryPickTargetRandom(bully);
-                    if (newTarget != null)
+                    if (storageAnchors != null && storageAnchors.Count > 0)
                     {
-                        st.wanderTargetUid = newTarget.GetUniqueLoadID();
-                        st.wanderRetargetTick = now;
-                        target = newTarget;
+                        st.targetStorage = storageAnchors.RandomElement();
+                        st.wanderRetargetTick = now; 
                     }
                 }
+                if (st.targetStorage.IsValid && !bully.CanReach(st.targetStorage, PathEndMode.Touch, Danger.Some))
+                {
+                    st.targetStorage = IntVec3.Invalid;
+                }
+                target = st.targetStorage;
+                // Follow Pawn
+                if (!target.IsValid)
+                {
+                    if (!hasPawnTarget)
+                    {
+                        Pawn newTarget = TryPickTargetRandom(bully);
+                        if (newTarget != null)
+                        {
+                            st.wanderTargetUid = newTarget.GetUniqueLoadID();
+                            st.wanderRetargetTick = now;
+                            targetPawn = newTarget;
+                        }
+                    }
+                    if (targetPawn != null)
+                        target = targetPawn.Position;
+                }
 
-                if (target != null)
+                if (target.IsValid)
                 {
                     if (st.wanderRetargetTick <= 0)
                         st.wanderRetargetTick = now;
 
                     bool invalidPos =
-                        !target.Position.IsValid ||
-                        !target.Position.InBounds(map) ||
-                        target.Position.OnEdge(map);
+                        !target.InBounds(map) ||
+                        target.OnEdge(map);
 
                     if (invalidPos)
                     {
@@ -355,7 +377,7 @@ namespace CheeseProtocol
                     }
                     else
                     {
-                        bool arrived = bully.Position.DistanceTo(target.Position) <= WanderApproachStopDist;
+                        bool arrived = bully.Position.DistanceTo(target) <= WanderApproachStopDist;
                         bool timeout = now - st.wanderRetargetTick >= WanderRetargetInterval;
 
                         if (arrived || timeout)
@@ -365,7 +387,7 @@ namespace CheeseProtocol
                         }
                         else
                         {
-                            chosen = target.Position;
+                            chosen = target;
                         }
                     }
                 }
@@ -493,6 +515,22 @@ namespace CheeseProtocol
 
                 return CellFinder.RandomEdgeCell(map);
             }
+            protected static bool IsEatingOrAboutToEat(Pawn p)
+            {
+                var j = p.CurJob;
+                if (j == null) return false;
+
+                // vanilla eating jobs
+                if (j.def == JobDefOf.Ingest) 
+                {
+                    QMsg($"Harass: Eating food -> don't interrupt.", Channel.Debug);
+                    return true;
+                }
+                if (j.def.defName != null && j.def.defName.IndexOf("Ingest", StringComparison.OrdinalIgnoreCase) >= 0)
+                    return true;
+
+                return false;
+            }
         }
 
         /// <summary>
@@ -519,6 +557,20 @@ namespace CheeseProtocol
                 for (int i = 0; i < pawns.Count; i++)
                 {
                     Pawn bully = pawns[i];
+                    if (!reg.TryGetBully(bully, out var st) || st == null)
+                    {
+                        continue;
+                    }
+
+                    var carried = bully.carryTracker?.CarriedThing;
+                    if (carried != null)
+                    {
+                        if (carried.def?.ingestible != null)
+                        {
+                            QMsg($"Harass: Carrying food ({carried.LabelCap}) -> don't interrupt.", Channel.Debug);
+                            continue;
+                        }
+                    }
                     if (IsExitGotoJob(bully.CurJob))
                     {
                         ForceJob(bully, MakeWanderNearAnchor(bully, anchor));
@@ -529,10 +581,6 @@ namespace CheeseProtocol
                         continue;
                     }
 
-                    if (!reg.TryGetBully(bully, out var st) || st == null)
-                    {
-                        continue;
-                    }
                     if (leader == null && st.isLeader) leader = bully;
                     // Phase transitions (group-level policy)
                     if (st.exitAtTick > 0 && now >= st.exitAtTick)
@@ -700,7 +748,6 @@ namespace CheeseProtocol
                     }
                     else
                     {
-                        // Can't steal: Wander and keep searching.
                         
                         ForceJob(bully, MakeWanderNearAnchor(bully, GetWanderWhileStealAnchor(bully, st, anchor)));
                     }
@@ -719,7 +766,7 @@ namespace CheeseProtocol
         private const int StunDuration = 180;
         private const int RadiusStep = 20;
         private const int MaxRadius = 75;
-        private const float LoRatioStep = 0.1f;
+        private const float LoRatioStep = 0.05f;
         private const float MinLoRatio = 0f;
         public static void ApplyStun(Pawn bully, Pawn target, int pawnCount)
         {
@@ -785,7 +832,7 @@ namespace CheeseProtocol
 
             if (!st.stealTargetUid.NullOrEmpty())
             {
-                stealTarget = FindThingByUid(map, st.stealTargetUid);
+                stealTarget = FindThingByUid(map, st.stealTargetUid, st.stealContainerUid);
             }
             if (stealTarget != null && IsValidStealTarget(stealTarget, bully))
             {
@@ -821,12 +868,8 @@ namespace CheeseProtocol
                 {
                     st.loRatio = Mathf.Max(st.loRatio - LoRatioStep, MinLoRatio);
                 }
-
-                IEnumerable<Thing> things =
-                    GenRadial.RadialCellsAround(center, st.scanRadius, true)
-                        .Where(c => c.InBounds(map))
-                        .SelectMany(c => c.GetThingList(map));
-                QMsg($"{bully.Name.ToStringShort}: Searching... scanRadius={st.scanRadius}, loRatio={st.loRatio}", Channel.Debug);
+                var things = ScanCellsAround(map, center, st.scanRadius);
+                //QMsg($"{bully.Name.ToStringShort}: Searching... scanRadius={st.scanRadius}, loRatio={st.loRatio}", Channel.Debug);
                 var top = PickClosestBelowValueTopN(bully, things, n: 20, targetValue: st.targetValue, minValue: 30f, job: jobBully, tooSmallRatio: st.loRatio);
                 Thing picked = null;
                 for (int i = 0; i < top.Count; i++)
@@ -843,6 +886,8 @@ namespace CheeseProtocol
                 if (stealTarget != null)
                 {
                     st.stealTargetUid = stealTarget.GetUniqueLoadID();
+                    var container = GetContainer(stealTarget);
+                    st.stealContainerUid = container == null ? null : container.GetUniqueLoadID();
                     st.stealTargetPickTick = now;
                     st.ResetScan();
                 }
@@ -850,46 +895,215 @@ namespace CheeseProtocol
 
             if (stealTarget == null)
             {
+                //Warn("stealTarget Reset to none.");
                 st.stealTargetUid = null; 
-                if (st.didSearch)
-                {
-                    // Job wanderJob = JobMaker.MakeJob(JobDefOf.GotoWander);
-                    // wanderJob.expiryInterval = 2000;
-                    // wanderJob.checkOverrideOnExpire = true;
-                    // wanderJob.locomotionUrgency = LocomotionUrgency.Jog;
-                    st.didSearch = false;
-                    // return wanderJob;
-                    return null;
-                }
                 return null;
             }
-            if (bully.CanReach(stealTarget, PathEndMode.ClosestTouch, Danger.Some) &&
-                TouchPathEndModeUtility.IsAdjacentOrInsideAndAllowedToTouch(bully.Position, stealTarget, bully.Map.pathing.Normal))
+            Thing gotoTarget = stealTarget?.SpawnedParentOrMe;
+            if (gotoTarget == null) return null;
+            if (bully.CanReach(gotoTarget, PathEndMode.ClosestTouch, Danger.Some) &&
+                TouchPathEndModeUtility.IsAdjacentOrInsideAndAllowedToTouch(bully.Position, gotoTarget, bully.Map.pathing.Normal))
             {
-                int count = Mathf.Min(stealTarget.stackCount, 999);
-                int carriedCount = bully.carryTracker.TryStartCarry(stealTarget, count);
-                if (carriedCount > 0)
+                var holder = GetContainer(stealTarget);
+                if (holder != null)
                 {
-                    jobBully?.ReleaseStealTarget(st.stealTargetUid);
-                    st.stealTargetUid = null;
-                    st.didSteal = true;
-                    st.stolenThing = bully.carryTracker.CarriedThing;
-                    Messages.Message(
-                        $"{bully?.Name?.ToStringShort ?? "Unknown"} 일진이 {st.stolenThing.LabelCap}을 훔쳐갑니다!",
-                        new LookTargets(bully),
-                        MessageTypeDefOf.NegativeEvent
-                    );
-                    string stealSuccessChat = LordChats.GetText(BullyTextKey.GrabbedItem, st.stolenThing?.LabelCap ?? "");
-                    SpeechBubbleManager.Get(bully.Map)?.AddNPCChat(stealSuccessChat, bully);
-                    return null;
+                    if (!TryDropFromContainer(holder, stealTarget, out Thing dropped))
+                        return null;
+                    stealTarget = dropped;
+                    st.stealTargetUid = stealTarget.GetUniqueLoadID();
+                    var container = GetContainer(stealTarget);
+                    st.stealContainerUid = container == null ? null : container.GetUniqueLoadID();
+                }
+                else
+                {
+                    int count = Mathf.Min(stealTarget.stackCount, 999);
+                    int carriedCount = bully.carryTracker.TryStartCarry(stealTarget, count);
+                    if (carriedCount > 0)
+                    {
+                        jobBully?.ReleaseStealTarget(st.stealTargetUid);
+                        st.stealTargetUid = null;
+                        st.didSteal = true;
+                        st.stolenThing = bully.carryTracker.CarriedThing;
+                        Messages.Message(
+                            $"{bully?.Name?.ToStringShort ?? "Unknown"} 일진이 {st.stolenThing.LabelCap}을 훔쳐갑니다!",
+                            new LookTargets(bully),
+                            MessageTypeDefOf.NegativeEvent
+                        );
+                        string stealSuccessChat = LordChats.GetText(BullyTextKey.GrabbedItem, st.stolenThing?.LabelCap ?? "");
+                        SpeechBubbleManager.Get(bully.Map)?.AddNPCChat(stealSuccessChat, bully);
+                        return null;
+                    }
                 }
             }
-            // 3) 아직 멀면 -> 그 물건으로 가는 Goto Job 리턴
-            Job job = JobMaker.MakeJob(JobDefOf.Goto, stealTarget);
+            gotoTarget = stealTarget?.SpawnedParentOrMe;
+            if (gotoTarget == null) return null;
+            Job job = JobMaker.MakeJob(JobDefOf.Goto, gotoTarget);
             job.expiryInterval = 300;
             job.checkOverrideOnExpire = true;
             job.locomotionUrgency = LocomotionUrgency.Jog;
             return job;
+        }
+        private static bool TryDropFromContainer(Thing container, Thing itemInCargo, out Thing dropped)
+        {
+            dropped = null;
+
+            if (container == null || itemInCargo == null)
+                return false;
+
+            if (!TryFindHoldingOwner(container, itemInCargo, out ThingOwner owner) || owner == null)
+                return false;
+
+            bool contains = owner.Contains(itemInCargo);
+            if (!contains) return false;
+
+            bool ok = owner.TryDrop(itemInCargo, container.Position, container.Map, ThingPlaceMode.Near, out dropped);
+            QMsg($"[TryDrop] TryDrop ok={ok}, droppedNull={dropped==null}, droppedUid={dropped?.GetUniqueLoadID()}", Channel.Debug);
+
+            return ok && dropped != null;
+        }
+        private static List<Thing> ScanCellsAround(Map map, IntVec3 center, float scanRadius)
+        {
+            var baseThings =
+            GenRadial.RadialCellsAround(center, scanRadius, true)
+                .Where(c => c.InBounds(map))
+                .SelectMany(c => c.GetThingList(map))
+                .Where(t => t?.def?.defName != null);
+
+            var allThings = new List<Thing>(256);
+            var seen = new HashSet<Thing>();
+            foreach (var t in baseThings)
+            {
+                if (t == null) continue;
+                if (!seen.Add(t)) continue;
+                allThings.Add(t);
+
+                string defname = t.def.defName;
+                if (!AllowBullyExtractFromContainer(t)) continue;
+                foreach (var it in EnumerateContainerContentsIfAny(t))
+                {
+                    if (it == null) continue;
+                    if (!seen.Add(it)) continue;
+                    allThings.Add(it);
+                }
+            }
+            return allThings;
+        }
+
+        private static Thing GetContainer(Thing t)
+        {
+            if (t == null) return null;
+            if (t.ParentHolder == null) return null;
+
+            Thing root = t.SpawnedParentOrMe;
+            if (root == null || root == t) return null;
+
+            return root;
+        }
+
+        private static IEnumerable<Thing> EnumerateContainerContentsIfAny(Thing container)
+        {
+            if (container == null) yield break;
+
+            if (container is IThingHolder th)
+            {
+                foreach (var t in EnumerateThingOwner(th.GetDirectlyHeldThings()))
+                    yield return t;
+            }
+
+            if (container is ThingWithComps twc && twc.AllComps != null)
+            {
+                var comps = twc.AllComps;
+                for (int i = 0; i < comps.Count; i++)
+                {
+                    if (comps[i] is IThingHolder ch)
+                    {
+                        foreach (var t in EnumerateThingOwner(ch.GetDirectlyHeldThings()))
+                            yield return t;
+                    }
+                }
+            }
+        }
+
+        private static IEnumerable<Thing> EnumerateThingOwner(ThingOwner owner)
+        {
+            if (owner == null) yield break;
+
+            for (int i = 0; i < owner.Count; i++)
+            {
+                Thing t = owner[i];
+                if (t != null) yield return t;
+            }
+        }
+        private static bool HasQuestTags(Thing t) => t?.questTags != null && t.questTags.Count > 0;
+
+        private static bool AllowBullyExtractFromContainer(Thing container)
+        {
+            if (container == null) return false;
+            if (!container.Spawned) return false;
+
+            if (HasQuestTags(container)) return false;
+            if (!container.Faction.IsPlayerSafe()) return false;
+            if (!HasOwner(container)) return false;
+
+            // if (!container.def.BuildableByPlayer) return false;
+            return true;
+        }
+
+        private static bool HasOwner(Thing container)
+        {
+            if (container == null) return false;
+            // Thing itself as holder (rare)
+            if (container is IThingHolder th)
+            {
+                return th.GetDirectlyHeldThings() != null;
+            }
+
+            // Comp-based holders (common)
+            if (container is ThingWithComps twc && twc.AllComps != null)
+            {
+                for (int i = 0; i < twc.AllComps.Count; i++)
+                {
+                    if (twc.AllComps[i] is IThingHolder holder)
+                    {
+                        return holder.GetDirectlyHeldThings() != null;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        private static bool TryFindHoldingOwner(Thing container, Thing itemInCargo, out ThingOwner owner)
+        {
+            owner = null;
+            if (container == null || itemInCargo == null) return false;
+            if (container is IThingHolder th)
+            {
+                var o = th.GetDirectlyHeldThings();
+                if (o != null && o.Contains(itemInCargo))
+                {
+                    owner = o;
+                    return true;
+                }
+            }
+            if (container is ThingWithComps twc && twc.AllComps != null)
+            {
+                var comps = twc.AllComps;
+                for (int i = 0; i < comps.Count; i++)
+                {
+                    if (comps[i] is IThingHolder holder)
+                    {
+                        var o = holder.GetDirectlyHeldThings();
+                        if (o != null && o.Contains(itemInCargo))
+                        {
+                            owner = o;
+                            return true;
+                        }
+                    }
+                }
+            }
+
+            return false;
         }
 
         private static List<Thing> PickClosestBelowValueTopN(
@@ -906,7 +1120,6 @@ namespace CheeseProtocol
             tooSmallRatio = Mathf.Clamp(tooSmallRatio, 0.05f, 0.99f);
             float postMaxVal = Mathf.Max(targetValue, minValue / tooSmallRatio);
             float postMinVal = Math.Max(postMaxVal * tooSmallRatio, minValue);
-
             return things
                 .Where(t => IsValidStealTarget(t, bully))
                 .Select(t => new { t, value = GetStealValue(t), uid = t.GetUniqueLoadID() })
@@ -917,7 +1130,7 @@ namespace CheeseProtocol
                 .Select(x => x.t)
                 .ToList();
         }
-        private static Thing FindThingByUid(Map map, string uid)
+        private static Thing FindSpawnedThingByUid(Map map, string uid)
         {
             if (map == null || uid.NullOrEmpty()) return null;
 
@@ -928,36 +1141,57 @@ namespace CheeseProtocol
             }
             return null;
         }
+        private static Thing FindThingByUid(Map map, string targetUid, string containerUid)
+        {
+            if (map == null || targetUid.NullOrEmpty()) return null;
+            Thing t = FindSpawnedThingByUid(map, targetUid);
+            if (t != null) return t;
+            if (containerUid.NullOrEmpty()) return null;
+            Thing container = FindSpawnedThingByUid(map, containerUid);
+            if (container == null) return null;
+            foreach (var it in EnumerateContainerContentsIfAny(container))
+            {
+                if (it != null && it.GetUniqueLoadID() == targetUid)
+                    return it;
+            }
+            return null;
+        }
         private static bool IsValidStealTarget(Thing t, Pawn bully)
         {
-            if (t.def.category != ThingCategory.Item) return false;
-            if (t.IsForbidden(bully)) return false;
+            if (t == null || bully == null) return false;
             if (t.Destroyed) return false;
-            if (!t.Spawned) return false;
+            //Thing parentOrMe = t.SpawnedParentOrMe;
+            Thing container = GetContainer(t);
+            if (HasQuestTags(t)) return false;
+            if (t.def?.category != ThingCategory.Item) return false;
+            if (IsForbiddenStealTarget(t)) return false;
             if (t.IsBurning()) return false;
-            if (!bully.CanReserveAndReach(t, PathEndMode.ClosestTouch, Danger.Some)) return false;
-
             if (t.def.EverHaulable == false) return false;
-            if (t.GetStatValue(StatDefOf.Mass) > bully.GetStatValue(StatDefOf.CarryingCapacity))
-                return false;
+            if (t.GetStatValue(StatDefOf.Mass) > bully.GetStatValue(StatDefOf.CarryingCapacity)) return false;
 
+            if (container == null)
+            {
+                if (!t.Spawned) return false;
+                if (!bully.CanReserveAndReach(t, PathEndMode.ClosestTouch, Danger.Some)) return false;
+            }
+            else
+            {
+                if (!container.Spawned) return false;
+                if (!bully.CanReserveAndReach(container, PathEndMode.ClosestTouch, Danger.Some)) return false;
+            }
             return true;
         }
+
+        private static bool IsForbiddenStealTarget(Thing t)
+        {
+            if (t.def == ThingDefOf.Genepack)
+                return true;
+            return false;
+        }
+
         private static float GetStealValue(Thing t)
         {
             return t.MarketValue * t.stackCount;
-        }
-
-        private static Thing GetStealTarget(Pawn bully, IEnumerable<Thing> candidates, float minStealValue=50f)
-        {
-            Thing best =
-                candidates
-                    .Where(t => IsValidStealTarget(t, bully))
-                    .Select(t => new { t, value = GetStealValue(t) })
-                    .Where(x => x.value >= minStealValue)
-                    .OrderByDescending(x => x.value)
-                    .FirstOrDefault()?.t;
-            return best;
         }
         public static Job MakeExitJob(IntVec3 exitCell)
         {

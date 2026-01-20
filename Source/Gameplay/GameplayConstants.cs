@@ -29,7 +29,7 @@ namespace CheeseProtocol
 
         //!일진
         public const int BullyCountMin = 1;
-        public const int BullyCountMax = 20;
+        public const int BullyCountMax = 10;
 
         //!운석
         public const int MeteorSizeMin = 1;

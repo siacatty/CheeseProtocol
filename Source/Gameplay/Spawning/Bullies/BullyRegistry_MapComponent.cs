@@ -43,11 +43,13 @@ namespace CheeseProtocol
 
         public int BullyCount => bullies?.Count ?? 0;
 
-        public void AddBullies(BullyRequest req, int durationTicks, float stealValueTotal)
+        public void AddBullies(BullyRequest req, int durationTicks, float stealValueRaw)
         {
             var pawns = req.bullyList;
             int now = Find.TickManager.TicksGame;
-            float[] stealValues = SplitFloatOrdered(stealValueTotal, pawns.Count);
+            const float scale = 0.5f;
+            const float bigShare = 0.5f;
+            float[] stealValues = SplitFloatBigShare(stealValueRaw * scale, pawns.Count, bigShare);
             for(int i = 0; i < pawns.Count; i++)
             {
                 var p = pawns[i];
@@ -66,26 +68,39 @@ namespace CheeseProtocol
             }
         }
 
-        public static float[] SplitFloatOrdered(float total, int n)
+        public static float[] SplitFloatBigShare(float total, int n, float bigShare)
         {
             if (n <= 0) return Array.Empty<float>();
             if (n == 1) return new[] { total };
 
-            float[] raw = new float[n];
-            float sum = 0f;
+            float[] result = new float[n];
 
-            for (int i = 0; i < n; i++)
+            // 1) big slot (leader = index 0)
+            float big = total * bigShare;
+            result[0] = big;
+
+            // 2) remaining budget
+            float rem = total - big;
+            if (rem <= 0f)
+                return result;
+
+            // 3) random split for others (1..n-1)
+            float sum = 0f;
+            for (int i = 1; i < n; i++)
             {
-                raw[i] = Rand.Value; // 0~1
-                sum += raw[i];
+                float r = Rand.Value;
+                result[i] = r;
+                sum += r;
             }
 
-            float scale = total / sum;
-            for (int i = 0; i < n; i++)
-                raw[i] *= scale;
+            if (sum <= 0f)
+                return result;
 
-            Array.Sort(raw, (a, b) => b.CompareTo(a));
-            return raw;
+            float scale = rem / sum;
+            for (int i = 1; i < n; i++)
+                result[i] *= scale;
+
+            return result;
         }
 
         public bool IsBully(Pawn pawn)

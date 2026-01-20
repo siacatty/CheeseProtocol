@@ -8,6 +8,7 @@ using System.Linq;
 using System.Collections;
 using Verse.Noise;
 using static CheeseProtocol.CheeseLog;
+using System.Text;
 
 namespace CheeseProtocol
 {
@@ -76,17 +77,21 @@ namespace CheeseProtocol
         {
             JoinAdvancedSettings joinAdvSetting = CheeseProtocolMod.Settings?.GetAdvSetting<JoinAdvancedSettings>(CheeseCommand.Join);
             if (joinAdvSetting == null) return null;
+            var race = RaceApplier.GetRace();
             var req = new PawnGenerationRequest(
-                PawnKindDefOf.Colonist,
+                race,
                 context: PawnGenerationContext.PlayerStarter,
                 forceGenerateNewPawn: true,
                 canGeneratePawnRelations: false,
                 forcedXenotype: XenotypeDefOf.Baseliner
             );
             Pawn pawn = PawnGenerator.GeneratePawn(req);
-            cleanPawn(pawn, joinAdvSetting.allowWorkDisable);
-            ApplyPawnCustomization(pawn, quality, trace);
-            pawn.skills?.DirtyAptitudes();
+            bool isCustomRace = race != PawnKindDefOf.Colonist;
+            cleanPawn(pawn, joinAdvSetting.allowWorkDisable, isCustomRace);
+            ApplyPawnCustomization(pawn, quality, trace, isCustomRace);
+            //ApplyRace(pawn);
+            if (!isCustomRace)
+                pawn.skills?.DirtyAptitudes();
             pawn.skills?.Notify_SkillDisablesChanged();
             pawn.Notify_DisabledWorkTypesChanged();
             pawn.workSettings?.Notify_DisabledWorkTypesChanged();
@@ -142,7 +147,7 @@ namespace CheeseProtocol
                 .RandomElementWithFallback();
         }
 
-        private static void cleanPawn(Pawn pawn, bool allowWorkDisable)
+        private static void cleanPawn(Pawn pawn, bool allowWorkDisable, bool isCustomRace)
         {
             if (pawn == null) return;
             foreach (var skill in pawn.skills.skills)
@@ -150,7 +155,8 @@ namespace CheeseProtocol
                 skill.Level = 0;
                 skill.passion = Passion.None;
             }
-            ClearGenes(pawn);
+            if (!isCustomRace)
+                ClearGenes(pawn);
             pawn.story.traits.allTraits.Clear();
             if (!allowWorkDisable)
                 SetNoDisableBackstories(pawn);
@@ -224,7 +230,7 @@ namespace CheeseProtocol
             return result.ToList();
         }
 
-        private static void ApplyPawnCustomization(Pawn pawn, float quality, CheeseRollTrace trace)
+        private static void ApplyPawnCustomization(Pawn pawn, float quality, CheeseRollTrace trace, bool isCustomRace)
         {
             if (pawn?.RaceProps == null || !pawn.RaceProps.Humanlike) return;
             var settings = CheeseProtocolMod.Settings;
@@ -234,7 +240,8 @@ namespace CheeseProtocol
             ApplyAge(pawn, quality, randomVar, joinAdvSetting.ageRange, trace);
             ApplySkills(pawn, quality, randomVar, joinAdvSetting.skillRange, trace);
             ApplyPassions(pawn, quality, randomVar, joinAdvSetting.passionRange, trace);
-            ApplyXenotype(pawn, joinAdvSetting.forceHuman);
+            if (!isCustomRace)
+                ApplyXenotype(pawn, joinAdvSetting.forceHuman);
             ApplyIdeo(pawn, joinAdvSetting.forcePlayerIdeo);
             ApplyTraits(pawn, quality, randomVar, joinAdvSetting.traitsRange, trace);
             ApplyHealth(pawn, quality, randomVar, joinAdvSetting.healthRange, trace);
