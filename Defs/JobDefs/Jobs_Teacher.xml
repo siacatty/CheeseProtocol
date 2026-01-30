@@ -1,0 +1,41 @@
+<Defs>
+    <JobDef>
+        <defName>CheeseProtocol_TeacherSubdue</defName>
+        <driverClass>CheeseProtocol.JobDriver_TeacherSubdue</driverClass>
+        <reportString>subduing TargetA.</reportString>
+        <casualInterruptible>false</casualInterruptible>
+        <playerInterruptible>false</playerInterruptible>
+    </JobDef>
+
+    <JobDef>
+        <defName>CheeseProtocol_TeacherCarry</defName>
+        <driverClass>CheeseProtocol.JobDriver_TeacherCarry</driverClass>
+        <reportString>carrying TargetA.</reportString>
+        <casualInterruptible>false</casualInterruptible>
+        <playerInterruptible>false</playerInterruptible>
+    </JobDef>
+
+    <JobDef>
+        <defName>CheeseProtocol_TeacherTeach</defName>
+        <driverClass>CheeseProtocol.JobDriver_TeacherTeach</driverClass>
+        <reportString>teaching students</reportString>
+        <casualInterruptible>false</casualInterruptible>
+        <playerInterruptible>false</playerInterruptible>
+    </JobDef>
+
+    <JobDef>
+        <defName>CheeseProtocol_TeacherShout</defName>
+        <driverClass>CheeseProtocol.JobDriver_TeacherShout</driverClass>
+        <reportString>shouting at TargetA.</reportString>
+        <casualInterruptible>false</casualInterruptible>
+        <playerInterruptible>false</playerInterruptible>
+    </JobDef>
+
+    <JobDef>
+        <defName>CheeseProtocol_TeacherEat</defName>
+        <driverClass>CheeseProtocol.JobDriver_TeacherEat</driverClass>
+        <reportString>Eating TargetA.</reportString>
+        <casualInterruptible>false</casualInterruptible>
+        <playerInterruptible>false</playerInterruptible>
+    </JobDef>
+</Defs>

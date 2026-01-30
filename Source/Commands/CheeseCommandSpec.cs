@@ -25,6 +25,7 @@ namespace CheeseProtocol
             new CheeseCommandSpec(CheeseCommand.Join, "!참여", "colonist", "Join / 참여"),
             new CheeseCommandSpec(CheeseCommand.Raid, "!습격", "raid",    "Raid / 습격"),
             new CheeseCommandSpec(CheeseCommand.Bully, "!일진", "bully",  "Bully / 일진"),
+            new CheeseCommandSpec(CheeseCommand.Teacher, "!교육", "teacher",  "Teacher / 교육"),
             new CheeseCommandSpec(CheeseCommand.Caravan, "!상단", "caravan", "Top donors / 상단"),
             new CheeseCommandSpec(CheeseCommand.Meteor, "!운석", "meteor",  "Meteor / 운석"),
             new CheeseCommandSpec(CheeseCommand.Supply, "!보급", "supply",  "Supply / 보급"),

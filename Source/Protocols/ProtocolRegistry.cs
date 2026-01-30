@@ -10,6 +10,7 @@ namespace CheeseProtocol
             new ColonistProtocol(),
             new RaidProtocol(),
             new BullyProtocol(),
+            new TeacherProtocol(),
             new CaravanProtocol(),
             new MeteorProtocol(),
             new SupplyProtocol(),

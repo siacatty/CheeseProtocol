@@ -5,6 +5,7 @@ namespace CheeseProtocol
         None,
         Join,       // !참여
         Raid,       // !습격
+        Teacher,    // !교육
         Bully,      //!일진
         Caravan,        // !상단
         Meteor,      // !운석

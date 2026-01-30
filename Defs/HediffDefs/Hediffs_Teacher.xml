@@ -1,0 +1,88 @@
+<Defs>
+    <HediffDef>
+        <defName>CheeseProtocol_LessonDisciplineDown</defName>
+        <label>스승의 은혜</label>
+        <description>스승의 은혜는 하늘 같아 기절해버렸습니다.</description>
+        <defaultLabelColor>(1, 0.2, 0.2)</defaultLabelColor>
+        <isBad>true</isBad>
+        <tendable>false</tendable>
+        <hediffClass>HediffWithComps</hediffClass>
+        <comps>
+            <li Class="HediffCompProperties_Disappears">
+                <disappearsAfterTicks>600~1600</disappearsAfterTicks>
+                <showRemainingTime>true</showRemainingTime>
+            </li>
+        </comps>
+        <stages>
+            <li>
+                <capMods>
+                    <li>
+                        <capacity>Consciousness</capacity>
+                        <setMax>0.1</setMax>
+                    </li>
+                    <li>
+                        <capacity>Moving</capacity>
+                        <setMax>0.0</setMax>
+                    </li>
+                </capMods>
+            </li>
+        </stages>
+    </HediffDef>
+
+    <HediffDef>
+        <defName>CheeseProtocol_LessonDisciplineDebuff</defName>
+        <label>스승의 패기</label>
+        <description>스승님의 괴성으로 인해 온몸이 경직되고 의식이 흐릿해집니다.</description>
+        <defaultLabelColor>(1, 0.2, 0.2)</defaultLabelColor>
+        <isBad>true</isBad>
+        <tendable>false</tendable>
+        <initialSeverity>1.0</initialSeverity>
+        <hediffClass>HediffWithComps</hediffClass>
+        <comps>
+            <li Class="HediffCompProperties_Disappears">
+                <disappearsAfterTicks>600~1600</disappearsAfterTicks>
+                <showRemainingTime>true</showRemainingTime>
+            </li>
+        </comps>
+        <stages>
+            <li>
+                <capMods>
+                    <li>
+                        <capacity>Consciousness</capacity>
+                        <setMax>0.8</setMax>
+                    </li>
+                    <li>
+                        <capacity>Moving</capacity>
+                        <offset>-0.5</offset>
+                    </li>
+                </capMods>
+            </li>
+        </stages>
+    </HediffDef>
+
+    <HediffDef>
+        <defName>CheeseProtocol_TeacherRageBuff</defName>
+        <label>스승의 분노</label>
+        <description>스승님이 노하셨습니다. 도망치세요.</description>
+        <defaultLabelColor>(0.85, 0.1, 0.1)</defaultLabelColor>
+        <isBad>true</isBad>
+        <tendable>false</tendable>
+        <initialSeverity>1.0</initialSeverity>
+        <hediffClass>HediffWithComps</hediffClass>
+        <comps>
+            <li Class="HediffCompProperties_SeverityPerDay">
+                <severityPerDay>-0.1</severityPerDay>
+            </li>
+        </comps>
+        <stages>
+            <li>
+                <capMods>
+                    <li>
+                        <capacity>Moving</capacity>
+                        <offset>+1.2</offset>
+                    </li>
+                </capMods>
+            </li>
+        </stages>
+    </HediffDef>
+</Defs>

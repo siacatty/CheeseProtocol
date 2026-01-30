@@ -82,7 +82,6 @@ namespace CheeseProtocol
                 .Count(p => p != null && !p.Dead);
             if (now != lastColonistCount)
             {
-                QWarn($"colonist number update. {lastColonistCount} -> {now}", Channel.Debug);
                 RefreshInActive();
                 RefreshActive();
                 lastColonistCount = now;

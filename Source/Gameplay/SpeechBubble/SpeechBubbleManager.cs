@@ -28,6 +28,8 @@ namespace CheeseProtocol
         private static readonly Color OutlineColor = new Color(0.38f, 0.55f, 0.70f, 0.95f);
         private static readonly Color NPCBoxColor     = new Color(0.18f, 0.05f, 0.05f, 0.85f);
         private static readonly Color NPCOutlineColor = new Color(0.80f, 0.22f, 0.22f, 0.95f);
+        private static readonly Color NonHostileNPCBoxColor     = new Color(0.06f, 0.18f, 0.10f, 0.85f);
+        private static readonly Color NonHostileNPCOutlineColor = new Color(0.25f, 0.75f, 0.45f, 0.95f);
 
         private readonly List<SpeechBubble> bubbles = new List<SpeechBubble>(16);
         private readonly Dictionary<string, float> lastChatTimeByUser = new Dictionary<string, float>(256);
@@ -87,9 +89,9 @@ namespace CheeseProtocol
             return true;
         }
 
-        public bool AddNPCChat(string text, Pawn pawn, float durationSec = DefaultNPCDurationSec)
+        public bool AddNPCChat(string text, Pawn pawn, float durationSec = DefaultNPCDurationSec, GameFont fontSize=GameFont.Small, SpeakerType speaker=SpeakerType.HostileNPC)
         {
-            if (map == null) 
+            if (map == null)
             {
                 return false;
             }
@@ -103,7 +105,7 @@ namespace CheeseProtocol
 
             float dur = Mathf.Max(0.05f, durationSec);
 
-            ReplaceBubbleForPawn(pawn, text, now, now + dur, isNPC: true);
+            ReplaceBubbleForPawn(pawn, text, now, now + dur, speaker, fontSize: fontSize);
 
             return true;
         }
@@ -126,6 +128,7 @@ namespace CheeseProtocol
             if (map == null || bubbles.Count == 0) return;
             if (Current.ProgramState != ProgramState.Playing) return;
             if (Event.current == null) return;
+            if (Event.current.type != EventType.Repaint) return;
 
             float now = Time.realtimeSinceStartup;
 
@@ -137,8 +140,6 @@ namespace CheeseProtocol
             var prevAnchor = Text.Anchor;
             var prevFont = Text.Font;
             bool prevWrap = Text.WordWrap;
-
-            Text.Font = GameFont.Small;
             Text.Anchor = TextAnchor.MiddleCenter;
             Text.WordWrap = true;
 
@@ -146,7 +147,7 @@ namespace CheeseProtocol
             {
                 var b = bubbles[i];
                 if (b == null) continue;
-
+                Text.Font = b.fontSize;
                 float alpha = ComputeAlpha(now, b.startRealtime, b.expireRealtime);
                 if (alpha <= 0f) continue;
 
@@ -156,22 +157,29 @@ namespace CheeseProtocol
                 rect = ClampToScreen(rect, 6f);
 
                 GUI.color = new Color(1f, 1f, 1f, alpha);
-                if (b.isNPC)
+                Color boxColor;
+                Color borderColor;
+                switch (b.speaker)
                 {
-                    Widgets.DrawBoxSolidWithOutline(
-                        rect,
-                        new Color(NPCBoxColor.r, NPCBoxColor.g, NPCBoxColor.b, NPCBoxColor.a * alpha),
-                        new Color(NPCOutlineColor.r, NPCOutlineColor.g, NPCOutlineColor.b, NPCOutlineColor.a * alpha)
-                    );
+                    case SpeakerType.Player:
+                        boxColor = new Color(BoxColor.r, BoxColor.g, BoxColor.b, BoxColor.a * alpha);
+                        borderColor = new Color(OutlineColor.r, OutlineColor.g, OutlineColor.b, OutlineColor.a * alpha);
+                        break;
+                    case SpeakerType.HostileNPC:
+                        boxColor = new Color(NPCBoxColor.r, NPCBoxColor.g, NPCBoxColor.b, NPCBoxColor.a * alpha);
+                        borderColor = new Color(NPCOutlineColor.r, NPCOutlineColor.g, NPCOutlineColor.b, NPCOutlineColor.a * alpha);
+                        break;
+                    case SpeakerType.NonHostileNPC:
+                        boxColor = new Color(NonHostileNPCBoxColor.r, NonHostileNPCBoxColor.g, NonHostileNPCBoxColor.b, NonHostileNPCBoxColor.a * alpha);
+                        borderColor = new Color(NonHostileNPCOutlineColor.r, NonHostileNPCOutlineColor.g, NonHostileNPCOutlineColor.b, NonHostileNPCOutlineColor.a * alpha);
+                        break;
+                    default:
+                        boxColor = new Color(BoxColor.r, BoxColor.g, BoxColor.b, BoxColor.a * alpha);
+                        borderColor = new Color(OutlineColor.r, OutlineColor.g, OutlineColor.b, OutlineColor.a * alpha);
+                        break;
                 }
-                else
-                {
-                    Widgets.DrawBoxSolidWithOutline(
-                        rect,
-                        new Color(BoxColor.r, BoxColor.g, BoxColor.b, BoxColor.a * alpha),
-                        new Color(OutlineColor.r, OutlineColor.g, OutlineColor.b, OutlineColor.a * alpha)
-                    );
-                }
+
+                Widgets.DrawBoxSolidWithOutline(rect, boxColor, borderColor);
                 Widgets.Label(rect, b.text);
             }
 
@@ -188,7 +196,7 @@ namespace CheeseProtocol
         /// Enforces one-bubble-per-pawn. If a bubble for this pawn exists, remove it first.
         /// Also enforces a global cap (drop oldest) as a safety net.
         /// </summary>
-        private void ReplaceBubbleForPawn(Pawn pawn, string text, float start, float expire, bool isNPC=false)
+        private void ReplaceBubbleForPawn(Pawn pawn, string text, float start, float expire, SpeakerType speaker=SpeakerType.Player, GameFont fontSize=GameFont.Small)
         {
             // Rule #2: replace existing bubble for same pawn
             for (int i = 0; i < bubbles.Count; i++)
@@ -196,13 +204,15 @@ namespace CheeseProtocol
                 var b = bubbles[i];
                 if (b != null && b.pawn == pawn)
                 {
+                    b.fontSize = fontSize;
                     b.text = text;
                     b.startRealtime = start;
                     b.expireRealtime = expire;
+                    b.speaker = speaker;
                     return;
                 }
             }
-            bubbles.Add(new SpeechBubble(text, pawn, start, expire, isNPC));
+            bubbles.Add(new SpeechBubble(text, pawn, start, expire, speaker, fontSize));
         }
 
         private void CleanupExpired(float now)

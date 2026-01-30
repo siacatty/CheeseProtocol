@@ -62,6 +62,7 @@ namespace CheeseProtocol
             { CheeseCommand.Join,    () => new JoinAdvancedSettings() },
             { CheeseCommand.Raid,    () => new RaidAdvancedSettings() },
             { CheeseCommand.Bully,    () => new BullyAdvancedSettings() },
+            { CheeseCommand.Teacher,  () => new TeacherAdvancedSettings() },
             { CheeseCommand.Caravan, () => new CaravanAdvancedSettings() },
             { CheeseCommand.Meteor,  () => new MeteorAdvancedSettings() },
             { CheeseCommand.Supply,  () => new SupplyAdvancedSettings() },
@@ -194,6 +195,7 @@ namespace CheeseProtocol
             EnsureAdv(CheeseCommand.Join, () => new JoinAdvancedSettings());
             EnsureAdv(CheeseCommand.Raid, () => new RaidAdvancedSettings());
             EnsureAdv(CheeseCommand.Bully, () => new BullyAdvancedSettings());
+            EnsureAdv(CheeseCommand.Teacher, () => new TeacherAdvancedSettings());
             EnsureAdv(CheeseCommand.Caravan, () => new CaravanAdvancedSettings());
             EnsureAdv(CheeseCommand.Meteor, () => new MeteorAdvancedSettings());
             EnsureAdv(CheeseCommand.Supply, () => new SupplyAdvancedSettings());
@@ -639,6 +641,7 @@ namespace CheeseProtocol
                 new CheeseCommandConfig { cmd = CheeseCommand.Join,   label = "!참여" },
                 new CheeseCommandConfig { cmd = CheeseCommand.Raid,   label = "!습격" },
                 new CheeseCommandConfig { cmd = CheeseCommand.Bully,    label = "!일진" },
+                new CheeseCommandConfig { cmd = CheeseCommand.Teacher,    label = "!교육" },
                 new CheeseCommandConfig { cmd = CheeseCommand.Caravan,    label = "!상단" },
                 new CheeseCommandConfig { cmd = CheeseCommand.Meteor, label = "!운석" },
                 new CheeseCommandConfig { cmd = CheeseCommand.Supply, label = "!보급" },
@@ -812,14 +815,20 @@ namespace CheeseProtocol
                         return GetAdvSetting(CheeseCommand.Bully).Draw(rect);
                     });
                     break;
+                case CheeseCommand.Teacher:
+                    DrawSectionNoListing(leftAdv, ref yL, "!교육", false, rect =>
+                    {
+                        return GetAdvSetting(CheeseCommand.Teacher).Draw(rect);
+                    });
+                    break;
                 case CheeseCommand.Meteor:
                     DrawSectionNoListing(leftAdv, ref yL, "!운석", false, rect =>
                     {
                         return GetAdvSetting(CheeseCommand.Meteor).Draw(rect);
                     });
-                    DrawSectionNoListing(leftAdv, ref yL, "선호/비선호 특성", false, rect =>
+                    DrawSectionNoListing(leftAdv, ref yL, "허용 운석", false, rect =>
                     {
-                        return GetAdvSetting<MeteorAdvancedSettings>(CheeseCommand.Meteor).DrawEditableList(rect, "선호/비선호 특성", lineH, paddingX, paddingY);
+                        return GetAdvSetting<MeteorAdvancedSettings>(CheeseCommand.Meteor).DrawEditableList(rect, "허용 운석", lineH, paddingX, paddingY);
                     });
                     break;
                 case CheeseCommand.Caravan:

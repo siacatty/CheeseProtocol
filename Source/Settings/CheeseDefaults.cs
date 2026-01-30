@@ -84,6 +84,11 @@ namespace CheeseProtocol
         //!일진
         public static readonly QualityRange BullyCountRange = QualityRange.init(GameplayConstants.BullyCountMin, GameplayConstants.BullyCountMax);
         public static readonly QualityRange StealValueRange = QualityRange.init();
+        //!교육
+        public static readonly QualityRange TeachSkillRange = QualityRange.init(GameplayConstants.TeachSkillMin, 10);
+        public static readonly QualityRange StudentCountRange = QualityRange.init(2, GameplayConstants.StudentCountMax);
+        public static readonly QualityRange PassionProbRange = QualityRange.init(0.3f, 0.9f);
+        public const bool AllowPassion = true;
         //!운석
         public static readonly QualityRange MeteorTypeRange = QualityRange.init();
         public static readonly QualityRange MeteorSizeRange = QualityRange.init(20, 100);

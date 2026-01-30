@@ -9,19 +9,27 @@ namespace CheeseProtocol
 
         public float startRealtime;
         public float expireRealtime;
-        public bool isNPC;
+        public SpeakerType speaker;
+        public GameFont fontSize;
 
         public SpeechBubble() { }
 
-        public SpeechBubble(string text, Pawn pawn, float startRealtime, float expireRealtime, bool isNPC)
+        public SpeechBubble(string text, Pawn pawn, float startRealtime, float expireRealtime, SpeakerType speaker=SpeakerType.Player, GameFont fontSize=GameFont.Small)
         {
             this.text = text;
             this.pawn = pawn;
             this.startRealtime = startRealtime;
             this.expireRealtime = expireRealtime;
-            this.isNPC = isNPC;
+            this.speaker = speaker;
+            this.fontSize = fontSize;
         }
-
         public bool Expired(float now) => now >= expireRealtime;
+    }
+
+    public enum SpeakerType
+    {
+        Player,
+        HostileNPC,
+        NonHostileNPC,
     }
 }

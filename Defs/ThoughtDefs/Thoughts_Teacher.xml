@@ -1,0 +1,29 @@
+<Defs>
+    <ThoughtDef>
+        <defName>CheeseProtocol_BoringLesson</defName>
+        <showBubble>true</showBubble>
+        <durationDays>2</durationDays>
+        <stackLimit>1</stackLimit>
+        <stages>
+            <li>
+                <label>지루한 수업</label>
+                <description>1초가 1년처럼 느껴졌어...</description>
+                <baseMoodEffect>-10</baseMoodEffect>
+            </li>
+        </stages>
+    </ThoughtDef>
+
+    <ThoughtDef>
+        <defName>CheeseProtocol_ThrillingEscape</defName>
+        <showBubble>true</showBubble>
+        <durationDays>2</durationDays>
+        <stackLimit>1</stackLimit>
+        <stages>
+            <li>
+                <label>짜릿한 일탈</label>
+                <description>매번 짜릿해. 해방이다!</description>
+                <baseMoodEffect>+20</baseMoodEffect>
+            </li>
+        </stages>
+    </ThoughtDef>
+</Defs>

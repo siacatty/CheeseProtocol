@@ -31,6 +31,12 @@ namespace CheeseProtocol
         public const int BullyCountMin = 1;
         public const int BullyCountMax = 10;
 
+        //!교육
+        public const int TeachSkillMin = 1;
+        public const int TeachSkillMax = 20;
+        public const int StudentCountMin = 1;
+        public const int StudentCountMax = 10;
+
         //!운석
         public const int MeteorSizeMin = 1;
         public const int MeteorSizeMax = 200;
