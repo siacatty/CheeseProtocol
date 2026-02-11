@@ -147,23 +147,6 @@ namespace CheeseProtocol
                 .RandomElementWithFallback();
         }
 
-        // private static void cleanPawn(Pawn pawn, bool allowWorkDisable, bool isCustomRace)
-        // {
-        //     if (pawn == null) return;
-        //     foreach (var skill in pawn.skills.skills)
-        //     {
-        //         skill.Level = 0;
-        //         skill.passion = Passion.None;
-        //     }
-        //     if (!isCustomRace)
-        //         ClearGenes(pawn);
-        //     pawn.story.traits.allTraits.Clear();
-        //     if (!allowWorkDisable)
-        //         SetNoDisableBackstories(pawn);
-        //     HealthApplier.ClearAllHediffs(pawn);
-        //     pawn.Notify_DisabledWorkTypesChanged();
-        // }
-
         private static void cleanPawn(Pawn pawn, bool allowWorkDisable, bool isCustomRace)
         {
             if (pawn == null) return;
@@ -180,7 +163,7 @@ namespace CheeseProtocol
             if (traitSet?.allTraits != null)
             {
                 var kept = traitSet.allTraits
-                    .Where(t => t != null && t.ScenForced)
+                    .Where(t => t != null && (t.ScenForced || t.sourceGene != null))
                     .ToList();
 
                 traitSet.allTraits.Clear();
@@ -207,14 +190,12 @@ namespace CheeseProtocol
             var genes = pawn?.genes;
             if (genes == null) return;
 
-            // 복사본으로 순회 (cachedGenes 이슈 방지)
             var all = genes.GenesListForReading.ToList();
 
             foreach (var g in all)
             {
                 var cat = g.def.endogeneCategory;
 
-                // ✅ 기본 외형 유전자는 유지
                 if (cat == EndogeneCategory.Melanin ||
                     cat == EndogeneCategory.HairColor)
                     continue;

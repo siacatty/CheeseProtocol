@@ -295,6 +295,8 @@ namespace CheeseProtocol
         {
             var joinAdvSettings = CheeseProtocolMod.Settings.GetAdvSetting<JoinAdvancedSettings>(CheeseCommand.Join);
             traitQuality = Mathf.Clamp01(traitQuality);
+            var disallowedTraits = pawn.kindDef.disallowedTraitsWithDegree;
+            var forcedTraits = pawn.kindDef.forcedTraits; //TODO: add forcedTraits
 
             int traitCount = SampleTraitCount(traitQuality); // your function
 
@@ -331,6 +333,14 @@ namespace CheeseProtocol
                 for (int i = 0; i < chosen.Count; i++)
                 {
                     var c = chosen[i];
+                    var trait = new Trait(c.def, c.degree);
+                    if (disallowedTraits != null)
+                    {
+                        foreach (var t in disallowedTraits)
+                        {
+                            if (t.Matches(trait)) continue;
+                        }
+                    }
                     pawn.story.traits.GainTrait(new Trait(c.def, c.degree));
                 }
             }
