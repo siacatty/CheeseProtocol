@@ -10,14 +10,14 @@ namespace CheeseProtocol
 {
     public class MeteorAdvancedSettings : CommandAdvancedSettingsBase
     {
-        public List<string> allowedMeteorKeys;
+        public List<string> disallowedMeteorKeys;
         public List<MeteorCandidate> allowedMeteorCandidates;
         public List<MeteorCandidate> disallowedMeteorCandidates;
         public override CheeseCommand Command => CheeseCommand.Meteor;
         public override string Label => "!운석";
         private const float lineH = 26f;
-        private Vector2 allowedMeteorScrollPos;
-        private float allowedMeteorListHeight = 400f;
+        private Vector2 disallowedMeteorScrollPos;
+        private float disallowedMeteorListHeight = 400f;
         public QualityRange meteorTypeRange;
         public QualityRange meteorSizeRange;
         private readonly Color HeaderBg     = new Color(0.20f, 0.32f, 0.40f); // steel blue
@@ -46,7 +46,7 @@ namespace CheeseProtocol
             dh.AddRange(meteorSizeRange);
 
             // allowedMeteorKeys는 보통 "선택된 집합" 의미라 순서 무관 처리 추천
-            dh.AddListUnordered(allowedMeteorKeys);
+            dh.AddListUnordered(disallowedMeteorKeys);
 
             return dh.Value;
         }
@@ -55,12 +55,12 @@ namespace CheeseProtocol
             LookRange(ref meteorTypeRange, "meteorTypeRange", CheeseDefaults.MeteorTypeRange);
             LookRange(ref meteorSizeRange, "meteorSizeRange", CheeseDefaults.MeteorSizeRange);
 
-            Scribe_Collections.Look(ref allowedMeteorKeys, "allowedMeteorKeys", LookMode.Value);
+            Scribe_Collections.Look(ref disallowedMeteorKeys, "disallowedMeteorKeys", LookMode.Value);
             
             if (Scribe.mode == LoadSaveMode.PostLoadInit)
             {
-                if (allowedMeteorKeys == null)
-                    allowedMeteorKeys = new List<string>(CheeseDefaults.AllowedMeteorKeys);
+                if (disallowedMeteorKeys == null)
+                    disallowedMeteorKeys = new List<string>(CheeseDefaults.DisallowedMeteorKeys);
                 InitializeAll();
             }
         }
@@ -74,9 +74,9 @@ namespace CheeseProtocol
         }
         public override void ResetToDefaults()
         {
-            allowedMeteorScrollPos = Vector2.zero;
+            disallowedMeteorScrollPos = Vector2.zero;
             
-            allowedMeteorKeys = new List<string>(CheeseDefaults.AllowedMeteorKeys);
+            disallowedMeteorKeys = new List<string>(CheeseDefaults.DisallowedMeteorKeys);
             if (CheeseProtocolMod.MeteorCatalog != null)
             {
                 UpdateMeteorList();
@@ -98,7 +98,7 @@ namespace CheeseProtocol
             meteorSizeRange = QualityRange.init(meteorSizeRange.qMin, meteorSizeRange.qMax);
 
             //ageRange = QualityRange.init(ageRange.qMin, ageRange.qMax);
-            allowedMeteorKeys = allowedMeteorKeys.Distinct().ToList();
+            disallowedMeteorKeys = disallowedMeteorKeys.Distinct().ToList();
             UpdateMeteorList();
         }
         public override float DrawResults(Rect rect)
@@ -181,7 +181,7 @@ namespace CheeseProtocol
             float usedH = 0;
             float checkboxPaddingY = 6f;
             float rowH = lineH+checkboxPaddingY;
-            string typeTip = "값이 높을수록 희귀도와 시장 가치가 높은 운석이 선택될 확률이 증가합니다.\n주의) 아래 허용된 운석이 없으면 이벤트가 발생하지 않습니다.";
+            string typeTip = "값이 높을수록 희귀도와 시장 가치가 높은 운석이 선택될 확률이 증가합니다.";
             string sizeTip = "값이 높을수록 운석 크기가 커집니다. 운석 크기는 선택된 운석 종류에 따라 약간의 보정이 적용됩니다.";
             //UIUtil.RowWithHighlight(rect, ref curY, rowH, r =>{Widgets.CheckboxLabeled(r, "결격사항 허용", ref allowWorkDisable);});
             UIUtil.RangeSliderWrapper(rect, ref curY, lineH, "운석 종류 퀄리티", ref meteorTypeRange, isPercentile: true, tooltip: typeTip);
@@ -196,33 +196,33 @@ namespace CheeseProtocol
             float topBarH = 34f;
             float btnSize = 24f;
             Rect windowRect = new Rect(rect.x, rect.y, rect.width, windowH);
-            UIUtil.SplitVerticallyByRatio(windowRect, out Rect allowedMeteorRect, out Rect unused, 0.5f, paddingX);
-            UIUtil.SplitHorizontallyByHeight(allowedMeteorRect, out Rect allowedTopRect, out Rect allowedListRect, topBarH, 0f);
-            UIUtil.SplitVerticallyByRatio(allowedTopRect, out Rect allowedTopLabel, out Rect allowedAddBtn, 0.7f, 0f);
+            UIUtil.SplitVerticallyByRatio(windowRect, out Rect disallowedMeteorRect, out Rect unused, 0.5f, paddingX);
+            UIUtil.SplitHorizontallyByHeight(disallowedMeteorRect, out Rect disallowedTopRect, out Rect disallowedListRect, topBarH, 0f);
+            UIUtil.SplitVerticallyByRatio(disallowedTopRect, out Rect disallowedTopLabel, out Rect disallowedAddBtn, 0.7f, 0f);
 
             Color oldColor = GUI.color;
-            Widgets.DrawBoxSolid(allowedTopRect, HeaderBg);
+            Widgets.DrawBoxSolid(disallowedTopRect, HeaderBg);
             GUI.color = HeaderBorder;
-            Widgets.DrawBox(allowedTopRect);
-            Widgets.DrawBoxSolid(allowedListRect, BodyBg);
+            Widgets.DrawBox(disallowedTopRect);
+            Widgets.DrawBoxSolid(disallowedListRect, BodyBg);
             GUI.color = BodyBorder;
-            Widgets.DrawBox(allowedListRect);
+            Widgets.DrawBox(disallowedListRect);
             GUI.color= oldColor;
 
-            allowedTopLabel = UIUtil.ShrinkRect(allowedTopLabel, 6f);
-            UIUtil.DrawCenteredText(allowedTopLabel, "허용 운석 종류", align: TextAlignment.Left);
+            disallowedTopLabel = UIUtil.ShrinkRect(disallowedTopLabel, 6f);
+            UIUtil.DrawCenteredText(disallowedTopLabel, "비허용 운석 종류", align: TextAlignment.Left);
 
-            allowedAddBtn = UIUtil.ResizeRectAligned(allowedAddBtn, btnSize, btnSize, TextAlignment.Right);
-            Widgets.DrawHighlightIfMouseover(allowedAddBtn);
+            disallowedAddBtn = UIUtil.ResizeRectAligned(disallowedAddBtn, btnSize, btnSize, TextAlignment.Right);
+            Widgets.DrawHighlightIfMouseover(disallowedAddBtn);
 
-            DrawAddMeteorDropdownButton(allowedAddBtn, allowedMeteorCandidates);
+            DrawAddMeteorDropdownButton(disallowedAddBtn, disallowedMeteorCandidates);
             UIUtil.AutoScrollView(
-                allowedListRect,
-                ref allowedMeteorScrollPos,
-                ref allowedMeteorListHeight,
+                disallowedListRect,
+                ref disallowedMeteorScrollPos,
+                ref disallowedMeteorListHeight,
                 viewRect =>
                 {
-                    return DrawMeteorList(viewRect, allowedMeteorCandidates);
+                    return DrawMeteorList(viewRect, disallowedMeteorCandidates);
                 },
                 true);
             usedH += windowH;
@@ -233,12 +233,12 @@ namespace CheeseProtocol
             List<MeteorCandidate> targetCandidates)
         {
             plusRect.x -= 4f; //additional padding for + button
-            bool hasAny = disallowedMeteorCandidates != null && disallowedMeteorCandidates.Count > 0;
+            bool hasAny = allowedMeteorCandidates != null && allowedMeteorCandidates.Count > 0;
             using (new UIUtil.GUIStateScope(hasAny))
             {
                 Widgets.Dropdown(
                     plusRect,
-                    hasAny ? (object)disallowedMeteorCandidates : null,
+                    hasAny ? (object)allowedMeteorCandidates : null,
                     _ => 0, // dummy payload
                     _ => BuildMeteorDropdown(targetCandidates),
                     "");
@@ -261,7 +261,7 @@ namespace CheeseProtocol
             Text.Font = GameFont.Small;
             var menu = new List<Widgets.DropdownMenuElement<int>>();
 
-            if (disallowedMeteorCandidates == null || disallowedMeteorCandidates.Count == 0)
+            if (allowedMeteorCandidates == null || allowedMeteorCandidates.Count == 0)
             {
                 menu.Add(new Widgets.DropdownMenuElement<int>
                 {
@@ -273,7 +273,7 @@ namespace CheeseProtocol
 
             // Snapshot to avoid issues if we modify neutralCandidates after selection.
             // We store the key in a local var for the closure.
-            foreach (var cand in disallowedMeteorCandidates.ToList())
+            foreach (var cand in allowedMeteorCandidates.ToList())
             {
                 var captured = cand;
                 string key = captured.key;
@@ -336,7 +336,7 @@ namespace CheeseProtocol
             {
                 MeteorApplier.BuildPools(
                     CheeseProtocolMod.MeteorCatalog,
-                    allowedMeteorKeys,
+                    disallowedMeteorKeys,
                     out List<MeteorCandidate> allowed,
                     out List<MeteorCandidate> disallowed
                 );
@@ -349,12 +349,12 @@ namespace CheeseProtocol
             if (string.IsNullOrEmpty(cand.key)) return false;
 
             // already selected?
-            if (allowedMeteorKeys.Contains(cand.key))
+            if (disallowedMeteorKeys.Contains(cand.key))
                 return false;
 
-            RemoveByKey(disallowedMeteorCandidates, cand.key);
-            AddUniqueByKey(allowedMeteorCandidates, cand);
-            allowedMeteorKeys.Add(cand.key);
+            RemoveByKey(allowedMeteorCandidates, cand.key);
+            AddUniqueByKey(disallowedMeteorCandidates, cand);
+            disallowedMeteorKeys.Add(cand.key);
             return true;
         }
 
@@ -363,10 +363,10 @@ namespace CheeseProtocol
             if (string.IsNullOrEmpty(cand.key)) return false;
 
             bool removed;
-            removed = RemoveByKey(allowedMeteorCandidates, cand.key);
+            removed = RemoveByKey(disallowedMeteorCandidates, cand.key);
             if (!removed) return false;
-            allowedMeteorKeys.Remove(cand.key);
-            AddUniqueByKey(disallowedMeteorCandidates, cand);
+            disallowedMeteorKeys.Remove(cand.key);
+            AddUniqueByKey(allowedMeteorCandidates, cand);
             return true;
         }
         private static bool RemoveByKey(List<MeteorCandidate> list, string key)

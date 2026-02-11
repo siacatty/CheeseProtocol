@@ -26,7 +26,6 @@ namespace CheeseProtocol
             // WorldComponent is save-scoped; Find.World is the current save's world.
             return Find.World?.GetComponent<CheeseParticipantRegistry>();
         }
-
         public override void ExposeData()
         {
             base.ExposeData();
@@ -94,6 +93,13 @@ namespace CheeseProtocol
         {
             if (string.IsNullOrEmpty(username) || ActiveRecords == null) return false;
             return ActiveRecords.Any(r => r != null && r.username == username);
+        }
+
+        public bool IsParticipant(Pawn pawn)
+        {
+            if (pawn == null || ActiveRecords == null) return false;
+            string uid = pawn.GetUniqueLoadID();
+            return ActiveRecords.Any(r => r!= null && r.pawnUid == uid);
         }
 
         public bool TryGetRecords(string username, out List<ParticipantRecord> result)

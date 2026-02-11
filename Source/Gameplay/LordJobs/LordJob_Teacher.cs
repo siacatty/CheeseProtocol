@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -43,7 +44,7 @@ namespace CheeseProtocol
         public int lessonProgressTicks;
         public int lastLessonStartTick = -1;
 
-        public const int LessonTotalTicks = 6000;
+        public const int LessonTotalTicks = 9000;
         public const string MemoGatherStudents = "GatherStudents";
         public const string MemoLessonStarted = "LessonStarted";
         public const string MemoTakeSeats = "LessonTakeSeats";
@@ -55,6 +56,7 @@ namespace CheeseProtocol
         public const string MemoResumeLesson = "ResumeLesson";
         public const string MemoLessonComplete = "LessonComplete";
         public const string MemoLessonFailed = "LessonFailed";
+        public const string MemoPlayerCheat = "PlayerCheat";
         public const string MemoEatSuccess = "EatSuccess";
         public const string MemoEatFail = "EatFail";
         public const string ColorPositive = "#2e8032ff";
@@ -296,7 +298,19 @@ namespace CheeseProtocol
 
                 RemoveStudents();
             });
-
+            Transition playerCheat = new Transition(catchStudents, exit);
+            playerCheat.AddTrigger(new Trigger_Memo(MemoPlayerCheat));
+            playerCheat.AddPreAction(cleanStudents);
+            playerCheat.AddPostAction(new TransitionAction_Custom((Action)delegate
+            {
+                if (TeacherValidForRead())
+                {
+                    string text = LordChats.GetText(TeacherTextKey.PlayerCheat);
+                    SpeechBubbleManager.Get(Map)?.AddNPCChat(text, teacher, speaker:SpeakerType.NonHostileNPC);
+                    Messages.Message("선생님이 지쳐 떠납니다.", teacher, MessageTypeDefOf.NegativeEvent);
+                }
+            }));
+            graph.AddTransition(playerCheat);
             Transition waitTimeOut2 = new Transition(catchStudents, exit);
             waitTimeOut2.AddTrigger(new Trigger_TicksPassed(10000));
             waitTimeOut2.AddPreAction(cleanStudents);
@@ -762,16 +776,13 @@ namespace CheeseProtocol
         public LessonVenue UpdateVenue(int studentCount)
         {
             int totalCount = studentCount + 1;
-            Warn("UpdateVenue called");
             if (catalog == null) return null;
             if (studentCount <= 0) return null;
 
             if (currentVenue != null && LessonCatalogUtility.CanFitStudents(currentVenue, totalCount))
             {
-                Warn($"currentVenue not null and can fit students : type={currentVenue.kind}");
                 return currentVenue;
             }
-            Warn("currentVenue is null");
 
             LessonVenue found =
                 LessonCatalogUtility.FindFirstFittable(catalog.blackboards, totalCount) ??
@@ -986,10 +997,16 @@ namespace CheeseProtocol
 
                 if (homeCenter.IsValid)
                 {
+                    Room baseRoom = homeCenter.GetRoom(map);
+
                     return CellFinder.TryFindRandomReachableNearbyCell(
                         homeCenter, map, 18,
                         TraverseParms.For(pawn),
-                        c => c.Standable(map) && !c.OnEdge(map),
+                        c => c.Standable(map)
+                            && !c.OnEdge(map)
+                            && home[c]
+                            && !(c.GetEdifice(map) is Building_Door)
+                            && (baseRoom == null || c.GetRoom(map) == baseRoom),
                         null,
                         out cell);
                 }

@@ -32,6 +32,14 @@
     </JobDef>
 
     <JobDef>
+        <defName>CheeseProtocol_TeacherBreakWall</defName>
+        <driverClass>CheeseProtocol.JobDriver_TeacherBreakWall</driverClass>
+        <reportString>breaking TargetA.</reportString>
+        <casualInterruptible>false</casualInterruptible>
+        <playerInterruptible>false</playerInterruptible>
+    </JobDef>
+
+    <JobDef>
         <defName>CheeseProtocol_TeacherEat</defName>
         <driverClass>CheeseProtocol.JobDriver_TeacherEat</driverClass>
         <reportString>Eating TargetA.</reportString>

@@ -24,10 +24,8 @@ namespace CheeseProtocol
         }
         private static bool IsOfficial(ModContentPack mcp)
         {
-            // Defs almost always have modContentPack, but be safe.
             if (mcp == null) return true;
 
-            // In RimWorld, Core/DLC packageIds are typically "ludeon.*"
             var id = mcp.PackageId ?? "";
             return id.StartsWith("ludeon.", StringComparison.OrdinalIgnoreCase);
         }

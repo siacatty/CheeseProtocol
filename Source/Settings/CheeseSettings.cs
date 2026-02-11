@@ -32,6 +32,7 @@ namespace CheeseProtocol
         public bool hudMinimized = CheeseDefaults.HudMinimized;
         public bool hudSlideHidden = CheeseDefaults.HudSlideHidden;
         public float randomVar = CheeseDefaults.RandomVar;
+        public bool allowQueueCDCmd = CheeseDefaults.AllowQueueCDCmd;
         public bool allowSpeechBubble = CheeseDefaults.AllowSpeechBubble;
         public int speechBubbleCD = CheeseDefaults.SpeechBubbleCD;
         public string speechBubbleCDBuf;
@@ -150,6 +151,7 @@ namespace CheeseProtocol
             Scribe_Values.Look(ref simDonAmountBuf, "simDonAmountBuf", CheeseDefaults.SimDonAmountBuf);
             Scribe_Values.Look(ref drainQueue, "drainQueue", CheeseDefaults.DrainQueue);
             Scribe_Values.Look(ref appendRollLogToLetters, "appendRollLogToLetters", CheeseDefaults.AppendRollLogToLetters);
+            Scribe_Values.Look(ref allowQueueCDCmd, "allowQueueCDCmd", CheeseDefaults.AllowQueueCDCmd);
             Scribe_Values.Look(ref allowSpeechBubble, "allowSpeechBubble", CheeseDefaults.AllowSpeechBubble);
             Scribe_Values.Look(ref speechBubbleCD, "speechBubbleCD", CheeseDefaults.SpeechBubbleCD);
 
@@ -329,8 +331,16 @@ namespace CheeseProtocol
                             () => "시청자의 운을 수치로 표시합니다.",
                             allowFeedbackRect.GetHashCode()
                         );
-
-
+                        listing.Gap(4);
+                        listing.GapLine();
+                        listing.Gap(4);
+                        Rect allowQueueCDCmdRect = listing.GetRect(lineH);
+                        Widgets.CheckboxLabeled(allowQueueCDCmdRect, "쿨타임 종료 시 자동 실행", ref allowQueueCDCmd);
+                        TooltipHandler.TipRegion(
+                            allowQueueCDCmdRect,
+                            () => "해제 시, 쿨타임 중 수신되는 명령어는 무시됩니다.",
+                            allowQueueCDCmdRect.GetHashCode()
+                        );
                         listing.Gap(4);
                         listing.GapLine();
                         listing.Gap(4);

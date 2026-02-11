@@ -32,14 +32,16 @@ namespace CheeseProtocol
             }
             
             pawn.SetFaction(Faction.OfPlayer);
-            if (!string.IsNullOrWhiteSpace(donorName))
-                pawn.Name = new NameSingle(TrimName(donorName));
-
             if (!CheeseParticipantRegistry.Get().TryRegister(donorName, pawn, out string reason))
             {
                 QWarn($"CheeseParticipant register failed. reason={reason}");
                 CheeseLetter.AlertFail("!참여", $"최대 합류인원을 초과해 {donorName}님이 합류하지 못했습니다.");
                 return;
+            }
+
+            if (!string.IsNullOrWhiteSpace(donorName))
+            {
+                pawn.Name = new NameSingle(TrimName(donorName));
             }
 
             IntVec3 rootCell = IntVec3.Invalid;
@@ -82,14 +84,12 @@ namespace CheeseProtocol
                 race,
                 context: PawnGenerationContext.PlayerStarter,
                 forceGenerateNewPawn: true,
-                canGeneratePawnRelations: false,
-                forcedXenotype: XenotypeDefOf.Baseliner
+                canGeneratePawnRelations: false
             );
             Pawn pawn = PawnGenerator.GeneratePawn(req);
             bool isCustomRace = race != PawnKindDefOf.Colonist;
             cleanPawn(pawn, joinAdvSetting.allowWorkDisable, isCustomRace);
             ApplyPawnCustomization(pawn, quality, trace, isCustomRace);
-            //ApplyRace(pawn);
             if (!isCustomRace)
                 pawn.skills?.DirtyAptitudes();
             pawn.skills?.Notify_SkillDisablesChanged();
@@ -147,6 +147,23 @@ namespace CheeseProtocol
                 .RandomElementWithFallback();
         }
 
+        // private static void cleanPawn(Pawn pawn, bool allowWorkDisable, bool isCustomRace)
+        // {
+        //     if (pawn == null) return;
+        //     foreach (var skill in pawn.skills.skills)
+        //     {
+        //         skill.Level = 0;
+        //         skill.passion = Passion.None;
+        //     }
+        //     if (!isCustomRace)
+        //         ClearGenes(pawn);
+        //     pawn.story.traits.allTraits.Clear();
+        //     if (!allowWorkDisable)
+        //         SetNoDisableBackstories(pawn);
+        //     HealthApplier.ClearAllHediffs(pawn);
+        //     pawn.Notify_DisabledWorkTypesChanged();
+        // }
+
         private static void cleanPawn(Pawn pawn, bool allowWorkDisable, bool isCustomRace)
         {
             if (pawn == null) return;
@@ -155,11 +172,32 @@ namespace CheeseProtocol
                 skill.Level = 0;
                 skill.passion = Passion.None;
             }
+
             if (!isCustomRace)
                 ClearGenes(pawn);
-            pawn.story.traits.allTraits.Clear();
+
+            var traitSet = pawn.story?.traits;
+            if (traitSet?.allTraits != null)
+            {
+                var kept = traitSet.allTraits
+                    .Where(t => t != null && t.ScenForced)
+                    .ToList();
+
+                traitSet.allTraits.Clear();
+
+                var seen = new HashSet<(TraitDef def, int degree)>();
+                foreach (var t in kept)
+                {
+                    if (t.def == null) continue;
+                    var key = (t.def, t.Degree);
+                    if (!seen.Add(key)) continue;
+                    traitSet.allTraits.Add(t);
+                }
+            }
+
             if (!allowWorkDisable)
                 SetNoDisableBackstories(pawn);
+
             HealthApplier.ClearAllHediffs(pawn);
             pawn.Notify_DisabledWorkTypesChanged();
         }

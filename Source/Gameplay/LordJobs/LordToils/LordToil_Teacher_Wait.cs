@@ -67,7 +67,7 @@ namespace CheeseProtocol
                     : new TargetInfo(teacher.Position, teacher.Map);
 
                 Find.WindowStack.Add(new Dialog_BeginCustom(
-                    "참여 학생",
+                    $"최대 참여 학생 : {maxStudents}명",
                     ritual: null,
                     target: lessonSpot,
                     map: teacher.Map,

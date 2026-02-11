@@ -158,14 +158,14 @@ namespace CheeseProtocol
             allowed = new List<MeteorCandidate>();
             disallowed = new List<MeteorCandidate>();
 
-            var allowedSet = (meteorKeys != null && meteorKeys.Count > 0)
+            var disallowedSet = (meteorKeys != null && meteorKeys.Count > 0)
                 ? new HashSet<string>(meteorKeys)
                 : null;
             foreach (var c in catalog)
             {
-                bool isAllowed = allowedSet != null && allowedSet.Contains(c.key);
-                if (isAllowed) allowed.Add(c);
-                else disallowed.Add(c);
+                bool isDisallowed = disallowedSet != null && disallowedSet.Contains(c.key);
+                if (isDisallowed) disallowed.Add(c);
+                else allowed.Add(c);
             }
         }
 

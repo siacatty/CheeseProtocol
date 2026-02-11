@@ -51,7 +51,7 @@ namespace CheeseProtocol
                 "\n\n선생님에게 말을 걸어 교육을 받을 수 있습니다." +
                 "\n\n수업을 무사히 끝마치면 기술을 습득할수있지만," +
                 "\n수업 중 도주에 성공하면 더 큰 보상이 있을것같습니다..." +
-                $"\n<color={ColorPositive}>(힌트: 수업이 시작하면 정착민을 소집할 수 있습니다.)</color>";
+                $"\n<color={ColorPositive}>(힌트: 수업이 시작하면 정착민을 소집할 수 있습니다.)\n도주는 수업장소에서 충분히 멀어지면 성공합니다.</color>";
 
 
             CheeseLetter.SendCheeseLetter(
@@ -120,7 +120,7 @@ namespace CheeseProtocol
                     traceStep
             );
             trace.steps.Add(traceStep);
-            request.teachSkill = Mathf.RoundToInt(Mathf.Clamp(teachSkillF, GameplayConstants.TeachSkillMin, GameplayConstants.TeachSkillMax));
+            request.teachSkill = Mathf.RoundToInt(Mathf.Clamp(teachSkillF, GameplayConstants.TeachSkillEXPMin, GameplayConstants.TeachSkillEXPMax));
         }
 
         private static void ApplyPassionProb(TeacherRequest request, float quality, float randomVar, QualityRange range, CheeseRollTrace trace)

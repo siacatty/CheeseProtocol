@@ -21,12 +21,12 @@ namespace CheeseProtocol
         private const float slideBarH = 40f;
         private const float lineH = 22f;
 
-        private const float widthInitial = 290f;
+        private const float widthInitial = 300f;
         private const float colCmd  = 52f;
         private const float colCd   = 60f;
-        private const float colRatioCmd  = 0.2f;
-        private const float colRatioCd   = 0.2f;
-        private const float colRatioDesc   = 0.60f;
+        private const float colRatioCmd  = 0.15f;
+        private const float colRatioCd   = 0.3f;
+        private const float colRatioDesc   = 0.55f;
 
         private const float statusLinesBase = 3f;
         private const float separatorH = 6f;
@@ -489,7 +489,9 @@ namespace CheeseProtocol
             var cdState = CheeseCooldownState.Current;
             int nowTick = Find.TickManager.TicksGame;
             float cdTicks = cfg.cooldownHours * 2500f;
-            
+            int pending = CheeseCommandQueue.Current?.GetPendingCount(cfg) ?? 0;
+            Rect cdRect = rect;
+
             Color prev = GUI.color;
             GUI.color = Color.green;
 
@@ -507,12 +509,13 @@ namespace CheeseProtocol
                 {
                     Color prev2 = GUI.color;
                     GUI.color = count < maxParticipants ? Color.green : Color.red;
-                    UIUtil.DrawCenteredText(rect, $"{count}/{maxParticipants}");
+                    string countString = pending > 0 ? $"{count}/{maxParticipants} (대기: {pending})" : $"{count}/{maxParticipants}";
+                    UIUtil.DrawCenteredText(cdRect, countString);
                     GUI.color = prev2;
                 }
                 else
                 {
-                    UIUtil.DrawCenteredText(rect, "준비됨");
+                    UIUtil.DrawCenteredText(cdRect, "준비됨");
                 }
 
                 GUI.color = prev;
@@ -523,7 +526,8 @@ namespace CheeseProtocol
             {
                 Color prev2 = GUI.color;
                 GUI.color = Color.red;
-                UIUtil.DrawCenteredText(rect, $"{count}/{maxParticipants}");
+                string countString = pending > 0 ? $"{count}/{maxParticipants} (대기: {pending})" : $"{count}/{maxParticipants}";
+                UIUtil.DrawCenteredText(cdRect, countString);
                 GUI.color = prev2;
                 return;
             }
@@ -534,7 +538,8 @@ namespace CheeseProtocol
             {
                 Color prev2 = GUI.color;
                 GUI.color = Color.red;
-                UIUtil.DrawCenteredText(rect, $"{participantRegistry.Count}/{maxParticipants}");
+                string countString = pending > 0 ? $"{count}/{maxParticipants} (대기: {pending})" : $"{count}/{maxParticipants}";
+                UIUtil.DrawCenteredText(cdRect, countString);
                 GUI.color = prev2;
                 return;
             }
@@ -544,17 +549,17 @@ namespace CheeseProtocol
             pct = Mathf.Clamp01(pct);
 
             // 배경
-            Widgets.DrawBoxSolid(rect, new Color(0.12f, 0.13f, 0.14f));
+            Widgets.DrawBoxSolid(cdRect, new Color(0.12f, 0.13f, 0.14f));
 
             // 채워진 바
-            Rect fill = new Rect(rect.x, rect.y, rect.width * pct, rect.height);
+            Rect fill = new Rect(cdRect.x, cdRect.y, cdRect.width * pct, cdRect.height);
             Widgets.DrawBoxSolid(fill, new Color(0.22f, 0.52f, 0.26f));
 
             // 텍스트
-            string remainingTime = FormatCooldownTicks(remain);
+            string remainingTime = pending > 0 ? $"대기: {pending}" : FormatCooldownTicks(remain);
             Text.Anchor = TextAnchor.MiddleCenter;
             GUI.color = new Color(0.9f, 0.9f, 0.9f);
-            Widgets.Label(rect, remainingTime);
+            UIUtil.DrawCenteredText(cdRect, remainingTime);
             Text.Anchor = TextAnchor.UpperLeft;
 
             

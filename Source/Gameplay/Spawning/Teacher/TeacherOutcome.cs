@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using RimWorld;
 using UnityEngine;
@@ -101,63 +103,161 @@ namespace CheeseProtocol
         {
             if (pawn?.skills == null) return string.Empty;
 
-            int remaining = skillUp;
-            if (remaining <= 0) return string.Empty;
-            List<SkillRecord> list = new List<SkillRecord>(pawn.skills.skills);
-            list.Shuffle();
-            list.Sort((a, b) => b.Level.CompareTo(a.Level));
-            Dictionary<SkillDef, int> applied = new Dictionary<SkillDef, int>();
-            for (int i = 0; i < list.Count && remaining > 0; i++)
+            float remaining = (float)skillUp; // skillUp is now XP (int)
+            if (remaining <= 0f) return string.Empty;
+
+            int cap = GameplayConstants.SkillLevelMax; // usually 20
+
+            // 1) Collect + shuffle for tie-breaking, then sort by (Level desc, progress desc)
+            List<SkillRecord> all = new List<SkillRecord>(pawn.skills.skills);
+            all.Shuffle();
+
+            all.Sort((a, b) =>
             {
-                SkillRecord sr = list[i];
-                if (sr == null) continue;
+                if (a == null && b == null) return 0;
+                if (a == null) return 1;
+                if (b == null) return -1;
 
-                int cap = GameplayConstants.SkillLevelMax;
-                if (sr.Level >= cap) continue;
+                int lvl = b.Level.CompareTo(a.Level);
+                if (lvl != 0) return lvl;
 
-                int give = Mathf.Min(3, remaining);
-                int room = cap - sr.Level;
-                if (room <= 0) continue;
+                float ap = SkillAsFloat(a);
+                float bp = SkillAsFloat(b);
+                return bp.CompareTo(ap);
+            });
 
-                int inc = Mathf.Min(give, room);
-                if (inc <= 0) continue;
-                for (int k = 0; k < inc; k++)
+            // 2) Eligible list (not capped)
+            List<SkillRecord> eligible = all.Where(sr => sr != null && sr.Level < cap).ToList();
+            if (eligible.Count == 0) return string.Empty;
+
+            // 3) Pick randomly among top window (0..2)
+            int windowCount = Math.Min(3, eligible.Count);
+            SkillRecord picked = eligible[Rand.Range(0, windowCount)];
+            int idx = eligible.IndexOf(picked);
+            if (idx < 0) idx = 0;
+
+            // 4) Track before/after for touched skills
+            //    store per SkillDef: (before, after)
+            Dictionary<SkillDef, (float before, float after)> changed = new Dictionary<SkillDef, (float, float)>();
+
+            // Helper: mark before if first time
+            void MarkBefore(SkillRecord sr)
+            {
+                if (sr?.def == null) return;
+                if (!changed.ContainsKey(sr.def))
                 {
-                    float need = sr.XpRequiredForLevelUp - sr.xpSinceLastLevel;
-                    if (need < 1f) need = 1f;
-                    sr.Learn(need +1f, direct: true);
+                    float bf = SkillAsFloat(sr);
+                    changed[sr.def] = (bf, bf);
                 }
-
-                remaining -= inc;
-
-                if (applied.TryGetValue(sr.def, out var prev))
-                    applied[sr.def] = prev + inc;
-                else
-                    applied.Add(sr.def, inc);
             }
 
-            if (applied.Count == 0) return string.Empty;
+            void MarkAfter(SkillRecord sr)
+            {
+                if (sr?.def == null) return;
+                if (changed.TryGetValue(sr.def, out var v))
+                {
+                    changed[sr.def] = (v.before, SkillAsFloat(sr));
+                }
+                else
+                {
+                    float now = SkillAsFloat(sr);
+                    changed[sr.def] = (now, now);
+                }
+            }
 
-            // 3) format string: " (Mining: 3, Medicine: 1, Shooting: 2)"
+            // 5) Distribute XP: dump to picked, overflow goes to next highest
+            for (int i = idx; i < eligible.Count && remaining > 0.0001f; i++)
+            {
+                SkillRecord sr = eligible[i];
+                if (sr == null) continue;
+                if (sr.Level >= cap) continue;
+
+                MarkBefore(sr);
+
+                // give ALL remaining to this skill; helper will stop at cap and return consumed amount
+                float used = AddRawXpNoRate(sr, remaining, cap);
+                remaining -= used;
+
+                MarkAfter(sr);
+            }
+
+            if (changed.Count == 0) return string.Empty;
+
+            // 6) Build string: " (Mining: 4.5 -> 5.2, Research: 3.2 -> 3.3)"
             var sb = new StringBuilder();
             sb.Append(" (");
 
             int written = 0;
-            foreach (var kv in applied)
+            foreach (var kv in changed)
             {
                 if (written > 0) sb.Append(", ");
 
-                // Use RimWorld label for readability
                 string label = kv.Key?.label ?? kv.Key?.defName ?? "스킬";
                 sb.Append(label);
-                sb.Append(": +");
-                sb.Append(kv.Value);
+                sb.Append(": ");
+                sb.Append(kv.Value.before.ToString("0.0"));
+                sb.Append(" -> ");
+                sb.Append(kv.Value.after.ToString("0.0"));
 
                 written++;
             }
 
             sb.Append(")");
             return sb.ToString();
+        }
+
+        private static float AddRawXpNoRate(SkillRecord sr, float amount, int cap)
+        {
+            // returns how much XP was actually consumed
+            if (sr == null || amount <= 0f) return 0f;
+            if (sr.Level >= cap) return 0f;
+
+            float consumed = 0f;
+
+            while (amount > 0.0001f && sr.Level < cap)
+            {
+                float req = sr.XpRequiredForLevelUp;
+                if (req <= 0.0001f) req = 1f;
+
+                float need = req - sr.xpSinceLastLevel;
+                if (need <= 0.0001f)
+                {
+                    // force level-up step (safety)
+                    sr.xpSinceLastLevel = 0f;
+                    sr.levelInt = Mathf.Min(sr.levelInt + 1, cap); // RimWorld field name is levelInt
+                    continue;
+                }
+
+                float give = Mathf.Min(amount, need);
+
+                // raw apply (NO learning rate)
+                sr.xpSinceLastLevel += give;
+                consumed += give;
+                amount -= give;
+
+                // handle level-up if reached
+                if (sr.xpSinceLastLevel >= req - 0.0001f)
+                {
+                    sr.xpSinceLastLevel = 0f;
+                    sr.levelInt = Mathf.Min(sr.levelInt + 1, cap);
+                }
+            }
+
+            return consumed;
+        }
+
+        private static float SkillAsFloat(SkillRecord sr)
+        {
+            if (sr == null) return 0f;
+            int cap = GameplayConstants.SkillLevelMax;
+
+            if (sr.Level >= cap) return sr.Level;
+
+            float req = sr.XpRequiredForLevelUp;
+            if (req <= 0.0001f) return sr.Level;
+
+            float frac = Mathf.Clamp01(sr.xpSinceLastLevel / req);
+            return sr.Level + frac;
         }
 
         private void ApplyBoringThought(Pawn pawn)

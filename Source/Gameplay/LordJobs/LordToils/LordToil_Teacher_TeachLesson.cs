@@ -17,10 +17,6 @@ namespace CheeseProtocol
 
         public List<Pawn> students;
         public int arrived;
-        private LessonVenue venue;
-        private IntVec3 teacherSeat;
-        private Dictionary<string, IntVec3> studentSeats;
-        private IntVec3 teacherFaceDir;
         private int nextRotateTick = 0;
         private Pawn escapingStudent;
         private const int RotateInterval = 30;
@@ -31,7 +27,6 @@ namespace CheeseProtocol
         {
             this.teacher = teacher;
             this.students = students;
-            this.venue = venue;
             arrived = 0;
             data = new LordToilData_Gathering();
         }
@@ -42,7 +37,6 @@ namespace CheeseProtocol
             if (job == null) return;
             teacher = job.teacher;
             students = job.students;
-            venue = job.currentVenue;
             if (job.lastLessonStartTick < 0)
             { 
             }
@@ -53,9 +47,6 @@ namespace CheeseProtocol
             job.RemoveTeacherBuff();
             if (!job.teacherSeat.IsValid || job.studentSeats == null || job.studentSeats.Count < students.Count)
                 job.ReassignSeats();
-            teacherSeat = job.teacherSeat;
-            studentSeats = job.studentSeats;
-            teacherFaceDir = job.teacherFaceDir;
             if (!teacher.Awake())
             {
                 RestUtility.WakeUp(teacher);
@@ -72,7 +63,7 @@ namespace CheeseProtocol
             if (lj == null) return;
             nextRotateTick = Find.TickManager.TicksGame + RotateInterval;
 
-            IntVec3 spot = venue.spotCell;
+            IntVec3 spot = lj.currentVenue.spotCell;
             var pawns = lord?.ownedPawns;
             if (pawns == null) return;
             if (pawns.Count == 1 && pawns[0] == teacher)
@@ -98,22 +89,27 @@ namespace CheeseProtocol
                     }
                     else
                     {
-                        var faceCell = teacherSeat + teacherFaceDir;
-                        if (CanStartTeachJobNow(teacher, faceCell, teacherSeat))
-                            StartTeachJob(teacher, faceCell, teacher, teacherSeat);
+                        if (!lj.teacherSeat.IsValid || !lj.teacherSeat.Walkable(Map))
+                            lj.ReassignSeats();
+                        var faceCell = lj.teacherSeat + lj.teacherFaceDir;
+                        if (CanStartTeachJobNow(teacher, faceCell, lj.teacherSeat))
+                            StartTeachJob(teacher, faceCell, teacher, lj.teacherSeat);
                     }
                 }
                 else
                 {
+                    bool canReach = true;//teacher.CanReach(pawn, PathEndMode.Touch, Danger.Some);
                     bool inMental = pawn.InMentalState;
-                    bool inClass = LessonPosUtility.InGatheringArea(pawn.Position, spot, Map, dist: 18f, maxRoomCell: 170);
-                    if (!inClass || inMental)
+                    bool inClass = LessonPosUtility.InGatheringArea(pawn.Position, spot, Map);
+                    if (canReach && (!inClass || inMental))
                     {
                         escapingStudent = pawn;
                         break;
                     }
-                    if (!pawn.Drafted && studentSeats.TryGetValue(pawn.GetUniqueLoadID(), out var seat))
+                    if (!pawn.Drafted && lj.studentSeats.TryGetValue(pawn.GetUniqueLoadID(), out var seat))
                     {
+                        if (!seat.IsValid || !seat.Walkable(Map))
+                            lj.ReassignSeats();
                         if (pawn.Position == seat)
                         {
                             if (teacher != null)
@@ -160,7 +156,8 @@ namespace CheeseProtocol
         
         public override void UpdateAllDuties()
         {
-            IntVec3 spot = ((LordJob_Teacher)lord.LordJob).GetSpot();
+            var lj = lord?.LordJob as LordJob_Teacher;
+            if (lj == null) return;
             for (int i = 0; i < lord.ownedPawns.Count; i++)
             {
                 Pawn pawn = lord.ownedPawns[i];
@@ -172,8 +169,8 @@ namespace CheeseProtocol
                 if (pawn == teacher)
                 {
                     PawnDuty teacherDuty;
-                    if (pawn.Position != teacherSeat)
-                        teacherDuty = new PawnDuty(DutyDefOf.Goto, teacherSeat);
+                    if (pawn.Position != lj.teacherSeat)
+                        teacherDuty = new PawnDuty(DutyDefOf.Goto, lj.teacherSeat);
                     else
                     {
                         teacherDuty = new PawnDuty(DutyDefOf.Idle);
@@ -182,7 +179,7 @@ namespace CheeseProtocol
                 }
                 else
                 {
-                    if (studentSeats.TryGetValue(pawn.GetUniqueLoadID(), out IntVec3 seat))
+                    if (lj.studentSeats.TryGetValue(pawn.GetUniqueLoadID(), out IntVec3 seat))
                     {
                         PawnDuty studentDuty;
                         if (pawn.Position != seat)

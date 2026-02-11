@@ -19,30 +19,29 @@ namespace CheeseProtocol
 
         public override void LoadedGame()
         {
-            Reset();
-            Msg("Cooldown state reset (loaded game).");
+            Msg("Cooldown state loaded.");
         }
 
-        private void Reset()
+        public override void ExposeData()
         {
-            lastTickByCmd.Clear();
+            base.ExposeData();
+            Scribe_Collections.Look(ref lastTickByCmd, "lastTickByCmd", LookMode.Value, LookMode.Value);
+
+            if (Scribe.mode == LoadSaveMode.PostLoadInit)
+            {
+                lastTickByCmd ??= new Dictionary<CheeseCommand, int>();
+            }
         }
 
-        // --- API ---
-        public void ResetAllCd()
-        {
-            Reset();
-        }
+        private void Reset() => lastTickByCmd.Clear();
+
+        public void ResetAllCd() => Reset();
+
         public int GetLastTick(CheeseCommand cmd)
-        {
-            if (lastTickByCmd.TryGetValue(cmd, out var t)) return t;
-            return -1; // never executed => always ready
-        }
+            => lastTickByCmd.TryGetValue(cmd, out var t) ? t : -1;
 
         public void MarkExecuted(CheeseCommand cmd, int nowTick)
-        {
-            lastTickByCmd[cmd] = nowTick;
-        }
+            => lastTickByCmd[cmd] = nowTick;
 
         public bool IsReady(CheeseCommand cmd, int cooldownHours, int nowTick)
         {
@@ -50,9 +49,7 @@ namespace CheeseProtocol
 
             int last = GetLastTick(cmd);
             int cdTicks = cooldownHours * 2500;
-            QMsg($"command config cooldown: {cdTicks} | last executed: {last} | now:  {nowTick}", Channel.Debug);
-            if (last < 0) //always run on first
-                return true;
+            if (last < 0) return true; // first run is ready
             return nowTick - last >= cdTicks;
         }
 
@@ -62,13 +59,13 @@ namespace CheeseProtocol
 
             int last = GetLastTick(cmd);
             int cdTicks = cooldownHours * 2500;
-            int remainTicks = cdTicks - (nowTick - last);
-            if (remainTicks <= 0) return 0;
 
-            return remainTicks; // ceil
+            if (last < 0) return 0; // never executed -> ready
+
+            int remain = cdTicks - (nowTick - last);
+            return remain <= 0 ? 0 : remain;
         }
 
-        // helper accessor
         public static CheeseCooldownState Current
             => Verse.Current.Game?.GetComponent<CheeseCooldownState>();
     }

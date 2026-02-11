@@ -49,9 +49,7 @@ namespace CheeseProtocol
                 SpeechBubbleManager.Get(pawn.Map)?.AddChat(username, message, pawn);
                 return;
             }
-            Map homeMap = Find.AnyPlayerHomeMap;
-            var ctx = new ProtocolContext(evt, homeMap);
-            var protocol = FindProtocol(evt, cmd);
+            var protocol = FindProtocol(cmd);
 
             if (CheeseProtocolMod.Settings == null || !CheeseProtocolMod.Settings.TryGetCommandConfig(cmd, out var cfg))
                 return;
@@ -64,42 +62,91 @@ namespace CheeseProtocol
                 QWarn("No protocol matched donation: " + evt);
                 return;
             }
-            if (homeMap == null)
+            var allowPendingCmd = CheeseProtocolMod.Settings?.allowQueueCDCmd ?? false;
+            if (IsProtocolCD_Ready(cfg) && CanExecuteProtocol(evt))
             {
-                CheeseLetter.AlertFail(CheeseCommands.GetCommandText(cmd));
-                QWarn("No map available; skipping donation: " + evt);
-                return;
+                try
+                {
+                    Map homeMap = Find.AnyPlayerHomeMap;
+                    var ctx = new ProtocolContext(evt, homeMap);
+                    protocol.Execute(ctx);
+                    var cdState = CheeseCooldownState.Current;
+                    cdState.MarkExecuted(cfg.cmd, Find.TickManager.TicksGame);
+                }
+                catch (Exception ex)
+                {
+                    CheeseLetter.AlertFail(CheeseCommands.GetCommandText(cmd), $"Error: {ex}");
+                    QErr($"Protocol {protocol.Id} failed: {ex}");
+                }
             }
-            if (!protocol.CanExecute(ctx))
+            else
             {
-                QWarn($"Protocol {protocol.Id} cannot execute right now.");
-                return;
+                if (allowPendingCmd)
+                {
+                    CheeseLetter.AlertCmdOnCd(CheeseCommands.GetCommandText(cmd));
+                    CheeseCommandQueue.Current?.Enqueue(evt);
+                }
+                else
+                {
+                    CheeseLetter.AlertFail(CheeseCommands.GetCommandText(cfg.cmd), "쿨타임 대기 중.\n쿨타임 종료 시 자동 실행을 허용 하려면 설정을 변경해주세요.");
+                }
+            }
+        }
+
+        public static bool TryExecuteFromQueue(CheeseEvent evt)
+        {
+            if (evt == null) return false;
+            CheeseCommand cmd = evt.cmd;
+            
+            var protocol = FindProtocol(cmd);
+
+            if (CheeseProtocolMod.Settings == null || !CheeseProtocolMod.Settings.TryGetCommandConfig(cmd, out var cfg))
+                return false;
+
+            if (!IsProtocolAllowedBySettings(CheeseProtocolMod.Settings, cfg, evt))
+                return false;
+
+            if (protocol == null)
+            {
+                QWarn("No protocol matched donation: " + evt);
+                return false;
             }
             try
             {
+                Map homeMap = Find.AnyPlayerHomeMap;
+                var ctx = new ProtocolContext(evt, homeMap);
                 protocol.Execute(ctx);
                 var cdState = CheeseCooldownState.Current;
                 cdState.MarkExecuted(cfg.cmd, Find.TickManager.TicksGame);
             }
             catch (Exception ex)
             {
+                CheeseLetter.AlertFail(CheeseCommands.GetCommandText(cmd), $"Error: {ex}");
                 QErr($"Protocol {protocol.Id} failed: {ex}");
+                return false;
             }
+            return true;
         }
 
-        private static IProtocol FindProtocol(CheeseEvent evt, CheeseCommand cmd)
+        public static bool CanExecuteProtocol(CheeseEvent evt)
         {
-            string msg = (evt.message ?? "").Trim();
+            var ctx = new ProtocolContext(evt, Find.AnyPlayerHomeMap);
+            var protocol = FindProtocol(evt.cmd);
+            if (protocol == null) return false;
+            return protocol.CanExecute(ctx);
+        }
+
+        private static IProtocol FindProtocol(CheeseCommand cmd)
+        {
             if (cmd != CheeseCommand.None &&
                 CheeseCommandParser.TryGetSpec(cmd, out var spec))
             {
-                QMsg($"Command found: \"{spec.protocolId}\"", Channel.Debug);
                 return ProtocolRegistry.ById(spec.protocolId);
             }
-            QMsg($"Unknown command - Redirect to SpeechBubble: \"{msg}\"", Channel.Debug);
 
             return ProtocolRegistry.ById("noop");
         }
+
         private static bool IsProtocolAllowedBySettings(CheeseSettings settings, CheeseCommandConfig cfg, CheeseEvent evt)
         {
             if (!cfg.enabled) return false;
@@ -107,22 +154,21 @@ namespace CheeseProtocol
             if (cfg.source == CheeseCommandSource.Donation)
             {
                 if (!evt.isDonation) return false;
-                if (!(evt.amount >= cfg.minDonation))
-                {
-                    QMsg($"Command ignored (<min_donation): \"{evt.message}\"", Channel.Debug);
-                    return false;
-                }
+                if (!(evt.amount >= cfg.minDonation)) return false;
             }
+            return true;
+        }
+        private static bool IsProtocolCD_Ready(CheeseCommandConfig cfg)
+        {
             int nowTick = Find.TickManager.TicksGame;
             var cdState = CheeseCooldownState.Current;
             if (cdState == null)
             {
-                QWarn("CooldownState missing; allow by default.", Channel.Debug);
-                return true;
+                QWarn("CooldownState missing; disallow by default.", Channel.Debug);
+                return false;
             }
             if (!cdState.IsReady(cfg.cmd, cfg.cooldownHours, nowTick))
             {
-                QMsg($"Command ignored (on cooldown): \"{evt.message}\"", Channel.Debug);
                 return false;
             }
             return true;

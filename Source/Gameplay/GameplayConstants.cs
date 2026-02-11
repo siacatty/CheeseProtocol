@@ -32,8 +32,8 @@ namespace CheeseProtocol
         public const int BullyCountMax = 10;
 
         //!교육
-        public const int TeachSkillMin = 1;
-        public const int TeachSkillMax = 20;
+        public const int TeachSkillEXPMin = 1000;
+        public const int TeachSkillEXPMax = 32000;
         public const int StudentCountMin = 1;
         public const int StudentCountMax = 10;
 

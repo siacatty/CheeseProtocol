@@ -158,12 +158,12 @@ namespace CheeseProtocol
             float checkboxPaddingY = 6f;
             float rowH = lineH+checkboxPaddingY;
             string studentCountTip = "선생님이 가르칠수있는 최대 학생 수";
-            string teachSkillTip = "선생님이 증가시키는 스킬 레벨";
-            string passionProbTip = "선생님이 학생에게 열정을 부여할 확률";
+            string teachSkillTip = "수업으로부터 얻는 스킬 경험치";
+            string passionProbTip = "도주 성공 시 열정을 부여할 확률";
             UIUtil.RowWithHighlight(rect, ref curY, rowH, r =>{Widgets.CheckboxLabeled(r, "열정 부여 가능", ref allowPassion);});
             UIUtil.RangeSliderWrapper(rect, ref curY, lineH, "가르치는 학생 수", ref studentCountRange, baseMin: GameplayConstants.StudentCountMin, baseMax: GameplayConstants.StudentCountMax, roundTo: 1f, tooltip:studentCountTip);
-            UIUtil.RangeSliderWrapper(rect, ref curY, lineH, "증가 스킬 레벨", ref teachSkillRange, baseMin: GameplayConstants.TeachSkillMin, baseMax: GameplayConstants.TeachSkillMax, roundTo: 1f, tooltip:teachSkillTip);
-            UIUtil.RangeSliderWrapper(rect, ref curY, lineH, "열정 부여 확률", ref passionProbRange, isPercentile: true, tooltip:passionProbTip);
+            UIUtil.RangeSliderWrapper(rect, ref curY, lineH, "증가 스킬 경험치", ref teachSkillRange, baseMin: GameplayConstants.TeachSkillEXPMin, baseMax: GameplayConstants.TeachSkillEXPMax, roundTo: 1f, tooltip:teachSkillTip);
+            UIUtil.RangeSliderWrapper(rect, ref curY, lineH, "도주 시 열정부여 확률", ref passionProbRange, isPercentile: true, tooltip:passionProbTip);
             usedH = curY - rect.y;
             return usedH;
         }

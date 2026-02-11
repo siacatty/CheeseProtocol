@@ -21,12 +21,17 @@ namespace CheeseProtocol
         public List<Pawn> students;
         public int arrived;
         private LessonVenue venue;
-        private IntVec3 teacherSeat;
-        private Dictionary<string, IntVec3> studentSeats;
         private IntVec3 teacherFaceDir;
         private int nextRotateTick = 0;
         private const int RotateInterval = 30;
+        private const int GiveUpTicks = 600;
+        private const int BreakTicks = 180;
+        private const int UpdateVenueTicks = 600;
         private float d2Sq;
+        private int nextGiveUpTick = 0;
+        private int nextBreakTick = 0;
+        private int nextBreakClassTick = 0;
+        private int nextUpdateVenueTick = 0;
 
         public LordToilData_Gathering Data => (LordToilData_Gathering)data;
 
@@ -50,8 +55,6 @@ namespace CheeseProtocol
                 job.ReassignSeats();
             job.AddTeacherBuff();
             d2Sq = LordJob_Teacher.CatchDistance*LordJob_Teacher.CatchDistance;
-            teacherSeat = job.teacherSeat;
-            studentSeats = job.studentSeats;
             teacherFaceDir = job.teacherFaceDir;
             if (!teacher.Awake())
             {
@@ -126,7 +129,7 @@ namespace CheeseProtocol
                 string uid = pawn.GetUniqueLoadID();
                 if (uid.NullOrEmpty()) continue;
 
-                bool inClass = LessonPosUtility.InGatheringArea(pawn.Position, spot, Map, dist: 18f, maxRoomCell: 170);
+                bool inClass = LessonPosUtility.InGatheringArea(pawn.Position, spot, Map);
                 bool inMental = pawn.InMentalState;
                 bool isEscaping = lj.escapingStudentUIDs.Contains(uid);
                 if (!inClass || inMental)
@@ -137,12 +140,12 @@ namespace CheeseProtocol
                 {
                     if (isEscaping)
                     {
+                        stunnedUidsToRemove ??= new List<string>(4);
                         uidsToClearEscaping ??= new List<string>(4);
                         uidsToClearEscaping.Add(uid);
+                        stunnedUidsToRemove.Add(uid);
                     }
                 }
-
-                // escape success (d2 밖)
                 if (isEscaping && pawn.Position.DistanceToSquared(spot) > d2Sq)
                 {
                     //Warn($"{pawn} to be removed from lord");
@@ -154,9 +157,9 @@ namespace CheeseProtocol
                     escapedUidsToRemove.Add(uid);
                     continue;
                 }
-                studentSeats.TryGetValue(uid, out var seat2);
+                lj.studentSeats.TryGetValue(uid, out var seat2);
                 // seat duty
-                if (!pawn.Drafted && studentSeats.TryGetValue(uid, out var seat))
+                if (!pawn.Drafted && lj.studentSeats.TryGetValue(uid, out var seat))
                 {
                     if (pawn.Position == seat)
                     {
@@ -225,6 +228,42 @@ namespace CheeseProtocol
                 bool chasingHolder;
                 bool shoutWindowActive = now <= lj.shoutWindowUntilTick;
                 bool shoutCDOff = now >= lj.nextShoutTick;
+                bool canReachClass = teacher.CanReach(venue.spotCell, PathEndMode.Touch, Danger.Some);
+
+                if (canReachClass)
+                {
+                    nextBreakClassTick = 0;
+                }
+                else
+                {
+                    if (nextBreakClassTick <= 0)
+                        nextBreakClassTick = now + BreakTicks;
+                    if (now >= nextBreakClassTick)
+                    {
+                        Thing toBreak = LessonPosUtility.FindWallToBreakNearTarget(teacher, Map, venue.spotCell, breakWallOnly: true) ??
+                                        LessonPosUtility.FindWallToBreakNearTarget(teacher, Map, venue.spotCell, breakWallOnly: false);
+                        if (toBreak == null)
+                        {
+                            if (nextUpdateVenueTick <= 0)
+                                nextUpdateVenueTick = now + UpdateVenueTicks;
+                            if (now >= nextUpdateVenueTick)
+                            {
+                                string text = LordChats.GetText(TeacherTextKey.PlayerCheat);
+                                SpeechBubbleManager.Get(Map)?.AddNPCChat(text, teacher, speaker: SpeakerType.NonHostileNPC);
+                                lord?.ReceiveMemo(LordJob_Teacher.MemoPlayerCheat);
+                                nextUpdateVenueTick = 0;
+                            }
+                        }
+                        else
+                        {
+                            nextBreakTick = 0;
+                            nextUpdateVenueTick = 0;
+                            if (CanStartBreakJobNow(teacher, toBreak))
+                                StartBreakJob(teacher, toBreak);
+                        }
+                    }
+                }
+
                 if (shoutWindowActive || shoutCDOff)
                 {
                     List<string> toStunUIDs= new List<string>(10);
@@ -262,10 +301,10 @@ namespace CheeseProtocol
                         ?? TryFindClosestEscapingStudent(teacher, lj.escapingStudentUIDs, out uid, excludeDowned: false);
                     lj.currentTargetUid = currentTarget == null? null : uid;
                 }
-
                 if (currentTarget!= null)
                 {
                     lj.lastHasEscapeTick = now;
+                    nextBreakTick = 0;
                     if (!currentTarget.Downed)
                     {
                         if (CanStartSubdueJobNow(teacher, currentTarget))
@@ -279,11 +318,49 @@ namespace CheeseProtocol
                 }
                 else
                 {
-                    if (lj.escapingStudentUIDs.Count == 0 && now - lj.lastHasEscapeTick >= LordJob_Teacher.ResumeLessonTicks)
+                    if (lj.escapingStudentUIDs.Count == 0)
                     {
-                        string text = LordChats.GetText(TeacherTextKey.LessonResume);
-                        SpeechBubbleManager.Get(Map)?.AddNPCChat(text, teacher, speaker:SpeakerType.NonHostileNPC);
-                        lord?.ReceiveMemo(LordJob_Teacher.MemoResumeLesson);
+                        if (now - lj.lastHasEscapeTick >= LordJob_Teacher.ResumeLessonTicks)
+                        {
+                            string text = LordChats.GetText(TeacherTextKey.LessonResume);
+                            SpeechBubbleManager.Get(Map)?.AddNPCChat(text, teacher, speaker:SpeakerType.NonHostileNPC);
+                            lord?.ReceiveMemo(LordJob_Teacher.MemoResumeLesson);
+                        }
+                    }
+                    else
+                    {
+                        if (nextBreakTick <= 0)
+                            nextBreakTick = now + BreakTicks;
+
+                        if (now >= nextBreakTick)
+                        {
+                            Pawn target = TryFindClosestEscapingStudent(teacher, lj.escapingStudentUIDs, out _, checkReachable: false, excludeDowned: true) ??
+                                        TryFindClosestEscapingStudent(teacher, lj.escapingStudentUIDs, out _, checkReachable: false, excludeDowned: false);
+                            Thing toBreak = null;
+                            if (target != null)
+                            {
+                                toBreak = LessonPosUtility.FindWallToBreakNearTarget(teacher, Map, target.Position, breakWallOnly: true) ??
+                                            LessonPosUtility.FindWallToBreakNearTarget(teacher, Map, target.Position, breakWallOnly: false);
+                            }
+                            if (toBreak == null)
+                            {
+                                if (nextGiveUpTick <= 0)
+                                    nextGiveUpTick = now + GiveUpTicks;
+                                if (now >= nextGiveUpTick)
+                                {
+                                    string text = LordChats.GetText(TeacherTextKey.PlayerCheat);
+                                    SpeechBubbleManager.Get(Map)?.AddNPCChat(text, teacher, speaker: SpeakerType.NonHostileNPC);
+                                    lord?.ReceiveMemo(LordJob_Teacher.MemoResumeLesson);
+                                    nextGiveUpTick = 0;
+                                }
+                            }
+                            else
+                            {
+                                nextGiveUpTick = 0;
+                                if (CanStartBreakJobNow(teacher, toBreak))
+                                    StartBreakJob(teacher, toBreak);
+                            }
+                        }
                     }
                 }
             }
@@ -318,6 +395,31 @@ namespace CheeseProtocol
             TryGiveDebuffHediff(target);
         }
 
+        private void StartBreakJob(Pawn teacher, Thing target)
+        {
+            if (teacher == null || target == null) return;
+            JobDef def = DefDatabase<JobDef>.GetNamedSilentFail("CheeseProtocol_TeacherBreakWall");
+            if (def == null) return;
+
+            Job job = JobMaker.MakeJob(def, target);
+            job.playerForced = true;
+            teacher.jobs.StartJob(job, JobCondition.InterruptForced, resumeCurJobAfterwards: false);
+        }
+        private bool CanStartBreakJobNow(Pawn teacher, Thing target)
+        {
+            if (teacher == null || target == null) return false;
+            if (teacher.Downed || teacher.Dead) return false;
+
+            var cur = teacher.CurJob;
+            if (cur == null) return true;
+
+            if (cur.def.defName == "CheeseProtocol_TeacherBreakWall"
+                && cur.targetA.Thing == target)
+                return false;
+
+            return true;
+        }
+
         private void StartShoutJob(Pawn teacher, Pawn target, int waitTicks=LordJob_Teacher.ShoutTeacherDelayTicks)
         {
             if (teacher == null || target == null) return;
@@ -337,8 +439,8 @@ namespace CheeseProtocol
 
             var cur = teacher.CurJob;
             if (cur == null) return true;
+            if (cur.def.defName == "CheeseProtocol_TeacherBreakWall") return false;
 
-            // 이미 같은 Job + 같은 타겟이면 다시 시작하지 않음
             if (cur.def.defName == "CheeseProtocol_TeacherShout"
                 && cur.targetA.Thing == target)
                 return false;
@@ -367,6 +469,7 @@ namespace CheeseProtocol
 
             var cur = teacher.CurJob;
             if (cur == null) return true;
+            if (cur.def.defName == "CheeseProtocol_TeacherBreakWall") return false;
             if (cur.def.defName == "CheeseProtocol_TeacherShout") return false;
             if (cur.def.defName == "CheeseProtocol_TeacherSubdue"
                 && cur.targetA.Thing == target)
@@ -397,7 +500,7 @@ namespace CheeseProtocol
 
             var cur = teacher.CurJob;
             if (cur == null) return true;
-
+            if (cur.def.defName == "CheeseProtocol_TeacherBreakWall") return false;
             if (cur.def.defName == "CheeseProtocol_TeacherShout") return false;
             if (cur.def.defName == "CheeseProtocol_TeacherCarry"
                 && cur.targetA.Thing == target)
@@ -518,6 +621,7 @@ namespace CheeseProtocol
             Pawn teacher,
             HashSet<string> escapingStudentUIDs,
             out string bestPawnUID,
+            bool checkReachable = true,
             bool excludeDowned = true)
         {
             bestPawnUID = null;
@@ -555,6 +659,7 @@ namespace CheeseProtocol
                 string uid = p.GetUniqueLoadID();
                 if (uid.NullOrEmpty()) continue;
                 if (!escapingStudentUIDs.Contains(uid)) continue;
+                if (checkReachable && !teacher.CanReach(p.PositionHeld, PathEndMode.Touch, Danger.Some)) continue;
 
                 Pawn p2 = null;
 
@@ -571,6 +676,7 @@ namespace CheeseProtocol
                         {
                             p2 = hp;
                             if (p2 == teacher) continue;
+                            if (checkReachable && !teacher.CanReach(p2, PathEndMode.Touch, Danger.Some)) continue;
                         }
                     }
                     else if (p.ParentHolder is Pawn holderPawn)
@@ -579,6 +685,7 @@ namespace CheeseProtocol
                         {
                             p2 = holderPawn;
                             if (p2 == teacher) continue;
+                            if (checkReachable && !teacher.CanReach(p2, PathEndMode.Touch, Danger.Some)) continue;
                         }
                     }
                 }
@@ -601,7 +708,8 @@ namespace CheeseProtocol
         
         public override void UpdateAllDuties()
         {
-            IntVec3 spot = ((LordJob_Teacher)lord.LordJob).GetSpot();
+            var lj = lord?.LordJob as LordJob_Teacher;
+            if (lj == null) return;
             for (int i = 0; i < lord.ownedPawns.Count; i++)
             {
                 Pawn pawn = lord.ownedPawns[i];
@@ -613,8 +721,8 @@ namespace CheeseProtocol
                 if (pawn == teacher)
                 {
                     PawnDuty teacherDuty;
-                    if (pawn.Position != teacherSeat)
-                        teacherDuty = new PawnDuty(DutyDefOf.Goto, teacherSeat);
+                    if (pawn.Position != lj.teacherSeat)
+                        teacherDuty = new PawnDuty(DutyDefOf.Goto, lj.teacherSeat);
                     else
                     {
                         teacherDuty = new PawnDuty(DutyDefOf.Idle);
@@ -623,7 +731,7 @@ namespace CheeseProtocol
                 }
                 else
                 {
-                    if (studentSeats.TryGetValue(pawn.GetUniqueLoadID(), out IntVec3 seat))
+                    if (lj.studentSeats.TryGetValue(pawn.GetUniqueLoadID(), out IntVec3 seat))
                     {
                         PawnDuty studentDuty;
                         if (pawn.Position != seat)

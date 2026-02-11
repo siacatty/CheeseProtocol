@@ -1,10 +1,11 @@
 using System;
+using Verse;
 
 namespace CheeseProtocol
 {
-    public class CheeseEvent
+    public class CheeseEvent : IExposable
     {
-        // When we received it (real time, not ticks)
+        // Meta
         public string donationType; // e.g. "CHAT", "VIDEO"
         public long receivedAtUtcMs;
         public long msgTimeMs;
@@ -16,15 +17,31 @@ namespace CheeseProtocol
         public string message;
         public CheeseCommand cmd;
 
-        // If the platform provides a unique donation id, store it here (best dedupe key)
+        // Deduplication
         public string donationId;
-
-        // A stable-ish dedupe key (set this when enqueuing)
         public string dedupeKey;
+
+        public CheeseEvent() { }
 
         public static long NowUtcMs()
             => DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-            
+
+        public void ExposeData()
+        {
+            Scribe_Values.Look(ref donationType, "donationType");
+            Scribe_Values.Look(ref receivedAtUtcMs, "receivedAtUtcMs");
+            Scribe_Values.Look(ref msgTimeMs, "msgTimeMs");
+
+            Scribe_Values.Look(ref isDonation, "isDonation");
+            Scribe_Values.Look(ref username, "username");
+            Scribe_Values.Look(ref amount, "amount");
+            Scribe_Values.Look(ref message, "message");
+            Scribe_Values.Look(ref cmd, "cmd");
+
+            Scribe_Values.Look(ref donationId, "donationId");
+            Scribe_Values.Look(ref dedupeKey, "dedupeKey");
+        }
+
         public override string ToString()
             => $"username={username}, amount={amount}, message={message}";
     }

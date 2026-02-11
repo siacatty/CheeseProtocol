@@ -9,7 +9,18 @@ namespace CheeseProtocol.Protocols
 
         public bool CanExecute(ProtocolContext ctx)
         {
-            return ctx?.Map != null && ctx?.CheeseEvt != null;
+            bool isMapValid = ctx?.Map != null;
+            bool isEvtValid = ctx?.CheeseEvt != null;
+            var participantRegistry = CheeseParticipantRegistry.Get();
+            if (participantRegistry == null) return false;
+            var join = CheeseProtocolMod.Settings?.GetAdvSetting<JoinAdvancedSettings>(CheeseCommand.Join);
+
+            bool restrictParticipants = join?.restrictParticipants ?? CheeseDefaults.RestrictParticipants;
+            int  maxParticipants      = join?.maxParticipants      ?? CheeseDefaults.MaxParticipants;
+            int count = participantRegistry.Count;
+
+            bool hasRoomForParticipant = !restrictParticipants || (count < maxParticipants);
+            return isMapValid && isEvtValid && hasRoomForParticipant;
         }
 
         public void Execute(ProtocolContext ctx)

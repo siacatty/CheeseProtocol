@@ -19,7 +19,7 @@ namespace CheeseProtocol
         private const TargetIndex SpotInd = TargetIndex.B;
         private const TargetIndex TeacherSeatInd = TargetIndex.C;
         private const int FaceDirInterval = 60;
-        private const int ChatInterval = 480;
+        private const int ChatInterval = 720;
         private const int QuizEveryNChat = 4;
         private int chatCount;
         private int nextFaceDirTick;

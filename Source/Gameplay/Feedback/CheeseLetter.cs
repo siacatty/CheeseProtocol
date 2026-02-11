@@ -37,7 +37,10 @@ namespace CheeseProtocol
 
             return t + "\n\n" + block;
         }
-
+        public static void AlertCmdOnCd(string command)
+        {
+            Find.LetterStack.ReceiveLetter($"{command} 대기", $"{command} 명령어가 쿨타임 대기 완료 혹은 조건 만족 시 실행됩니다.", LetterDefOf.NeutralEvent);
+        }
         public static void AlertFail(
             string command,
             string reason = "플레이어 정착지가 지정되지 않았습니다."

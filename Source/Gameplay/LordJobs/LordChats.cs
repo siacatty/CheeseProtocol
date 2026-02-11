@@ -19,6 +19,7 @@ namespace CheeseProtocol
     {
         Arrived,
         Wait,
+        BreakWall,
         GatherStudentsOutdoor,
         GatherStudentsPlain,
         GatherStudentsTable,
@@ -27,6 +28,7 @@ namespace CheeseProtocol
         TakeSeats,
         LessonStart,
         LessonResume,
+        PlayerCheat,
         TeachLesson,
         TeachLessonQuiz,
         TeachLessonDrafted,
@@ -52,6 +54,14 @@ namespace CheeseProtocol
             {
                 "반가워요~",
                 "안녕하세요? 변방계 『최강』 교사 {0}입니다.",
+            },
+            [TeacherTextKey.BreakWall] = new[]
+            {
+                "어디서 꼼수를 쓸라고.\n『진심 펀치』",
+            },
+            [TeacherTextKey.PlayerCheat] = new[]
+            {
+                "저런 꼼수를 쓰다니.. 드럽다 드러워.",
             },
             [TeacherTextKey.Wait] = new[]
             {
